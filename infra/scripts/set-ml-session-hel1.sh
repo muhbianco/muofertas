@@ -10,13 +10,15 @@
 #     X-Csrf-Token
 # Nada aparece na tela nem vai para log. O arquivo fica 600 em /root/megapromooz-secrets, montado
 # só leitura no worker, que o relê a cada link: renovar a sessão não pede deploy.
+# Dono do arquivo: o usuário `app` da imagem (uid 1001), o único além do root que precisa ler.
 set -euo pipefail
 
 dir=/root/megapromooz-secrets
 file="$dir/ml-session"
+app_uid=1001  # USER app do Dockerfile
 [ "$(id -u)" = 0 ] || { echo "rode como root" >&2; exit 2; }
 [ -t 0 ] || { echo "rode num terminal interativo: os valores são colados" >&2; exit 2; }
-install -d -m 700 "$dir"
+install -d -m 700 -o "$app_uid" -g "$app_uid" "$dir"
 
 saved=$(stty -g)
 trap 'stty "$saved"' EXIT
@@ -41,6 +43,7 @@ csrf=${csrf#[Xx]-[Cc]srf-[Tt]oken: }
 tmp=$(mktemp "$dir/.ml-session.XXXXXX")
 chmod 600 "$tmp"
 printf 'cookie=%s\ncsrf=%s\n' "$cookie" "$csrf" > "$tmp"
+chown "$app_uid:$app_uid" "$tmp"
 mv -f "$tmp" "$file"
 echo "gravado: $file (cookie com ${#cookie} caracteres, token com ${#csrf})."
 echo "O worker usa no próximo link aprovado. Se a sessão cair, chega o alerta por e-mail."
