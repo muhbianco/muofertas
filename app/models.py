@@ -16,6 +16,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     TypeDecorator,
@@ -54,6 +55,12 @@ class Niche(Base):
     name: Mapped[str] = mapped_column(String(80))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    # Regras da nota por nicho (0002). Comissão em pontos-base: 1600 = 16% (tabela do afiliado ML).
+    commission_rate_bp: Mapped[int] = mapped_column(Integer, default=1200)
+    require_official: Mapped[bool] = mapped_column(Boolean, default=False)
+    high_risk_brands: Mapped[str | None] = mapped_column(
+        Text, nullable=True
+    )  # JSON: lista de marcas
 
 
 class NicheCategory(Base):
@@ -78,6 +85,7 @@ class CatalogProduct(Base):
     __table_args__ = (
         UniqueConstraint("marketplace", "external_id"),
         Index("ix_catalog_product_due", "active", "next_check_at"),
+        Index("ix_catalog_product_needs_eval", "needs_evaluation", "active"),
     )
 
     id: Mapped[int] = mapped_column(
@@ -107,6 +115,11 @@ class CatalogProduct(Base):
         UTCDateTime(), nullable=True
     )
     best_highlight_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Nota (0002): o coletor marca para reavaliar quando o preço muda; o avaliador desmarca.
+    needs_evaluation: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_evaluated_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    last_tier: Mapped[str | None] = mapped_column(String(12), nullable=True)
+    last_score: Mapped[float | None] = mapped_column(Numeric(5, 1, asdecimal=False), nullable=True)
 
 
 class PriceObservation(Base):
@@ -167,6 +180,35 @@ class IntegrationError(Base):
     error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
     path: Mapped[str | None] = mapped_column(String(255), nullable=True)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class OfferEvaluation(Base):
+    """Avaliação de um produto num instante: imutável (só insert), com tudo o que entrou na conta.
+
+    Responde "por que esta oferta foi Excepcional?" com os dados daquele momento: `snapshot` traz
+    portões, sinais, componentes, preço usado, referência e a versão das regras.
+    """
+
+    __tablename__ = "offer_evaluation"
+    __table_args__ = (
+        Index("ix_offer_evaluation_product_time", "product_id", "evaluated_at"),
+        Index("ix_offer_evaluation_tier_time", "tier", "evaluated_at"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    product_id: Mapped[int] = mapped_column(ForeignKey("catalog_product.id", ondelete="CASCADE"))
+    evaluated_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    trigger: Mapped[str] = mapped_column(String(16))  # price_change | daily
+    ruleset: Mapped[str] = mapped_column(String(32))
+    tier: Mapped[str] = mapped_column(String(12))
+    score: Mapped[float] = mapped_column(Numeric(5, 1, asdecimal=False))
+    price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    used_official: Mapped[bool] = mapped_column(Boolean, default=False)
+    real_discount_bp: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reference_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    snapshot: Mapped[str] = mapped_column(Text)  # JSON da Evaluation
 
 
 class WorkerLease(Base):

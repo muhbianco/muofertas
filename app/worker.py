@@ -25,6 +25,7 @@ from app.core.clock import utcnow
 from app.core.config import Settings, settings
 from app.core.database import SessionFactory, dispose_engine
 from app.core.logging import configure_logging, get_logger
+from app.evaluation.service import Evaluator
 from app.integrations.mercadolivre import (
     CallBudgetExceededError,
     MercadoLivreClient,
@@ -83,6 +84,7 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
     holder = holder_id()
     client = MercadoLivreClient(cfg)
     collector = Collector(SessionFactory, client, cfg)
+    evaluator = Evaluator(SessionFactory)
     logger.info(
         "worker iniciado", extra={"holder": holder, "collector_enabled": cfg.collector_enabled}
     )
@@ -95,6 +97,7 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                 elif cfg.collector_enabled:
                     await collector.discover_due()
                     stats = await collector.refresh_due()
+                    await evaluator.evaluate_due()
                     if stats.seen:
                         logger.info(
                             "lote atualizado",

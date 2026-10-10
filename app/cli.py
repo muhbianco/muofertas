@@ -43,6 +43,11 @@ async def seed_niches(data: dict[str, Any]) -> None:
             else:
                 niche.name = item["nome"]
                 niche.active = item.get("ativo", True)
+            niche.commission_rate_bp = int(item.get("comissao_bp", 1200))
+            niche.require_official = bool(item.get("exigir_loja_oficial", False))
+            niche.high_risk_brands = json.dumps(
+                item.get("marcas_alto_risco", []), ensure_ascii=False
+            )
             wanted = {c["id"]: c["nome"] for c in item["categorias"]}
             current = {
                 c.external_category_id: c

@@ -1,50 +1,140 @@
 {
   "_comentario": "Nichos e categorias do ML que alimentam o coletor (descoberta pelos mais vendidos). Os 3 primeiros viram grupos; 'observacao' só coleta para comparação (modo sombra). Fonte: docs/fase0/nichos/README.md (varredura de 10/10/2026). Aplicar: python -m app.cli seed-niches config/nichos.json",
+  "_regras": "comissao_bp: comissão direta do afiliado ML em pontos-base (ajuda 27913: 1600 = beleza/calçados/esportes, 1200 = ferramentas/casa/brinquedos/games, 500 = celulares/eletrônicos). exigir_loja_oficial: só preço de loja oficial entra na nota. marcas_alto_risco: marca falsificada com frequência; exige loja oficial mesmo no nicho que não exige.",
   "nichos": [
     {
       "slug": "ferramentas",
       "nome": "Ferramentas",
+      "comissao_bp": 1200,
+      "exigir_loja_oficial": false,
+      "marcas_alto_risco": [
+        "Makita",
+        "DeWalt",
+        "Bosch",
+        "Milwaukee"
+      ],
       "categorias": [
-        {"id": "MLB2526", "nome": "Ferramentas Elétricas"},
-        {"id": "MLB437789", "nome": "Ferramentas Pneumáticas"},
-        {"id": "MLB189210", "nome": "Caixas e Organizadores"},
-        {"id": "MLB2528", "nome": "Acessórios para Ferramentas"},
-        {"id": "MLB5550", "nome": "Medições e Instrumentação"},
-        {"id": "MLB2527", "nome": "Ferramentas Manuais"}
+        {
+          "id": "MLB2526",
+          "nome": "Ferramentas Elétricas"
+        },
+        {
+          "id": "MLB437789",
+          "nome": "Ferramentas Pneumáticas"
+        },
+        {
+          "id": "MLB189210",
+          "nome": "Caixas e Organizadores"
+        },
+        {
+          "id": "MLB2528",
+          "nome": "Acessórios para Ferramentas"
+        },
+        {
+          "id": "MLB5550",
+          "nome": "Medições e Instrumentação"
+        },
+        {
+          "id": "MLB2527",
+          "nome": "Ferramentas Manuais"
+        }
       ]
     },
     {
       "slug": "beleza",
       "nome": "Beleza: maquiagem, perfumes e cuidados",
+      "comissao_bp": 1600,
+      "exigir_loja_oficial": true,
+      "marcas_alto_risco": [],
       "categorias": [
-        {"id": "MLB6284", "nome": "Perfumes"},
-        {"id": "MLB1248", "nome": "Maquiagem"},
-        {"id": "MLB199407", "nome": "Cuidados com a Pele"},
-        {"id": "MLB1263", "nome": "Cuidados com o Cabelo"},
-        {"id": "MLB455174", "nome": "Artefatos para Cabelo"},
-        {"id": "MLB264787", "nome": "Barbearia"}
+        {
+          "id": "MLB6284",
+          "nome": "Perfumes"
+        },
+        {
+          "id": "MLB1248",
+          "nome": "Maquiagem"
+        },
+        {
+          "id": "MLB199407",
+          "nome": "Cuidados com a Pele"
+        },
+        {
+          "id": "MLB1263",
+          "nome": "Cuidados com o Cabelo"
+        },
+        {
+          "id": "MLB455174",
+          "nome": "Artefatos para Cabelo"
+        },
+        {
+          "id": "MLB264787",
+          "nome": "Barbearia"
+        }
       ]
     },
     {
       "slug": "tenis-esporte",
       "nome": "Tênis e Esporte",
+      "comissao_bp": 1600,
+      "exigir_loja_oficial": true,
+      "marcas_alto_risco": [],
       "categorias": [
-        {"id": "MLB3900", "nome": "Tênis (esportivos)"},
-        {"id": "MLB123103", "nome": "Monitores Esportivos"},
-        {"id": "MLB1292", "nome": "Ciclismo"},
-        {"id": "MLB1338", "nome": "Fitness e Musculação"}
+        {
+          "id": "MLB3900",
+          "nome": "Tênis (esportivos)"
+        },
+        {
+          "id": "MLB123103",
+          "nome": "Monitores Esportivos"
+        },
+        {
+          "id": "MLB1292",
+          "nome": "Ciclismo"
+        },
+        {
+          "id": "MLB1338",
+          "nome": "Fitness e Musculação"
+        }
       ]
     },
     {
       "slug": "observacao",
       "nome": "Observação (sem grupo, para comparar)",
+      "comissao_bp": 1200,
+      "exigir_loja_oficial": false,
+      "marcas_alto_risco": [
+        "Apple",
+        "Samsung",
+        "Sony",
+        "Nintendo",
+        "LEGO"
+      ],
       "categorias": [
-        {"id": "MLB1618", "nome": "Casa: Cozinha"},
-        {"id": "MLB264051", "nome": "Casa: Cuidado da Casa e Lavanderia"},
-        {"id": "MLB455425", "nome": "Brinquedos de Montar"},
-        {"id": "MLB6911", "nome": "Brinquedos: Ar Livre e Playground"},
-        {"id": "MLB1144", "nome": "Games"},
-        {"id": "MLB1051", "nome": "Celulares e Telefones"}
+        {
+          "id": "MLB1618",
+          "nome": "Casa: Cozinha"
+        },
+        {
+          "id": "MLB264051",
+          "nome": "Casa: Cuidado da Casa e Lavanderia"
+        },
+        {
+          "id": "MLB455425",
+          "nome": "Brinquedos de Montar"
+        },
+        {
+          "id": "MLB6911",
+          "nome": "Brinquedos: Ar Livre e Playground"
+        },
+        {
+          "id": "MLB1144",
+          "nome": "Games"
+        },
+        {
+          "id": "MLB1051",
+          "nome": "Celulares e Telefones"
+        }
       ]
     }
   ]

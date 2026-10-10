@@ -358,6 +358,7 @@ class Collector:
                     current.last_observation_at = now
                 if changed:
                     current.last_changed_at = now
+                    current.needs_evaluation = True
                     stats.changed += 1
                 tier = next_tier(
                     Tier(current.tier),
