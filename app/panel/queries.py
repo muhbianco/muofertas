@@ -15,6 +15,7 @@ from app.models import (
     CatalogProduct,
     CollectionRun,
     IntegrationError,
+    MarketplaceSeller,
     Niche,
     NicheCategory,
     OfferEvaluation,
@@ -33,6 +34,61 @@ def product_url(product: CatalogProduct) -> str:
     return product.permalink or f"https://www.mercadolivre.com.br/p/{product.external_id}"
 
 
+LEVELS = {
+    "5_green": "verde",
+    "4_light_green": "verde-claro",
+    "3_yellow": "amarela",
+    "2_orange": "laranja",
+    "1_red": "vermelha",
+}
+POWER = {"platinum": "MercadoLíder Platinum", "gold": "MercadoLíder Gold", "silver": "MercadoLíder"}
+KIND = {"oficial": "loja oficial", "confiavel": "oferta confiável", "elegivel": "vendedor elegível"}
+
+
+def offer_url(product: CatalogProduct, item_id: str | None) -> str:
+    """Página do produto com a oferta escolhida já selecionada (sem item, a página do produto)."""
+    base = product_url(product)
+    if not item_id:
+        return base
+    return f"{base}{'&' if '?' in base else '?'}pdp_filters=item_id:{item_id}"
+
+
+@dataclass
+class SellerView:
+    nickname: str | None
+    reputation: str
+    power: str | None
+    sales: int
+
+    @classmethod
+    def of(cls, seller: MarketplaceSeller) -> SellerView:
+        return cls(
+            nickname=seller.nickname,
+            reputation=LEVELS.get(seller.level_id or "", "sem reputação"),
+            power=POWER.get(seller.power_seller_status or ""),
+            sales=seller.transactions_total,
+        )
+
+
+async def _sellers(db: AsyncSession, ids: set[int]) -> dict[int, SellerView]:
+    if not ids:
+        return {}
+    rows = (
+        await db.execute(
+            select(MarketplaceSeller).where(
+                MarketplaceSeller.marketplace == "mercadolivre",
+                MarketplaceSeller.external_id.in_(list(ids)),
+            )
+        )
+    ).scalars()
+    return {s.external_id: SellerView.of(s) for s in rows}
+
+
+def _seller_id(snapshot: dict[str, Any]) -> int | None:
+    value = snapshot.get("offer_seller_id")
+    return value if isinstance(value, int) else None
+
+
 @dataclass
 class Card:
     product_id: int
@@ -48,13 +104,21 @@ class Card:
     real_discount_bp: int | None
     used_official: bool
     reasons: list[str] = field(default_factory=list)
+    offer_kind: str | None = None
+    offer_url: str | None = None
+    seller: SellerView | None = None
+    read_at: datetime | None = None
 
 
 def reasons(snapshot: dict[str, Any]) -> list[str]:
     labels = {
         "G1_preco_velho": "preço desatualizado",
         "G2_sem_oferta": "sem oferta à venda",
-        "G7_sem_loja_oficial": "sem loja oficial (exigida)",
+        "G7_sem_loja_oficial": "sem loja oficial (o nicho exige)",
+        "G7_sem_oferta_confiavel": "marca de risco sem oferta confiável (loja oficial ou "
+        "MercadoLíder Gold/Platinum)",
+        "G9_sem_vendedor_elegivel": "nenhum vendedor elegível (reputação amarela/verde, "
+        "envio pelo ML e vendas mínimas)",
         "G8_titulo_de_copia": "título de cópia/réplica",
         "S1_subiu_para_descer": "subiu antes de cair",
         "S2_desconto_alto_demais": "desconto alto demais",
@@ -98,10 +162,13 @@ async def queue(db: AsyncSession, tiers: list[str], niche_id: int | None) -> lis
     ).all()
     ids = [p.id for p, _ in rows]
     latest = await _latest_evaluations(db, ids)
+    snaps = {pid: json.loads(ev.snapshot) for pid, ev in latest.items()}
+    sellers = await _sellers(db, {s for s in map(_seller_id, snaps.values()) if s is not None})
     cards = []
     for product, niche_name in rows:
         ev = latest.get(product.id)
-        snap = json.loads(ev.snapshot) if ev else {}
+        snap = snaps.get(product.id, {})
+        seller_id = _seller_id(snap)
         cards.append(
             Card(
                 product_id=product.id,
@@ -117,6 +184,10 @@ async def queue(db: AsyncSession, tiers: list[str], niche_id: int | None) -> lis
                 real_discount_bp=ev.real_discount_bp if ev else None,
                 used_official=bool(ev and ev.used_official),
                 reasons=reasons(snap),
+                offer_kind=KIND.get(snap.get("offer_kind") or ""),
+                offer_url=offer_url(product, snap.get("offer_item_id")),
+                seller=sellers.get(seller_id) if seller_id is not None else None,
+                read_at=product.last_checked_at,
             )
         )
     return cards
@@ -146,6 +217,9 @@ class ProductPage:
     evaluations: list[OfferEvaluation]
     decisions: list[OperatorDecision]
     latest_snapshot: dict[str, Any]
+    seller: SellerView | None = None
+    offer_url: str | None = None
+    offer_kind: str | None = None
 
 
 async def product_page(db: AsyncSession, product_id: int) -> ProductPage | None:
@@ -187,20 +261,33 @@ async def product_page(db: AsyncSession, product_id: int) -> ProductPage | None:
         ).scalars()
     )
     snap = json.loads(evaluations[0].snapshot) if evaluations else {}
+    seller_id = _seller_id(snap)
+    sellers = await _sellers(db, {seller_id} if seller_id is not None else set())
     return ProductPage(
-        product, niche.name if niche else None, observations, evaluations, decisions, snap
+        product,
+        niche.name if niche else None,
+        observations,
+        evaluations,
+        decisions,
+        snap,
+        seller=sellers.get(seller_id) if seller_id is not None else None,
+        offer_url=offer_url(product, snap.get("offer_item_id")),
+        offer_kind=KIND.get(snap.get("offer_kind") or ""),
     )
 
 
 def sparkline(
     observations: list[PriceObservation], width: int = 320, height: int = 90
 ) -> dict[str, Any]:
-    """Pontos (degrau) do menor preço e do menor preço de loja oficial, já em coordenadas SVG."""
-    if not observations:
-        return {"min": "", "official": "", "lo": None, "hi": None}
-    prices = [o.min_price_cents for o in observations] + [
+    """Degraus do menor preço de vendedor elegível e da loja oficial, em coordenadas SVG.
+
+    O menor preço bruto fica fora: pode ser de vendedor sem reputação (a nota o ignora).
+    """
+    prices = [o.eligible_min_price_cents for o in observations if o.eligible_min_price_cents] + [
         o.min_official_price_cents for o in observations if o.min_official_price_cents
     ]
+    if not prices:
+        return {"min": "", "official": "", "lo": None, "hi": None}
     lo, hi = min(prices), max(prices)
     t0 = observations[0].observed_at.timestamp()
     t1 = max(utcnow().timestamp(), t0 + 1)
@@ -227,7 +314,7 @@ def sparkline(
         return " ".join(pts)
 
     return {
-        "min": path([(o.observed_at, o.min_price_cents) for o in observations]),
+        "min": path([(o.observed_at, o.eligible_min_price_cents) for o in observations]),
         "official": path([(o.observed_at, o.min_official_price_cents) for o in observations]),
         "lo": lo,
         "hi": hi,

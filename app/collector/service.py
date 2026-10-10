@@ -9,6 +9,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -18,10 +19,13 @@ from app.core.config import Settings
 from app.core.logging import get_logger
 from app.domain.catalog_offers import (
     CatalogSnapshot,
+    OfferPolicy,
+    SellerInfo,
     Tier,
     TierPolicy,
     needs_heartbeat,
     next_tier,
+    seller_ids,
     summarize,
 )
 from app.integrations.mercadolivre import (
@@ -36,6 +40,7 @@ from app.models import (
     CatalogProduct,
     CollectionRun,
     IntegrationError,
+    MarketplaceSeller,
     NicheCategory,
     PriceObservation,
 )
@@ -43,6 +48,7 @@ from app.models import (
 logger = get_logger(__name__)
 MARKETPLACE = "mercadolivre"
 MAX_FAILURES_BEFORE_COLD = 3
+SELLER_TTL = timedelta(days=7)
 
 
 def tier_policy(settings: Settings) -> TierPolicy:
@@ -96,6 +102,7 @@ class Collector:
         self._client = client
         self._settings = settings
         self._policy = tier_policy(settings)
+        self._offer_policy = OfferPolicy(min_seller_sales=settings.min_seller_sales)
 
     # ------------------------------------------------------------------ registro
 
@@ -268,6 +275,72 @@ class Collector:
             await self._finish_run(run_id, stats, "failed", str(exc))
             return 0
 
+    # ------------------------------------------------------------------ vendedores
+
+    async def _sellers(self, wanted: set[int], run_id: int) -> dict[int, SellerInfo]:
+        """Reputação dos vendedores: cache no banco; o que falta ou venceu vem por /users/bulk."""
+        if not wanted:
+            return {}
+        fresh_after = utcnow() - SELLER_TTL
+        async with self._sessions() as session:
+            cached = {
+                s.external_id: s
+                for s in (
+                    await session.execute(
+                        select(MarketplaceSeller).where(
+                            MarketplaceSeller.marketplace == MARKETPLACE,
+                            MarketplaceSeller.external_id.in_(list(wanted)),
+                        )
+                    )
+                ).scalars()
+            }
+        missing = sorted(s for s in wanted if s not in cached or cached[s].checked_at < fresh_after)
+        fetched: list[dict[str, Any]] = []
+        if missing:
+            try:
+                fetched = await self._client.users_bulk(missing)
+            except (RateLimitedError, CallBudgetExceededError):
+                raise
+            except MercadoLivreError as exc:
+                await self._record_error("ml_sellers", run_id, exc)
+        now = utcnow()
+        if fetched:
+            async with self._sessions() as session, session.begin():
+                rows = {
+                    s.external_id: s
+                    for s in (
+                        await session.execute(
+                            select(MarketplaceSeller).where(
+                                MarketplaceSeller.marketplace == MARKETPLACE,
+                                MarketplaceSeller.external_id.in_([u["id"] for u in fetched]),
+                            )
+                        )
+                    ).scalars()
+                }
+                for user in fetched:
+                    rep = user.get("seller_reputation") or {}
+                    transactions = (rep.get("transactions") or {}) if isinstance(rep, dict) else {}
+                    row = rows.get(user["id"])
+                    if row is None:
+                        row = MarketplaceSeller(marketplace=MARKETPLACE, external_id=user["id"])
+                        session.add(row)
+                        cached[user["id"]] = row
+                    row.nickname = str(user.get("nickname") or "")[:120] or None
+                    row.level_id = rep.get("level_id") if isinstance(rep, dict) else None
+                    row.power_seller_status = (
+                        rep.get("power_seller_status") if isinstance(rep, dict) else None
+                    )
+                    row.transactions_total = int(transactions.get("total") or 0)
+                    row.status = (
+                        str((user.get("status") or {}).get("site_status") or "")[:16] or None
+                    )
+                    row.checked_at = now
+                    cached[row.external_id] = row
+        return {
+            sid: SellerInfo(s.level_id, s.power_seller_status, s.transactions_total)
+            for sid, s in cached.items()
+        }
+
     # ------------------------------------------------------------------ atualização de preço
 
     async def refresh_due(self) -> RunStats:
@@ -291,13 +364,12 @@ class Collector:
 
         run_id = await self._start_run("ml_refresh")
         calls_before = self._client.calls
+        raw: dict[int, list[dict[str, Any]]] = {}
         results: dict[int, CatalogSnapshot | MercadoLivreError | None] = {}
         stop: MercadoLivreError | None = None
         for product in due:
             try:
-                results[product.id] = summarize(
-                    await self._client.product_items(product.external_id)
-                )
+                raw[product.id] = await self._client.product_items(product.external_id)
             except (RateLimitedError, CallBudgetExceededError) as exc:
                 stop = exc
                 break
@@ -305,6 +377,19 @@ class Collector:
                 results[product.id] = exc
                 stats.errors += 1
                 await self._record_error("ml_refresh", run_id, exc)
+
+        # Reputação dos vendedores do lote inteiro (cache de 7 dias + /users/bulk para o resto).
+        sellers: dict[int, SellerInfo] = {}
+        if raw and stop is None:
+            wanted: set[int] = set()
+            for offers in raw.values():
+                wanted |= seller_ids(offers)
+            try:
+                sellers = await self._sellers(wanted, run_id)
+            except (RateLimitedError, CallBudgetExceededError) as exc:
+                stop = exc
+        for product_id, offers in raw.items():
+            results[product_id] = summarize(offers, sellers, self._offer_policy)
 
         now = utcnow()
         async with self._sessions() as session, session.begin():
@@ -411,6 +496,17 @@ def _snapshot(row: PriceObservation) -> CatalogSnapshot:
         min_offer_seller_id=row.min_offer_seller_id,
         min_offer_original_price_cents=row.min_offer_original_price_cents,
         min_offer_free_shipping=row.min_offer_free_shipping,
+        eligible_min_price_cents=row.eligible_min_price_cents,
+        eligible_item_id=row.eligible_item_id,
+        eligible_seller_id=row.eligible_seller_id,
+        eligible_offers_count=row.eligible_offers_count,
+        trusted_min_price_cents=row.trusted_min_price_cents,
+        trusted_item_id=row.trusted_item_id,
+        trusted_seller_id=row.trusted_seller_id,
+        eligible_official=row.eligible_official,
+        trusted_official=row.trusted_official,
+        official_item_id=row.official_item_id,
+        official_seller_id=row.official_seller_id,
     )
 
 
@@ -432,4 +528,15 @@ def _observation(
         min_offer_seller_id=snap.min_offer_seller_id,
         min_offer_original_price_cents=snap.min_offer_original_price_cents,
         min_offer_free_shipping=snap.min_offer_free_shipping,
+        eligible_min_price_cents=snap.eligible_min_price_cents,
+        eligible_item_id=snap.eligible_item_id,
+        eligible_seller_id=snap.eligible_seller_id,
+        eligible_offers_count=snap.eligible_offers_count,
+        trusted_min_price_cents=snap.trusted_min_price_cents,
+        trusted_item_id=snap.trusted_item_id,
+        trusted_seller_id=snap.trusted_seller_id,
+        eligible_official=snap.eligible_official,
+        trusted_official=snap.trusted_official,
+        official_item_id=snap.official_item_id,
+        official_seller_id=snap.official_seller_id,
     )

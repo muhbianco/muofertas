@@ -14,7 +14,10 @@ from app.models import CatalogProduct, Niche, OfferEvaluation, PriceObservation
 async def seed(
     sessions: async_sessionmaker[AsyncSession], *, history: list[tuple[float, int, int | None]]
 ) -> int:
-    """history: (dias atrás, menor preço, menor preço oficial)."""
+    """history: (dias atrás, menor preço, menor preço oficial).
+
+    Nos testes, o menor preço é de vendedor elegível e a loja oficial é a oferta confiável.
+    """
     now = utcnow()
     async with sessions() as session, session.begin():
         niche = Niche(
@@ -65,6 +68,15 @@ async def seed(
                     min_offer_seller_id=1,
                     min_offer_original_price_cents=None,
                     min_offer_free_shipping=True,
+                    eligible_min_price_cents=price,
+                    eligible_item_id="MLB1",
+                    eligible_seller_id=1,
+                    eligible_offers_count=10,
+                    eligible_official=official is not None and official <= price,
+                    trusted_min_price_cents=official,
+                    trusted_item_id="MLB2" if official else None,
+                    trusted_seller_id=2 if official else None,
+                    trusted_official=official is not None,
                 )
             )
         return product.id
@@ -84,7 +96,7 @@ async def test_real_official_drop_is_recorded_and_flag_cleared(
     assert ev.used_official
     assert ev.real_discount_bp == 3333
     snapshot = json.loads(ev.snapshot)
-    assert snapshot["ruleset"].startswith("v1") and "components" in snapshot
+    assert snapshot["ruleset"].startswith("v2") and "components" in snapshot
     assert product.needs_evaluation is False
     assert product.last_tier == ev.tier
     # já avaliado e sem mudança: nada a fazer
@@ -99,4 +111,35 @@ async def test_high_risk_brand_without_official_is_blocked(
     async with sessions() as session:
         ev = (await session.execute(select(OfferEvaluation))).scalar_one()
     assert ev.tier == "bloqueada"
-    assert "G7_sem_loja_oficial" in json.loads(ev.snapshot)["gates_failed"]
+    assert "G7_sem_oferta_confiavel" in json.loads(ev.snapshot)["gates_failed"]
+
+
+async def test_rows_before_seller_filter_stay_out_of_the_series(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    # Linha antiga (antes da 0004): sem preço elegível, não entra na série da nota.
+    product_id = await seed(sessions, history=[(0.0035, 30000, 30000)])
+    async with sessions() as session, session.begin():
+        session.add(
+            PriceObservation(
+                product_id=product_id,
+                observed_at=utcnow() - timedelta(days=30),
+                kind="change",
+                currency="BRL",
+                min_price_cents=10000,
+                min_official_price_cents=None,
+                offers_count=3,
+                official_offers_count=0,
+                deal_offers_count=0,
+                free_shipping_offers_count=0,
+                min_offer_item_id="MLB9",
+                min_offer_seller_id=9,
+                min_offer_original_price_cents=None,
+                min_offer_free_shipping=False,
+            )
+        )
+    await Evaluator(sessions).evaluate_due()
+    async with sessions() as session:
+        ev = (await session.execute(select(OfferEvaluation))).scalar_one()
+    assert ev.price_cents == 30000
+    assert ev.real_discount_bp is None  # a linha de R$ 100 não virou referência

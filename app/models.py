@@ -147,6 +147,38 @@ class PriceObservation(Base):
     min_offer_seller_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     min_offer_original_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     min_offer_free_shipping: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 0004: o preço que vale é o de vendedor elegível (regra do afiliado) ou confiável (loja
+    # oficial / MercadoLíder ouro-platina). O `min_*` acima é bruto e só serve de sinal.
+    eligible_min_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    eligible_item_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    eligible_seller_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    eligible_offers_count: Mapped[int] = mapped_column(Integer, default=0)
+    trusted_min_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    trusted_item_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    trusted_seller_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    eligible_official: Mapped[bool] = mapped_column(Boolean, default=False)
+    trusted_official: Mapped[bool] = mapped_column(Boolean, default=False)
+    official_item_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    official_seller_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+
+class MarketplaceSeller(Base):
+    """Reputação do vendedor (cache de /users/bulk, renovado a cada 7 dias)."""
+
+    __tablename__ = "marketplace_seller"
+    __table_args__ = (UniqueConstraint("marketplace", "external_id"),)
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    marketplace: Mapped[str] = mapped_column(String(20))
+    external_id: Mapped[int] = mapped_column(BigInteger)
+    nickname: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    level_id: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    power_seller_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    transactions_total: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    checked_at: Mapped[datetime] = mapped_column(UTCDateTime())
 
 
 class CollectionRun(Base):

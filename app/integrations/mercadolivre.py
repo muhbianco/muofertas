@@ -29,6 +29,7 @@ MAX_ATTEMPTS = 3
 TOKEN_SAFETY_SECONDS = 300
 PRODUCT_ITEMS_PAGE = 100
 PRODUCT_ITEMS_MAX = 300
+USERS_BULK_PAGE = 20
 
 
 class MercadoLivreError(Exception):
@@ -233,6 +234,24 @@ class MercadoLivreClient:
             if not page or offset >= int(total or 0):
                 break
         return offers
+
+    async def users_bulk(self, user_ids: list[int]) -> list[dict[str, Any]]:
+        """Perfil público (com `seller_reputation`) de vários vendedores, 20 por chamada.
+
+        `/users/bulk` substitui `/users?ids=` (doc do ML: migrar até 25/10/2026). A resposta pode
+        vir como lista de usuários ou de {code, body}; os dois formatos são aceitos.
+        """
+        users: list[dict[str, Any]] = []
+        for i in range(0, len(user_ids), USERS_BULK_PAGE):
+            chunk = user_ids[i : i + USERS_BULK_PAGE]
+            body = await self.get("/users/bulk", params={"ids": ",".join(str(u) for u in chunk)})
+            for entry in body if isinstance(body, list) else []:
+                if not isinstance(entry, dict):
+                    continue
+                user = entry.get("body", entry)
+                if isinstance(user, dict) and isinstance(user.get("id"), int):
+                    users.append(user)
+        return users
 
     @property
     def calls_this_hour(self) -> int:

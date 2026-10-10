@@ -76,3 +76,5 @@ th { background: #faf5e8; font-weight: 600; }
 .erro { color: var(--verm); font-size: 14px; margin-top: 10px; }
 .ok { color: var(--esm); }
 .sair { background: transparent; color: var(--creme); border: 1px solid rgba(255,255,255,.4); border-radius: 10px; padding: 6px 10px; font-size: 14px; }
+.oferta { font-size: 13px; color: var(--cinza); margin-top: 2px; }
+.nota-pix { font-size: 12px; color: var(--cinza); margin: 0 0 10px; }

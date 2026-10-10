@@ -21,7 +21,7 @@ from app.core.clock import utcnow
 from app.core.logging import get_logger
 from app.domain.catalog_offers import CatalogSnapshot
 from app.domain.price_history import PricePoint, compute_stats
-from app.domain.scoring import Evaluation, ScoringInput, evaluate
+from app.domain.scoring import Evaluation, ScoringInput, evaluate, kind_price, required_kind
 from app.models import CatalogProduct, Niche, OfferEvaluation, PriceObservation
 
 logger = get_logger(__name__)
@@ -58,6 +58,17 @@ def _snapshot(row: PriceObservation) -> CatalogSnapshot:
         min_offer_seller_id=row.min_offer_seller_id,
         min_offer_original_price_cents=row.min_offer_original_price_cents,
         min_offer_free_shipping=row.min_offer_free_shipping,
+        eligible_min_price_cents=row.eligible_min_price_cents,
+        eligible_item_id=row.eligible_item_id,
+        eligible_seller_id=row.eligible_seller_id,
+        eligible_offers_count=row.eligible_offers_count,
+        trusted_min_price_cents=row.trusted_min_price_cents,
+        trusted_item_id=row.trusted_item_id,
+        trusted_seller_id=row.trusted_seller_id,
+        eligible_official=row.eligible_official,
+        trusted_official=row.trusted_official,
+        official_item_id=row.official_item_id,
+        official_seller_id=row.official_seller_id,
     )
 
 
@@ -140,7 +151,11 @@ class Evaluator:
                         PriceObservation.product_id.in_(ids),
                         PriceObservation.observed_at >= now - timedelta(days=HISTORY_DAYS),
                     )
-                    .order_by(PriceObservation.product_id, PriceObservation.id)
+                    .order_by(
+                        PriceObservation.product_id,
+                        PriceObservation.observed_at,
+                        PriceObservation.id,
+                    )
                 )
             ).scalars()
             history: dict[int, list[PriceObservation]] = defaultdict(list)
@@ -154,10 +169,14 @@ class Evaluator:
             rule = rules.get(product.niche_id or -1)
             if not rows or rule is None:
                 continue
-            # Preço de referência sobre a loja oficial quando ela existe; senão, o menor geral.
+            # A série da nota é a da mesma régua que a nota usa. Linhas de antes da 0004 só têm o
+            # menor preço oficial: entram na régua oficial e ficam fora das outras.
+            high_risk = bool(product.brand and product.brand.lower() in rule.high_risk_brands)
+            kind = required_kind(require_official=rule.require_official, high_risk_brand=high_risk)
             points = [
-                PricePoint(r.observed_at, r.min_official_price_cents or r.min_price_cents)
+                PricePoint(r.observed_at, price)
                 for r in rows
+                if (price := kind_price(_snapshot(r), kind)[0])
             ]
             ev = evaluate(
                 ScoringInput(
@@ -165,9 +184,7 @@ class Evaluator:
                     brand=product.brand,
                     commission_rate=rule.commission_rate,
                     require_official=rule.require_official,
-                    high_risk_brand=bool(
-                        product.brand and product.brand.lower() in rule.high_risk_brands
-                    ),
+                    high_risk_brand=high_risk,
                     snapshot=_snapshot(rows[-1]),
                     stats=compute_stats(points, now),
                     observed_at=product.last_checked_at,

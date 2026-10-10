@@ -12,6 +12,12 @@
   {% if s.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}
   <span class="preco">{{ s.price_cents | brl }}</span>
 </div>
+{% if p.offer_kind %}<p class="oferta">
+  {% if s.used_official %}loja oficial{% elif p.seller %}{{ p.seller.nickname or 'vendedor' }} · reputação {{ p.seller.reputation }}{% if p.seller.power %} · {{ p.seller.power }}{% endif %} · {{ p.seller.sales }} vendas{% else %}{{ p.offer_kind }}{% endif %}
+  · <a href="{{ p.offer_url }}" target="_blank" rel="noopener noreferrer">ver esta oferta</a>
+  · lido {{ prod.last_checked_at | local }}
+</p>{% endif %}
+<p class="nota-pix">Preço do anúncio. O desconto no Pix que a página do ML às vezes mostra não vem pela API.</p>
 
 <h2>Histórico (90 dias)</h2>
 <div class="grafico">
@@ -20,9 +26,9 @@
     <polyline fill="none" stroke="#0e8a62" stroke-width="2" points="{{ spark.min }}"/>
     {% if spark.official %}<polyline fill="none" stroke="#f2a900" stroke-width="2" stroke-dasharray="4 3" points="{{ spark.official }}"/>{% endif %}
   </svg>
-  <div class="legenda"><span><i class="leg-min"></i>menor preço</span><span><i class="leg-of"></i>loja oficial</span>
+  <div class="legenda"><span><i class="leg-min"></i>vendedor elegível</span><span><i class="leg-of"></i>loja oficial</span>
     <span>de {{ spark.lo | brl }} a {{ spark.hi | brl }}</span></div>
-  {% else %}<p class="vazio">Sem observações ainda.</p>{% endif %}
+  {% else %}<p class="vazio">Sem preço de vendedor elegível ainda.</p>{% endif %}
 </div>
 
 <h2>Por que esta nota</h2>
@@ -51,9 +57,9 @@
 
 <h2>Últimas observações</h2>
 <table>
-  <tr><th>Quando</th><th>Menor</th><th>Oficial</th><th>Ofertas</th></tr>
+  <tr><th>Quando</th><th>Elegível</th><th>Oficial</th><th>Qualquer vendedor</th></tr>
   {% for o in p.observations[-10:] | reverse %}
-  <tr><td>{{ o.observed_at | local }}</td><td>{{ o.min_price_cents | brl }}</td><td>{{ o.min_official_price_cents | brl }}</td><td>{{ o.offers_count }}</td></tr>
+  <tr><td>{{ o.observed_at | local }}</td><td>{{ o.eligible_min_price_cents | brl }}</td><td>{{ o.min_official_price_cents | brl }}</td><td>{{ o.min_price_cents | brl }} <small>({{ o.eligible_offers_count }}/{{ o.offers_count }} elegíveis)</small></td></tr>
   {% endfor %}
 </table>
 

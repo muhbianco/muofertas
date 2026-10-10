@@ -20,7 +20,7 @@ from typing import Any
 from app.domain.catalog_offers import CatalogSnapshot
 from app.domain.price_history import PriceStats
 
-RULESET_VERSION = "v1-2026-10-10"
+RULESET_VERSION = "v2-2026-10-10"
 
 WEIGHTS = {"F": 0.35, "D": 0.20, "Q": 0.15, "U": 0.10, "R": 0.20}
 
@@ -69,6 +69,11 @@ class Evaluation:
     reference_cents: int | None
     ruleset: str = RULESET_VERSION
     notes: list[str] = field(default_factory=list)
+    # Régua de onde saiu o preço: "oficial", "confiavel" (oficial ou MercadoLíder Gold/Platinum
+    # verde) ou "elegivel" (vendedor amarelo/verde com envio pelo ML).
+    offer_kind: str | None = None
+    offer_item_id: str | None = None
+    offer_seller_id: int | None = None
 
     def as_snapshot(self) -> dict[str, Any]:
         data = asdict(self)
@@ -89,6 +94,35 @@ def _interpolate(x: float, points: list[tuple[float, float]]) -> float:
     return points[-1][1]
 
 
+def required_kind(*, require_official: bool, high_risk_brand: bool) -> str:
+    """Qual régua de preço vale: o nicho pode exigir loja oficial; a marca de risco pede oferta
+    confiável (oficial ou MercadoLíder Gold/Platinum verde); o resto, qualquer vendedor elegível."""
+    if require_official:
+        return "oficial"
+    if high_risk_brand:
+        return "confiavel"
+    return "elegivel"
+
+
+def kind_price(snap: CatalogSnapshot, kind: str) -> tuple[int | None, str | None, int | None]:
+    """(preço, anúncio, vendedor) da régua."""
+    if kind == "oficial":
+        return snap.min_official_price_cents, snap.official_item_id, snap.official_seller_id
+    if kind == "confiavel":
+        return snap.trusted_min_price_cents, snap.trusted_item_id, snap.trusted_seller_id
+    return snap.eligible_min_price_cents, snap.eligible_item_id, snap.eligible_seller_id
+
+
+# Até 2% acima do melhor preço da régua, a loja oficial é preferida.
+OFFICIAL_TOLERANCE = 1.02
+
+MISSING_GATE = {
+    "oficial": "G7_sem_loja_oficial",
+    "confiavel": "G7_sem_oferta_confiavel",
+    "elegivel": "G9_sem_vendedor_elegivel",
+}
+
+
 def evaluate(inp: ScoringInput) -> Evaluation:
     gates: list[str] = []
     signals: list[str] = []
@@ -103,20 +137,43 @@ def evaluate(inp: ScoringInput) -> Evaluation:
     if FORBIDDEN_TITLE.search(_plain(inp.title)):
         gates.append("G8_titulo_de_copia")
 
-    must_be_official = inp.require_official or inp.high_risk_brand
+    # O preço que vale é de oferta que o programa paga (vendedor amarelo/verde, envio pelo ML),
+    # na régua que o nicho e a marca pedem.
+    kind = required_kind(require_official=inp.require_official, high_risk_brand=inp.high_risk_brand)
     price: int | None = None
     used_official = False
+    offer_kind: str | None = None
+    offer_item: str | None = None
+    offer_seller: int | None = None
     if snap is not None:
-        if snap.min_official_price_cents is not None and (
-            must_be_official or snap.min_official_price_cents <= snap.min_price_cents * 1.02
-        ):
-            # Loja oficial quando é obrigatório, ou quando custa praticamente o mesmo.
-            price, used_official = snap.min_official_price_cents, True
-        elif must_be_official:
-            gates.append("G7_sem_loja_oficial")
+        price, offer_item, offer_seller = kind_price(snap, kind)
+        if price is None:
+            gates.append(MISSING_GATE[kind])
         else:
-            price = snap.min_price_cents
-            notes.append("menor preço de vendedor não oficial")
+            if (
+                kind != "oficial"
+                and snap.min_official_price_cents is not None
+                and snap.min_official_price_cents <= price * OFFICIAL_TOLERANCE
+            ):
+                # Loja oficial custando praticamente o mesmo: ela é a recomendação.
+                kind = "oficial"
+                price, offer_item, offer_seller = kind_price(snap, kind)
+                assert price is not None
+            offer_kind = kind
+            used_official = {
+                "oficial": True,
+                "confiavel": snap.trusted_official,
+                "elegivel": snap.eligible_official,
+            }[kind]
+            floor = snap.eligible_min_price_cents or price
+            if floor < price * 0.95:
+                cheaper = round(100 * (1 - floor / price))
+                notes.append(f"vendedor elegível {cheaper}% mais barato fica de fora pela régua")
+            if snap.min_price_cents < floor * 0.95:
+                cheaper = round(100 * (1 - snap.min_price_cents / price))
+                notes.append(
+                    f"há oferta {cheaper}% mais barata de vendedor não elegível (ignorada)"
+                )
 
     if gates:
         return Evaluation(
@@ -130,6 +187,9 @@ def evaluate(inp: ScoringInput) -> Evaluation:
             None,
             inp.stats.reference_cents,
             notes=notes,
+            offer_kind=offer_kind,
+            offer_item_id=offer_item,
+            offer_seller_id=offer_seller,
         )
     assert price is not None and snap is not None
 
@@ -144,6 +204,7 @@ def evaluate(inp: ScoringInput) -> Evaluation:
         and snap.min_official_price_cents is not None
         and price < snap.min_official_price_cents * 0.6
     ):
+        # Vendedor elegível, mas 40% abaixo da própria marca: risco de falsificação ou erro.
         signals.append("S4_muito_abaixo_da_loja_oficial")
 
     # --- componentes ---------------------------------------------------------------------
@@ -163,7 +224,11 @@ def evaluate(inp: ScoringInput) -> Evaluation:
         else max(0.0, 100.0 - (inp.highlight_position - 1) * 4.0)
     )
 
-    q = 50.0 + (25.0 if used_official else 0.0) + (15.0 if inp.stats.has_reference else 0.0)
+    q = (
+        50.0
+        + (25.0 if used_official else 15.0 if offer_kind == "confiavel" else 0.0)
+        + (15.0 if inp.stats.has_reference else 0.0)
+    )
     if inp.observed_at is not None and inp.now - inp.observed_at <= timedelta(hours=1):
         q += 10.0
     q = min(q, 100.0)
@@ -212,4 +277,7 @@ def evaluate(inp: ScoringInput) -> Evaluation:
         round(discount, 4) if discount is not None else None,
         inp.stats.reference_cents,
         notes=notes,
+        offer_kind=offer_kind,
+        offer_item_id=offer_item,
+        offer_seller_id=offer_seller,
     )

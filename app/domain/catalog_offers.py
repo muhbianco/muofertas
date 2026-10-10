@@ -8,6 +8,7 @@ do vendedor) é guardado como dado auxiliar e nunca vira base de desconto.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -34,6 +35,25 @@ def to_cents(value: Any) -> int | None:
     return int((amount * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
+# Regra do programa de afiliados do ML (ajuda 30088): só vendedor com reputação amarela ou verde.
+ELIGIBLE_LEVELS = frozenset({"3_yellow", "4_light_green", "5_green"})
+TRUSTED_POWER = frozenset({"gold", "platinum"})
+# Envio pelo Mercado Envios. "custom"/"not_specified" é "entrega a combinar com o vendedor".
+ML_SHIPPING_MODES = frozenset({"me1", "me2"})
+
+
+@dataclass(frozen=True, slots=True)
+class SellerInfo:
+    level_id: str | None
+    power_seller_status: str | None
+    transactions_total: int
+
+
+@dataclass(frozen=True, slots=True)
+class OfferPolicy:
+    min_seller_sales: int = 50
+
+
 @dataclass(frozen=True, slots=True)
 class Offer:
     item_id: str
@@ -44,6 +64,7 @@ class Offer:
     free_shipping: bool
     has_deal: bool
     condition: str | None
+    shipping_mode: str | None = None
 
     @classmethod
     def from_api(cls, raw: dict[str, Any]) -> Offer | None:
@@ -55,6 +76,7 @@ class Offer:
         shipping = raw.get("shipping") or {}
         seller = raw.get("seller_id")
         official = raw.get("official_store_id")
+        mode = shipping.get("mode")
         return cls(
             item_id=item_id,
             seller_id=seller if isinstance(seller, int) else None,
@@ -64,12 +86,47 @@ class Offer:
             free_shipping=bool(shipping.get("free_shipping")),
             has_deal=bool(raw.get("deal_ids")),
             condition=raw.get("condition") if isinstance(raw.get("condition"), str) else None,
+            shipping_mode=mode if isinstance(mode, str) else None,
         )
+
+
+def is_eligible(offer: Offer, seller: SellerInfo | None, policy: OfferPolicy) -> bool:
+    """Oferta que o programa paga e que dá para recomendar.
+
+    Nova e de vendedor amarelo/verde com envio pelo ML e histórico mínimo. Loja oficial é a marca:
+    dispensa a contagem de vendas e o envio pelo ML (gift card e serviço digital vêm sem frete).
+    """
+    if offer.condition not in (None, "new"):
+        return False
+    if offer.official_store_id is not None:
+        return seller is None or seller.level_id is None or seller.level_id in ELIGIBLE_LEVELS
+    return (
+        offer.shipping_mode in ML_SHIPPING_MODES
+        and seller is not None
+        and seller.level_id in ELIGIBLE_LEVELS
+        and seller.transactions_total >= policy.min_seller_sales
+    )
+
+
+def is_trusted(offer: Offer, seller: SellerInfo | None, policy: OfferPolicy) -> bool:
+    """Para marca de alto risco: loja oficial, ou vendedor verde com MercadoLíder ouro/platina."""
+    if not is_eligible(offer, seller, policy):
+        return False
+    return offer.official_store_id is not None or (
+        seller is not None
+        and seller.level_id == "5_green"
+        and seller.power_seller_status in TRUSTED_POWER
+    )
 
 
 @dataclass(frozen=True, slots=True)
 class CatalogSnapshot:
-    """O que vira uma linha de `price_observation`."""
+    """O que vira uma linha de `price_observation`.
+
+    `min_*` é o menor preço bruto (qualquer vendedor): serve só de sinal. O preço que vale para a
+    nota sai de uma das três réguas: `eligible_*` (vendedor elegível), `trusted_*` (loja oficial
+    ou MercadoLíder Gold/Platinum verde) ou `*official*` (só loja oficial elegível).
+    """
 
     min_price_cents: int
     min_official_price_cents: int | None
@@ -81,31 +138,73 @@ class CatalogSnapshot:
     min_offer_seller_id: int | None
     min_offer_original_price_cents: int | None
     min_offer_free_shipping: bool
+    eligible_min_price_cents: int | None = None
+    eligible_item_id: str | None = None
+    eligible_seller_id: int | None = None
+    eligible_offers_count: int = 0
+    trusted_min_price_cents: int | None = None
+    trusted_item_id: str | None = None
+    trusted_seller_id: int | None = None
+    eligible_official: bool = False
+    trusted_official: bool = False
+    official_item_id: str | None = None
+    official_seller_id: int | None = None
+
+    @property
+    def tracking_price_cents(self) -> int:
+        """Preço que move as camadas do coletor: o elegível quando existe."""
+        return self.eligible_min_price_cents or self.trusted_min_price_cents or self.min_price_cents
 
     def differs_from(self, previous: CatalogSnapshot | None) -> bool:
-        """Mudança que merece linha nova no histórico (o resto vira batimento diário)."""
+        """Mudança que merece linha nova no histórico (o resto vira batimento diário).
+
+        O menor preço bruto fica de fora: vendedor sem reputação entrando e saindo não é sinal.
+        """
         if previous is None:
             return True
         return (
-            self.min_price_cents != previous.min_price_cents
+            self.eligible_min_price_cents != previous.eligible_min_price_cents
+            or self.trusted_min_price_cents != previous.trusted_min_price_cents
             or self.min_official_price_cents != previous.min_official_price_cents
+            or self.eligible_item_id != previous.eligible_item_id
             or (self.deal_offers_count > 0) != (previous.deal_offers_count > 0)
-            or self.min_offer_item_id != previous.min_offer_item_id
         )
 
 
-def summarize(raw_offers: list[dict[str, Any]]) -> CatalogSnapshot | None:
-    """Só ofertas novas (condition=new) entram: usado não é recomendável no programa."""
+def seller_ids(raw_offers: list[dict[str, Any]]) -> set[int]:
+    return {s for s in (r.get("seller_id") for r in raw_offers) if isinstance(s, int)}
+
+
+def summarize(
+    raw_offers: list[dict[str, Any]],
+    sellers: Mapping[int, SellerInfo] | None = None,
+    policy: OfferPolicy | None = None,
+) -> CatalogSnapshot | None:
+    """Resume as ofertas novas do produto.
+
+    Sem reputação conhecida, nenhum vendedor comum é elegível (só loja oficial).
+    """
+    policy = policy or OfferPolicy()
+    known = sellers or {}
     offers = [
         o for o in (Offer.from_api(r) for r in raw_offers) if o and o.condition in (None, "new")
     ]
     if not offers:
         return None
-    best = min(offers, key=lambda o: (o.price_cents, o.official_store_id is None, o.item_id))
-    official = [o.price_cents for o in offers if o.official_store_id is not None]
+
+    def key(o: Offer) -> tuple[int, bool, str]:
+        return (o.price_cents, o.official_store_id is None, o.item_id)
+
+    best = min(offers, key=key)
+    eligible = [o for o in offers if is_eligible(o, known.get(o.seller_id or -1), policy)]
+    trusted = [o for o in eligible if is_trusted(o, known.get(o.seller_id or -1), policy)]
+    official = [o for o in eligible if o.official_store_id is not None]
+    best_eligible = min(eligible, key=key) if eligible else None
+    best_trusted = min(trusted, key=key) if trusted else None
+    best_official = min(official, key=key) if official else None
     return CatalogSnapshot(
         min_price_cents=best.price_cents,
-        min_official_price_cents=min(official) if official else None,
+        min_official_price_cents=best_official.price_cents if best_official else None,
         offers_count=len(offers),
         official_offers_count=len(official),
         deal_offers_count=sum(o.has_deal for o in offers),
@@ -114,6 +213,17 @@ def summarize(raw_offers: list[dict[str, Any]]) -> CatalogSnapshot | None:
         min_offer_seller_id=best.seller_id,
         min_offer_original_price_cents=best.original_price_cents,
         min_offer_free_shipping=best.free_shipping,
+        eligible_min_price_cents=best_eligible.price_cents if best_eligible else None,
+        eligible_item_id=best_eligible.item_id if best_eligible else None,
+        eligible_seller_id=best_eligible.seller_id if best_eligible else None,
+        eligible_offers_count=len(eligible),
+        trusted_min_price_cents=best_trusted.price_cents if best_trusted else None,
+        trusted_item_id=best_trusted.item_id if best_trusted else None,
+        trusted_seller_id=best_trusted.seller_id if best_trusted else None,
+        eligible_official=bool(best_eligible and best_eligible.official_store_id is not None),
+        trusted_official=bool(best_trusted and best_trusted.official_store_id is not None),
+        official_item_id=best_official.item_id if best_official else None,
+        official_seller_id=best_official.seller_id if best_official else None,
     )
 
 
@@ -145,7 +255,7 @@ def next_tier(
     if (
         previous
         and new
-        and new.min_price_cents <= previous.min_price_cents * (1 - policy.hot_drop_ratio)
+        and new.tracking_price_cents <= previous.tracking_price_cents * (1 - policy.hot_drop_ratio)
     ):
         return Tier.HOT
     if new and previous is None:

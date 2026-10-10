@@ -4,6 +4,8 @@ from datetime import UTC, datetime, timedelta
 
 from app.domain.catalog_offers import (
     CatalogSnapshot,
+    OfferPolicy,
+    SellerInfo,
     Tier,
     TierPolicy,
     needs_heartbeat,
@@ -94,20 +96,101 @@ def test_summarize_empty_or_only_used() -> None:
     assert summarize([offer("MLB1", 10.0, condition="used")]) is None
 
 
-def test_differs_from() -> None:
-    assert snap(1000).differs_from(None)
-    assert not snap(1000).differs_from(snap(1000, offers_count=9))  # só contagem não é mudança
-    assert snap(900).differs_from(snap(1000))
-    assert snap(1000, min_official_price_cents=1100).differs_from(snap(1000))
-    assert snap(1000, deal_offers_count=2).differs_from(snap(1000))
-    assert snap(1000, min_offer_item_id="MLB2").differs_from(snap(1000))
+def test_differs_from_ignores_raw_min_from_ineligible_sellers() -> None:
+    base = snap(1000, eligible_min_price_cents=1200, eligible_item_id="MLB2")
+    assert base.differs_from(None)
+    # vendedor sem reputação entrando mais barato: não é mudança
+    assert not base.differs_from(snap(500, eligible_min_price_cents=1200, eligible_item_id="MLB2"))
+    assert snap(1000, eligible_min_price_cents=1100, eligible_item_id="MLB2").differs_from(base)
+    assert snap(1000, eligible_min_price_cents=1200, eligible_item_id="MLB3").differs_from(base)
+    assert snap(
+        1000, eligible_min_price_cents=1200, eligible_item_id="MLB2", trusted_min_price_cents=1300
+    ).differs_from(base)
+    assert snap(
+        1000, eligible_min_price_cents=1200, eligible_item_id="MLB2", deal_offers_count=2
+    ).differs_from(base)
+
+
+GREEN_SILVER = SellerInfo("5_green", "silver", 3520)
+GREEN_GOLD = SellerInfo("5_green", "gold", 12000)
+GREEN_NEW = SellerInfo("5_green", None, 10)
+NO_REP = SellerInfo(None, None, 0)
+ME2 = {"mode": "me2", "free_shipping": True}
+
+
+def test_galaxy_case_ignores_seller_without_reputation() -> None:
+    # Caso real de 10/10/2026 (Galaxy A17): R$ 1.170,40 de vendedor sem reputação e 0 vendas,
+    # R$ 1.299 de verde/MercadoLíder, R$ 1.309 de verde/Gold, loja oficial a R$ 1.499.
+    raw = [
+        offer("MLB5360397725", 1170.40, seller_id=1, shipping=ME2),
+        offer("MLB7083641270", 1299.00, seller_id=2, shipping=ME2),
+        offer("MLB6000000001", 1309.00, seller_id=4, shipping=ME2),
+        offer("MLB4217058289", 1499.00, seller_id=3, official_store_id=2962, shipping=ME2),
+    ]
+    official = SellerInfo("5_green", "platinum", 10**6)
+    sellers = {1: NO_REP, 2: GREEN_SILVER, 3: official, 4: GREEN_GOLD}
+    s = summarize(raw, sellers)
+    assert s is not None
+    assert s.min_price_cents == 117040  # bruto: só sinal
+    assert (s.eligible_min_price_cents, s.eligible_item_id) == (129900, "MLB7083641270")
+    assert (s.trusted_min_price_cents, s.trusted_item_id) == (130900, "MLB6000000001")
+    assert (s.min_official_price_cents, s.official_item_id) == (149900, "MLB4217058289")
+    assert not s.eligible_official and not s.trusted_official
+
+
+def test_gift_card_case_only_the_official_store_is_eligible() -> None:
+    # Caso real (gift card PSN R$ 150): R$ 70 com 3 vendas e "entrega a combinar", R$ 125 com
+    # 1 venda. Só a loja oficial vale; ela vende o código sem frete, e isso não a desqualifica.
+    raw = [
+        offer("MLB5359577131", 70.0, seller_id=1, shipping={"mode": "custom"}),
+        offer("MLB5365840309", 125.0, seller_id=2, shipping={"mode": "custom"}),
+        offer(
+            "MLB5408400744",
+            150.0,
+            seller_id=3,
+            official_store_id=1473,
+            shipping={"mode": "not_specified"},
+        ),
+    ]
+    sellers = {
+        1: SellerInfo(None, None, 3),
+        2: SellerInfo("4_light_green", None, 1),
+        3: SellerInfo("5_green", "platinum", 1_156_788),
+    }
+    s = summarize(raw, sellers)
+    assert s is not None
+    assert s.min_price_cents == 7000
+    assert (s.eligible_min_price_cents, s.eligible_item_id, s.eligible_official) == (
+        15000,
+        "MLB5408400744",
+        True,
+    )
+    assert s.trusted_min_price_cents == s.min_official_price_cents == 15000
+
+
+def test_min_sales_and_trusted_rules() -> None:
+    raw = [
+        offer("A", 100.0, seller_id=1, shipping=ME2),
+        offer("B", 110.0, seller_id=2, shipping=ME2),
+    ]
+    s = summarize(raw, {1: GREEN_NEW, 2: SellerInfo("4_light_green", None, 500)})
+    assert s is not None
+    assert s.eligible_item_id == "B"  # A tem só 10 vendas
+    assert s.trusted_min_price_cents is None  # B não é verde ouro/platina
+    s = summarize(raw, {1: GREEN_NEW}, OfferPolicy(min_seller_sales=5))
+    assert s is not None and s.eligible_item_id == "A"
+
+
+def test_unknown_sellers_are_not_eligible() -> None:
+    s = summarize([offer("A", 100.0, seller_id=9, shipping=ME2)])
+    assert s is not None and s.eligible_min_price_cents is None
 
 
 def test_next_tier_goes_hot_on_relevant_drop() -> None:
     tier = next_tier(
         Tier.WARM,
-        previous=snap(10_000),
-        new=snap(9_000),
+        previous=snap(10_000, eligible_min_price_cents=10_000),
+        new=snap(5_000, eligible_min_price_cents=9_000),
         last_changed_at=NOW,
         now=NOW,
         policy=POLICY,

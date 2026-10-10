@@ -18,6 +18,8 @@
   {% if counts.get('sem nota') %}<span>sem nota: {{ counts['sem nota'] }}</span>{% endif %}
 </div>
 
+<p class="nota-pix">Preço do anúncio. O desconto no Pix que a página do ML às vezes mostra não vem pela API.</p>
+
 {% if not cards %}
 <p class="vazio">Nada na fila agora. Nas primeiras semanas isso é esperado: sem ~10 dias de histórico nenhum desconto está comprovado.</p>
 {% endif %}
@@ -30,6 +32,11 @@
     <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
     <div class="linha">{{ c.niche }}</div>
     <div class="preco">{{ c.price_cents | brl }}</div>
+    {% if c.offer_kind %}<div class="oferta">
+      {% if c.used_official %}loja oficial{% elif c.seller %}{{ c.seller.nickname or 'vendedor' }} · reputação {{ c.seller.reputation }}{% if c.seller.power %} · {{ c.seller.power }}{% endif %} · {{ c.seller.sales }} vendas{% else %}{{ c.offer_kind }}{% endif %}
+      · <a href="{{ c.offer_url }}" target="_blank" rel="noopener noreferrer">ver esta oferta</a>
+      · lido {{ c.read_at | local }}
+    </div>{% endif %}
     <div class="linha">
       {% if c.real_discount_bp is not none %}{{ c.real_discount_bp | pct }} abaixo da referência ({{ c.reference_cents | brl }}){% else %}desconto ainda não comprovado{% endif %}
     </div>

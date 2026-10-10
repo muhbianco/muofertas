@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import re
 import time
 from collections.abc import AsyncIterator
@@ -13,7 +14,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.clock import utcnow
 from app.core.database import get_session
 from app.main import app
-from app.models import AdminUser, CatalogProduct, Niche, OperatorDecision
+from app.models import (
+    AdminUser,
+    CatalogProduct,
+    MarketplaceSeller,
+    Niche,
+    OfferEvaluation,
+    OperatorDecision,
+    PriceObservation,
+)
 from app.panel import routes
 from app.panel.security import (
     TOTP_STEP_SECONDS,
@@ -192,3 +201,86 @@ async def test_login_throttle_returns_429(
         "/login", data={"username": "dono", "password": "x" * 12, "code": "123456"}
     )
     assert r.status_code == 429
+
+
+async def test_card_shows_where_the_price_comes_from(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    # Galaxy A17 de 10/10/2026: o preço é do vendedor verde (R$ 1.299), não do sem reputação.
+    secret = await seed_admin(sessions)
+    product_id = await seed_product(sessions)
+    now = utcnow()
+    async with sessions() as session, session.begin():
+        product = await session.get(CatalogProduct, product_id)
+        assert product is not None
+        product.last_checked_at = now
+        session.add(
+            MarketplaceSeller(
+                marketplace="mercadolivre",
+                external_id=2,
+                nickname="LOJA_BOA",
+                level_id="5_green",
+                power_seller_status="silver",
+                transactions_total=3520,
+                checked_at=now,
+            )
+        )
+        session.add(
+            PriceObservation(
+                product_id=product_id,
+                observed_at=now,
+                kind="change",
+                currency="BRL",
+                min_price_cents=117040,
+                min_official_price_cents=149900,
+                offers_count=12,
+                official_offers_count=1,
+                deal_offers_count=0,
+                free_shipping_offers_count=12,
+                min_offer_item_id="MLB1",
+                min_offer_seller_id=1,
+                min_offer_original_price_cents=None,
+                min_offer_free_shipping=True,
+                eligible_min_price_cents=129900,
+                eligible_item_id="MLB7083641270",
+                eligible_seller_id=2,
+                eligible_offers_count=6,
+            )
+        )
+        snapshot = {
+            "tier": "boa",
+            "gates_failed": [],
+            "signals": [],
+            "notes": ["há oferta 10% mais barata de vendedor não elegível (ignorada)"],
+            "offer_kind": "elegivel",
+            "offer_item_id": "MLB7083641270",
+            "offer_seller_id": 2,
+            "used_official": False,
+            "price_cents": 129900,
+            "score": 62.0,
+            "ruleset": "v2-2026-10-10",
+            "components": {},
+            "real_discount": None,
+        }
+        session.add(
+            OfferEvaluation(
+                product_id=product_id,
+                evaluated_at=now,
+                trigger="price_change",
+                ruleset="v2-2026-10-10",
+                tier="boa",
+                score=62.0,
+                price_cents=129900,
+                used_official=False,
+                snapshot=json.dumps(snapshot),
+            )
+        )
+    assert (await login(client, secret)).status_code == 303
+    page = (await client.get("/")).text
+    assert "R$ 1.299,00" in page
+    assert "LOJA_BOA · reputação verde · MercadoLíder · 3520 vendas" in page
+    assert "pdp_filters=item_id:MLB7083641270" in page
+    assert "10% mais barata de vendedor não elegível" in page
+    detail = await client.get(f"/produto/{product_id}")
+    assert detail.status_code == 200 and "LOJA_BOA" in detail.text
+    assert "6/12 elegíveis" in detail.text

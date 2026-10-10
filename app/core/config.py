@@ -61,6 +61,8 @@ class Settings(BaseSettings):
     tier_warm_minutes: int = 180
     tier_cold_minutes: int = 1440
     heartbeat_hours: int = 24
+    # Vendedor comum só entra no preço com reputação amarela/verde e este mínimo de vendas.
+    min_seller_sales: int = 50
     refresh_batch_size: int = 40
     worker_idle_seconds: float = 5.0
     worker_lease_seconds: int = 60

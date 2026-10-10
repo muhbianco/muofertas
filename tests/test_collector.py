@@ -11,7 +11,14 @@ from app.core.clock import utcnow
 from app.core.config import Settings
 from app.integrations import mercadolivre as ml
 from app.integrations.mercadolivre import MercadoLivreClient
-from app.models import CatalogProduct, CollectionRun, Niche, NicheCategory, PriceObservation
+from app.models import (
+    CatalogProduct,
+    CollectionRun,
+    MarketplaceSeller,
+    Niche,
+    NicheCategory,
+    PriceObservation,
+)
 from tests.fake_ml import FakeML
 
 
@@ -180,3 +187,62 @@ async def test_rate_limit_stops_batch_and_keeps_partial_run(
         ).scalar_one()
     assert statuses == ["ok", "partial"]
     assert observations == 0
+
+
+def rep(level: str | None, power: str | None, sales: int) -> dict[str, object]:
+    return {"level_id": level, "power_seller_status": power, "transactions": {"total": sales}}
+
+
+ME2 = {"mode": "me2", "free_shipping": True}
+
+
+async def test_refresh_prices_only_eligible_sellers_and_caches_reputation(
+    sessions: async_sessionmaker[AsyncSession], settings: Settings
+) -> None:
+    await seed(sessions)
+    fake = fake_ml()
+    fake.offers["MLBP1"] = [
+        offer("MLB1", 299.9, seller_id=1, shipping=ME2),  # sem reputação
+        offer("MLB2", 319.9, seller_id=2, shipping={"mode": "custom"}),  # entrega a combinar
+        offer("MLB3", 349.9, seller_id=3, shipping=ME2),  # verde, prata
+        offer("MLB4", 379.9, seller_id=4, shipping=ME2, official_store_id=5),
+    ]
+    fake.sellers = {
+        1: rep(None, None, 0),
+        2: rep("5_green", "platinum", 9000),
+        3: rep("5_green", "silver", 3520),
+        4: rep("5_green", "platinum", 10**6),
+    }
+    client = MercadoLivreClient(settings, transport=fake.transport())
+    collector = Collector(sessions, client, settings)
+    try:
+        await collector.discover_due()
+        await collector.refresh_due()
+        assert fake.calls.count("/users/bulk") == 1
+        # dentro do TTL do cache, a reputação não é pedida de novo
+        async with sessions() as session, session.begin():
+            product = (await session.execute(select(CatalogProduct))).scalar_one()
+            product.next_check_at = utcnow() - timedelta(seconds=1)
+        await collector.refresh_due()
+        assert fake.calls.count("/users/bulk") == 1
+    finally:
+        await client.aclose()
+
+    async with sessions() as session:
+        row = (await session.execute(select(PriceObservation))).scalar_one()
+        sellers = (
+            await session.execute(select(func.count()).select_from(MarketplaceSeller))
+        ).scalar_one()
+    assert row.min_price_cents == 29990  # bruto, só sinal
+    assert (row.eligible_min_price_cents, row.eligible_item_id, row.eligible_official) == (
+        34990,
+        "MLB3",
+        False,
+    )
+    assert (row.trusted_min_price_cents, row.trusted_item_id, row.trusted_official) == (
+        37990,
+        "MLB4",
+        True,
+    )
+    assert (row.min_official_price_cents, row.official_item_id) == (37990, "MLB4")
+    assert sellers == 4

@@ -81,6 +81,38 @@ Início: 10/10/2026.
 - **P6 continua valendo.** Usar essa série internamente e publicar afirmação de histórico depende
   da resposta do suporte de desenvolvedores.
 
+## Preço por vendedor elegível (10/10/2026, regras v2)
+O dono comparou o painel com a página do ML e achou dois desvios:
+- **Galaxy A17:** o painel mostrava R$ 1.499; a página mostrava R$ 1.399.
+- **Gift card PSN:** o painel mostrava R$ 70; a página mostrava R$ 125.
+
+**Causa.**
+- A v1 usava o menor preço de **qualquer** vendedor, inclusive vendedor sem reputação, sem vendas
+  e com "entrega a combinar". No gift card, os R$ 70 vinham de um vendedor com 3 vendas.
+- Para marca de alto risco, a v1 só aceitava loja oficial. No Galaxy, isso deu R$ 1.499, a
+  oficial, contra R$ 1.299 de um vendedor verde com 3.520 vendas.
+- A página ainda mostra o desconto do Pix, que a API não expõe (R$ 1.349,10 na oficial).
+
+**Regra nova.** A ajuda 30088 diz que o programa só paga vendedor amarelo ou verde.
+- **Elegível:**
+  - produto novo;
+  - vendedor `3_yellow`/`4_light_green`/`5_green`;
+  - envio pelo ML (`me1`/`me2`);
+  - ≥ 50 vendas (`MIN_SELLER_SALES`).
+  - Loja oficial é a marca: dispensa as vendas mínimas e o envio pelo ML (gift card não tem
+    frete).
+- **Confiável:** loja oficial, ou elegível verde com MercadoLíder Gold/Platinum.
+- **Três réguas para o preço:**
+  - **oficial:** nicho com `exigir_loja_oficial` (beleza, tênis), para conter falsificação;
+  - **confiável:** marca de alto risco;
+  - **elegível:** o resto.
+  - Em todas, a loja oficial é preferida quando custa até 2% a mais.
+- O menor preço bruto continua gravado, só como sinal. O painel avisa quando há oferta mais
+  barata fora da régua.
+- A reputação vem de `/users/bulk` (20 por chamada), com cache de 7 dias em `marketplace_seller`.
+- A série da nota usa a mesma régua do preço. As linhas de antes da `0004` só entram na régua
+  oficial.
+
 ## O que só o dono pode fazer (nesta ordem) — ML primeiro
 
 1. **ML (caminho crítico):**
