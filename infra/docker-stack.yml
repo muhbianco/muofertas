@@ -87,6 +87,12 @@ services:
     image: muhrilobianco/megapromooz:${MEGAPROMOOZ_TAG:?MEGAPROMOOZ_TAG obrigatorio}
     logging: *logging
     command: ["python", "-m", "app.worker"]
+    # Sessão do portal de afiliados do ML (link curto oficial). Fora do Env: só este container lê.
+    volumes:
+      - type: bind
+        source: /root/megapromooz-secrets
+        target: /run/megapromooz
+        read_only: true
     environment:
       <<: *env
     extra_hosts:

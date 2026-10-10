@@ -12,11 +12,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.config import Settings
+from app.distribution.links import resolve_links
 from app.distribution.sender import send_due
 from app.distribution.service import publications_for_approval
 from app.domain.distribution import build_affiliate_url, pix_to_show
 from app.integrations import mercadolivre as ml
 from app.integrations.mercadolivre import MercadoLivreClient
+from app.integrations.ml_affiliate import AffiliatePortal
 from app.integrations.wuzapi import WuzapiClient
 from app.models import (
     CatalogProduct,
@@ -63,6 +65,8 @@ def cfg() -> Settings:
         wuzapi_base_url="http://wuzapi.test",
         wuzapi_admin_token=SecretStr(ADMIN),
         wuzapi_session_token=SecretStr(SESSION),
+        ml_affiliate_tool_id="19964746",
+        ml_session_file="/nao/existe/ml-session",  # sem sessão do portal: link longo
     )
 
 
@@ -128,7 +132,15 @@ async def approve(
             pix_cents=pix,
             affiliate_tool_id="19964746",
         )
-    assert result.created == 1 and result.ready == 1
+    assert result.created == 1 and result.auto_link == 1
+    async with sessions() as session:
+        pub = (await session.execute(select(Publication))).scalar_one()
+    assert pub.state == "awaiting_link" and pub.affiliate_url is None  # o link é do worker
+    portal = AffiliatePortal(cfg())
+    try:
+        assert await resolve_links(sessions, portal, cfg(), NOW, pause=0) == 1
+    finally:
+        await portal.aclose()
     async with sessions() as session:
         pub = (await session.execute(select(Publication))).scalar_one()
     assert pub.state == "ready" and pub.affiliate_url and "matt_tool=19964746" in pub.affiliate_url
@@ -276,7 +288,7 @@ async def test_panel_approval_with_pix_and_group_checks(
     ok = await client.post("/decisao", data={**base, "pix": "404,90"})
     assert ok.headers["location"].endswith("aviso=pronta")  # grupo manual, link já montado
     pub = await state(sessions)
-    assert pub.state == "ready" and pub.pix_price_cents == 40490 and pub.pix_at is not None
+    assert pub.state == "awaiting_link" and pub.pix_price_cents == 40490 and pub.pix_at is not None
 
     # envio incerto: o operador confere no grupo e marca
     async with sessions() as session, session.begin():

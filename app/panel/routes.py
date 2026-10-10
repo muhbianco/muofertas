@@ -45,7 +45,7 @@ DECISIONS = {"approved": "aprovada", "rejected": "rejeitada", "blocked": "bloque
 NOTICES = {
     "links": "Aprovada. Ela está em Links: gere o link do ML para postar.",
     "automatica": "Aprovada. Vai sozinha para o grupo no próximo horário livre.",
-    "pronta": "Aprovada e com link. Está em Postar.",
+    "pronta": "Aprovada. O link sai em instantes e ela aparece em Postar.",
     "pix": "Não aprovada: o Pix precisa ser menor que o preço e até 30% abaixo (ex.: 49,90).",
     "sem-grupo": "Aprovada, mas o nicho não tem grupo cadastrado (Grupos).",
     "repetida": "Aprovada, mas não vai agora: já foi para o grupo nos últimos 7 dias.",
@@ -249,7 +249,7 @@ async def decide(
                 notice = "sem-grupo"
             elif result.automatic:
                 notice = "automatica"
-            elif result.ready:
+            elif result.auto_link:
                 notice = "pronta"
             elif result.created:
                 notice = "links"

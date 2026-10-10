@@ -46,6 +46,7 @@ ALERT_LEASE = "alerts"
 OPEN_LIMIT = 50
 RESOLUTION_RETRY = timedelta(days=1)
 WHATSAPP_FRESH = timedelta(hours=1)
+PORTAL_ALERT_WINDOW = timedelta(hours=3)
 
 
 async def gather_facts(db: AsyncSession, now: datetime) -> HealthFacts:
@@ -96,6 +97,17 @@ async def gather_facts(db: AsyncSession, now: datetime) -> HealthFacts:
         products_active=active,
         products_overdue=overdue,
         whatsapp_down=whatsapp_down,
+        portal_session_errors=(
+            await db.execute(
+                select(func.count())
+                .select_from(IntegrationError)
+                .where(
+                    IntegrationError.source == "ml_portal",
+                    IntegrationError.error_code.in_(("session", "blocked")),
+                    IntegrationError.occurred_at >= now - PORTAL_ALERT_WINDOW,
+                )
+            )
+        ).scalar_one(),
         uncertain_sends=(
             await db.execute(
                 select(func.count())

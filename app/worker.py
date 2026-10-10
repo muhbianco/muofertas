@@ -22,6 +22,7 @@ from app.core.config import Settings, settings
 from app.core.database import SessionFactory, dispose_engine
 from app.core.lease import acquire_lease, holder_id, release_lease
 from app.core.logging import configure_logging, get_logger
+from app.distribution.links import resolve_links
 from app.distribution.sender import send_due
 from app.evaluation.service import Evaluator
 from app.integrations.mercadolivre import (
@@ -29,6 +30,7 @@ from app.integrations.mercadolivre import (
     MercadoLivreClient,
     RateLimitedError,
 )
+from app.integrations.ml_affiliate import AffiliatePortal
 from app.integrations.wuzapi import WuzapiClient
 
 logger = get_logger(__name__)
@@ -40,6 +42,7 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
     client = MercadoLivreClient(cfg)
     wa_client = WuzapiClient(cfg)
     images = httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0))
+    portal = AffiliatePortal(cfg)
     collector = Collector(SessionFactory, client, cfg)
     evaluator = Evaluator(SessionFactory)
     logger.info(
@@ -68,6 +71,9 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                                 },
                             )
                             pause = 0.5  # ainda pode haver lote vencido
+                    linked = await resolve_links(SessionFactory, portal, cfg, utcnow())
+                    if linked:
+                        logger.info("links de afiliado", extra={"linked": linked})
                     if cfg.autosend_enabled:
                         # Só com o lease: um envio por vez, nunca dois workers no mesmo grupo.
                         sent = await send_due(
@@ -94,6 +100,7 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
         await client.aclose()
         await wa_client.aclose()
         await images.aclose()
+        await portal.aclose()
         logger.info("worker encerrado", extra={"holder": holder})
 
 

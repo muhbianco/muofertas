@@ -197,6 +197,22 @@ mão**.
   que não dá para reproduzir.
 - **Atribuição a confirmar:** etiqueta `teste1`, cliques reais e métricas do portal depois de 3 h.
 
+**Link curto oficial (desde 10/10/2026, também decisão do dono):**
+- O worker chama o mesmo endpoint da página do gerador
+  (`/affiliate-program/api/v2/affiliates/createLink`, corpo `{urls, tag}`, resposta com
+  `short_url`) com a sessão logada do dono.
+- A sessão (Cookie e `X-Csrf-Token`):
+  - fica em `/root/megapromooz-secrets/ml-session` (600), montada só leitura **só no worker**, fora
+    do Env do Portainer;
+  - é gravada com `infra/scripts/set-ml-session-hel1.sh`, sem eco;
+  - é relida a cada link, então renovar não pede deploy.
+- Uma URL por chamada, com 3 s entre elas.
+- 401/403, redirecionamento ou resposta que não é JSON (captcha ou verificação): a sessão não é
+  usada mais naquela rodada. O post sai com o link longo e abre o alerta `sessao_ml`. Não se
+  contorna captcha.
+- **Risco aceito pelo dono:** a sessão no servidor age como ele no ML. O ML pode estranhar o uso a
+  partir do IP da hel1.
+
 **Envio:**
 - Grupo com "Envio: automático" (precisa estar ligado ao WhatsApp).
 - O worker, sob o lease, pega a publicação pronta mais antiga de cada grupo, dentro da janela, do

@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     # Código de afiliado do ML (`matt_tool`, público: vai em todo link). Com ele e a etiqueta
     # do grupo, o link nasce na aprovação; vazio, o link vem colado pela tela Links.
     ml_affiliate_tool_id: str = ""
+    # Sessão do portal de afiliados (cookie + X-Csrf-Token) para o link curto oficial: arquivo do
+    # host montado só leitura no worker (infra/scripts/set-ml-session-hel1.sh). Sem ele: link longo.
+    ml_session_file: str = "/run/megapromooz/ml-session"
 
     @property
     def database_url(self) -> str:

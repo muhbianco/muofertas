@@ -33,6 +33,7 @@ TITLES = {
     "fila_atrasada": "Coletor atrasado",
     "whatsapp_desconectado": "WhatsApp desconectado",
     "envio_incerto": "Envio para grupo sem confirmação",
+    "sessao_ml": "Sessão do ML no servidor expirou",
 }
 
 
@@ -46,6 +47,7 @@ class HealthFacts:
     products_overdue: int
     whatsapp_down: bool = False
     uncertain_sends: int = 0
+    portal_session_errors: int = 0
 
 
 def _hhmm(at: datetime) -> str:
@@ -70,6 +72,12 @@ def firing(facts: HealthFacts) -> dict[str, str]:
         out["fila_atrasada"] = (
             f"{facts.products_overdue} de {facts.products_active} produtos com leitura atrasada "
             "há mais de 1 hora."
+        )
+    if facts.portal_session_errors:
+        out["sessao_ml"] = (
+            "O gerador de links do ML recusou a sessão gravada na hel1 (expirou ou pediu "
+            "verificação). Os posts seguem com o link longo. Renove: entre no ML, copie Cookie e "
+            "X-Csrf-Token do createLink e rode infra/scripts/set-ml-session-hel1.sh na hel1."
         )
     if facts.uncertain_sends:
         out["envio_incerto"] = (

@@ -22,7 +22,6 @@ from app.domain.distribution import (
     PixError,
     PriorPost,
     Recheck,
-    build_affiliate_url,
     check_pix,
     is_fresh,
     local_day_start,
@@ -72,8 +71,8 @@ def policy_of(channel: Channel) -> ChannelPolicy:
 @dataclass
 class ApprovalResult:
     created: int = 0
-    ready: int = 0  # já com link (montado na aprovação)
-    automatic: int = 0  # vão sozinhas para o grupo
+    auto_link: int = 0  # o worker gera o link (grupo com etiqueta)
+    automatic: int = 0  # e vão sozinhas para o grupo
     skipped: list[str] | None = None
     no_channel: bool = False
 
@@ -149,11 +148,6 @@ async def publications_for_approval(
         if reason is None and channel.paused:
             reason = "grupo pausado"
         target_url = offer_page_url(product.permalink, product.external_id, item_id)
-        link = (
-            build_affiliate_url(target_url, tag=channel.ml_tag, tool_id=affiliate_tool_id)
-            if affiliate_tool_id and channel.ml_tag and not reason
-            else None
-        )
         db.add(
             Publication(
                 channel_id=channel.id,
@@ -162,12 +156,10 @@ async def publications_for_approval(
                 decision_id=decision.id,
                 idempotency_key=key,
                 dedup_key=dedup_key,
-                state="skipped" if reason else ("ready" if link else "awaiting_link"),
+                state="skipped" if reason else "awaiting_link",
                 tier=evaluation.tier,
                 item_id=item_id,
                 target_url=target_url,
-                affiliate_url=link,
-                link_at=now if link else None,
                 approved_price_cents=evaluation.price_cents,
                 pix_price_cents=pix_cents,
                 pix_at=now if pix_cents is not None else None,
@@ -180,8 +172,8 @@ async def publications_for_approval(
             result.skipped.append(f"{channel.name}: {reason}")
         else:
             result.created += 1
-            if link:
-                result.ready += 1
+            if channel.ml_tag and (affiliate_tool_id or channel.transport == "wuzapi"):
+                result.auto_link += 1
                 if channel.transport == "wuzapi" and channel.wa_jid:
                     result.automatic += 1
     return result
