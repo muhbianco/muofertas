@@ -24,6 +24,7 @@ from app.domain.distribution import (
     Recheck,
     check_pix,
     is_fresh,
+    listing_discount,
     local_day_start,
     offer_page_url,
     parse_affiliate_links,
@@ -238,6 +239,7 @@ async def fetch_recheck(
 def apply_recheck(pub: Publication, recheck: Recheck, now: datetime) -> None:
     pub.checked_at = now
     pub.checked_price_cents = recheck.price_cents
+    pub.original_price_cents = recheck.original_cents
     pub.message = (
         None  # remontada com o preço e a hora novos (o Pix vale pela hora em que foi visto)
     )
@@ -287,6 +289,11 @@ async def message_for(db: AsyncSession, pub: Publication) -> str:
         url=pub.affiliate_url,
         pix_cents=pix_to_show(
             pub.pix_price_cents, pub.pix_at, pub.checked_price_cents, pub.checked_at
+        ),
+        discount=listing_discount(
+            pub.checked_price_cents,
+            pub.original_price_cents,
+            evaluation.reference_cents if evaluation else None,
         ),
     )
 

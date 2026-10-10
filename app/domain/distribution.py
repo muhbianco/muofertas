@@ -42,6 +42,9 @@ PIX_MAX_DISCOUNT = 0.30
 PIX_VALID_FOR = timedelta(hours=3)
 # Variação no intervalo do envio automático: grupos não recebem no mesmo minuto exato.
 MAX_JITTER_SECONDS = 600
+MIN_DISCOUNT_PCT = 5
+MAX_DISCOUNT_PCT = 70
+MAX_ANCHOR_OVER_REFERENCE = 1.5
 
 
 def format_brl(cents: int | None) -> str:
@@ -161,6 +164,7 @@ def parse_affiliate_links(text: str, expected: int) -> list[str]:
 class Recheck:
     status: str  # ok | gone | price_up
     price_cents: int | None
+    original_cents: int | None = None  # o "de" do próprio anúncio, se houver
 
 
 def recheck_offer(raw_offers: list[dict[str, Any]], item_id: str, approved_cents: int) -> Recheck:
@@ -169,8 +173,8 @@ def recheck_offer(raw_offers: list[dict[str, Any]], item_id: str, approved_cents
         offer = Offer.from_api(raw)
         if offer is not None and offer.item_id == item_id:
             if offer.price_cents > approved_cents * (1 + PRICE_UP_TOLERANCE):
-                return Recheck("price_up", offer.price_cents)
-            return Recheck("ok", offer.price_cents)
+                return Recheck("price_up", offer.price_cents, offer.original_price_cents)
+            return Recheck("ok", offer.price_cents, offer.original_price_cents)
     return Recheck("gone", None)
 
 
@@ -187,6 +191,30 @@ def pix_to_show(
     if checked_at - pix_at > PIX_VALID_FOR or pix_cents >= price_cents:
         return None
     return pix_cents
+
+
+@dataclass(frozen=True, slots=True)
+class ListingDiscount:
+    original_cents: int
+    percent: int
+
+
+def listing_discount(
+    price_cents: int, original_cents: int | None, reference_cents: int | None
+) -> ListingDiscount | None:
+    """ "De/por" do próprio anúncio, com travas contra o "de" inflado (metade do dobro):
+
+    - de 5% a 70% (acima disso é erro de preço ou golpe; abaixo não vale a linha);
+    - com histórico nosso, o "de" não pode passar de 1,5 x o preço de referência medido.
+    """
+    if original_cents is None or original_cents <= price_cents:
+        return None
+    percent = (original_cents - price_cents) * 100 // original_cents  # truncado, como a página
+    if not MIN_DISCOUNT_PCT <= percent <= MAX_DISCOUNT_PCT:
+        return None
+    if reference_cents is not None and original_cents > reference_cents * MAX_ANCHOR_OVER_REFERENCE:
+        return None
+    return ListingDiscount(original_cents, percent)
 
 
 def jitter(publication_id: int) -> timedelta:
@@ -212,6 +240,7 @@ def render_message(
     official: bool,
     url: str,
     pix_cents: int | None = None,
+    discount: ListingDiscount | None = None,
 ) -> str:
     """Formato do WhatsApp: *negrito*, _itálico_ e blocos separados por linha em branco.
 
@@ -225,7 +254,15 @@ def render_message(
     ]
     if official:
         lines.append("✅ Loja oficial")
-    lines += ["", f"💰 *{format_brl(price_cents)}* no Mercado Livre"]
+    lines.append("")
+    if discount is not None:
+        lines += [
+            f"🔥 *{discount.percent}% OFF*",
+            f"💰 De ~{format_brl(discount.original_cents)}~ por *{format_brl(price_cents)}* "
+            "no Mercado Livre",
+        ]
+    else:
+        lines.append(f"💰 *{format_brl(price_cents)}* no Mercado Livre")
     if pix_cents:
         lines.append(f"⚡ *{format_brl(pix_cents)} no Pix*")
     lines += [

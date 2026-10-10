@@ -151,3 +151,36 @@ def test_message_with_pix_shows_both_prices() -> None:
         pix_cents=4950,
     )
     assert "💰 *R$ 55,00* no Mercado Livre\n⚡ *R$ 49,50 no Pix*" in text
+
+
+def test_listing_discount_matches_the_page_and_blocks_inflated_anchors() -> None:
+    from app.domain.distribution import listing_discount
+
+    # Jequiti oficial: de 79,90 por 49,90 = 37% OFF na página (truncado, não 38)
+    jequiti = listing_discount(4990, 7990, None)
+    assert jequiti is not None and (jequiti.original_cents, jequiti.percent) == (7990, 37)
+    assert listing_discount(4490, 9646, None).percent == 53  # type: ignore[union-attr]
+    assert listing_discount(4990, None, None) is None
+    assert listing_discount(4990, 5100, None) is None  # 2%: não vale a linha
+    assert listing_discount(2000, 9990, None) is None  # 79%: erro de preço ou golpe
+    # com histórico: "de" 1,5x acima da nossa referência é âncora inflada
+    assert listing_discount(4490, 9646, 5000) is None
+    assert listing_discount(4490, 7000, 5000) is not None
+
+
+def test_message_with_listing_discount() -> None:
+    from app.domain.distribution import ListingDiscount
+
+    text = render_message(
+        niche_slug="beleza",
+        niche_name="Beleza: maquiagem, perfumes e cuidados",
+        product_name="Colônia Jequiti Turma da Mônica Cebolinha 50 mL",
+        price_cents=4990,
+        checked_at=NOW,
+        official=True,
+        url="https://meli.la/x",
+        discount=ListingDiscount(7990, 37),
+    )
+    assert text.startswith("#publi · 💄 *BELEZA*")
+    assert "🔥 *37% OFF*" in text
+    assert "💰 De ~R$ 79,90~ por *R$ 49,90* no Mercado Livre" in text

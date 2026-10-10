@@ -393,3 +393,27 @@ async def test_resend_now_copies_and_sends_immediately(
         rows = list((await session.execute(select(Publication).order_by(Publication.id))).scalars())
     assert [r.state for r in rows] == ["sent", "sent"]
     assert rows[1].idempotency_key == rows[0].idempotency_key + ":r1"
+
+
+async def test_post_shows_listing_discount_from_the_linked_offer(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await approve(sessions)
+    wa = FakeWuzapi()
+    fake_ml = FakeML(
+        offers={
+            "MLBP1": [
+                {"item_id": ITEM, "price": 449.90, "original_price": 599.90, "currency_id": "BRL"}
+            ]
+        }
+    )
+    ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
+    wa_client = WuzapiClient(cfg(), transport=wa.transport())
+    try:
+        assert await send_due(sessions, ml_client, wa_client, NOW) == 1
+    finally:
+        await ml_client.aclose()
+        await wa_client.aclose()
+    body = wa.sent[0]["Body"]
+    assert "🔥 *25% OFF*" in body and "De ~R$ 599,90~ por *R$ 449,90*" in body
+    assert (await state(sessions)).original_price_cents == 59990
