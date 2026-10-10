@@ -29,9 +29,40 @@
 <h1>Grupos</h1>
 <p class="nota-pix">Cada grupo recebe as ofertas aprovadas do seu nicho. Horários em hora de Brasília. Por enquanto o envio é manual, pelo seu celular.</p>
 {% if error %}<p class="erro">{{ error }}</p>{% endif %}
+{% if wa_rows is not none %}
+<article class="bloco">
+  <h2>No WhatsApp do chip</h2>
+  {% if not wa_rows %}<p class="vazio">O número não está em nenhum grupo.</p>{% endif %}
+  {% for r in wa_rows %}
+  <div class="item-wa">
+    <p><b>{{ r.group.name or 'sem nome' }}</b> · {{ r.group.members }} membros{% if r.group.announce %} · <span class="ok">só admins enviam</span>{% else %} · <span class="erro">todos enviam</span>{% endif %}</p>
+    {% if r.channel %}<p class="linha ok">Ligado a {{ r.channel.name }}</p>{% endif %}
+    <form class="formulario duas" method="post" action="/grupos/whatsapp/vincular">
+      <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+      <input type="hidden" name="jid" value="{{ r.group.jid }}">
+      <select name="channel_id" aria-label="Grupo do painel" required>
+        {% for c in channels %}<option value="{{ c.id }}" {% if r.channel and r.channel.id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+      <button class="botao rejeitar" type="submit">{{ 'Religar' if r.channel else 'Ligar' }}</button>
+    </form>
+    {% if not r.group.announce %}
+    <form method="post" action="/grupos/whatsapp/so-admins">
+      <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+      <input type="hidden" name="jid" value="{{ r.group.jid }}">
+      <button class="botao aprovar" type="submit">Só admins enviam</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</article>
+{% elif wa_error %}<p class="erro">{{ wa_error }}</p>
+{% elif wa_session is none %}<p class="nota-pix">Conecte o chip em <a href="/numero">Número</a> para ligar os grupos do WhatsApp e acompanhar quantos membros entram.</p>
+{% endif %}
 {% for c in channels %}
 <article class="bloco">
   <h2>{{ c.name }}{% if c.paused %} <span class="selo regular">pausado</span>{% endif %}</h2>
+  {% set gr = growth.get(c.id) if growth else none %}
+  {% if c.wa_jid %}<p class="linha">WhatsApp ligado{% if gr and gr.today is not none %} · {{ gr.today }} membros hoje{% if gr.delta is not none %} ({{ '%+d' % gr.delta }} em 7 dias){% endif %}{% endif %}</p>{% endif %}
   {{ channel_form(c, "/grupos/" ~ c.id, "Salvar") }}
 </article>
 {% endfor %}

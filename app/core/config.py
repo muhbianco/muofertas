@@ -75,6 +75,14 @@ class Settings(BaseSettings):
     alert_email_to: str = ""
     panel_url: str = "https://ofertas.muhbianco.com.br"
 
+    # --- WhatsApp (WuzAPI da muconnect, rede interna) ------------------------------------
+    # O token admin só cria a sessão e lê o número dela. Os dois tokens vêm do Env da stack.
+    wuzapi_base_url: str = ""
+    wuzapi_admin_token: SecretStr = SecretStr("")
+    wuzapi_session_token: SecretStr = SecretStr("")
+    wuzapi_session_name: str = "megapromooz"
+    wuzapi_timeout_seconds: float = 15.0
+
     @property
     def database_url(self) -> str:
         if self.database_url_override:

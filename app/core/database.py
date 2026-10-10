@@ -42,6 +42,11 @@ SessionFactory = async_sessionmaker(
 )
 
 
+def get_sessionmaker() -> async_sessionmaker[AsyncSession]:
+    """Para rotas que precisam fechar a transação antes de chamar a rede e abrir outra depois."""
+    return SessionFactory
+
+
 async def get_session() -> AsyncIterator[AsyncSession]:
     """Uma sessão por request: commit no fim, rollback em qualquer erro."""
     async with SessionFactory() as session:

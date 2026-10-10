@@ -16,9 +16,12 @@ from app.distribution import service
 from app.distribution.service import DistributionError
 from app.domain.distribution import INVITE_PREFIX, ML_TAG_RE, is_fresh, share_url
 from app.integrations.mercadolivre import MercadoLivreClient
+from app.integrations.wuzapi import WuzapiClient, WuzapiError
 from app.models import CatalogProduct, Channel, Niche, Publication
 from app.panel.auth import check_csrf
 from app.panel.routes import Admin, Db, templates
+from app.panel.whatsapp_routes import get_wa_client
+from app.whatsapp import service as wa
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -42,6 +45,7 @@ async def get_ml_client(request: Request) -> MercadoLivreClient:
 
 
 Ml = Annotated[MercadoLivreClient, Depends(get_ml_client)]
+WaClient = Annotated[WuzapiClient, Depends(get_wa_client)]
 
 
 def _see_other(url: str) -> RedirectResponse:
@@ -85,21 +89,52 @@ def _validate(form: ChannelForm, niche_ids: set[int]) -> str | None:
 
 
 async def _render_groups(
-    request: Request, db: Db, ctx: Admin, error: str | None = None, code: int = 200
+    request: Request,
+    db: Db,
+    ctx: Admin,
+    error: str | None = None,
+    code: int = 200,
+    wa_client: WuzapiClient | None = None,
 ) -> Response:
     channels = list((await db.execute(select(Channel).order_by(Channel.id).limit(50))).scalars())
     niches = list((await db.execute(select(Niche).order_by(Niche.id).limit(50))).scalars())
+    growth = await wa.growth(db, utcnow())
+    session = await wa.get_session(db, settings)
+    await db.commit()  # a lista de grupos vem da WuzAPI: sem transação aberta
+    wa_rows: list[wa.GroupRow] | None = None
+    wa_error = None
+    if wa_client is not None and wa_client.configured and session is not None and session.logged_in:
+        try:
+            wa_rows = await wa.group_rows(db, await wa_client.groups())
+        except WuzapiError:
+            wa_error = "O WhatsApp não respondeu agora; os grupos de lá não aparecem."
     return templates.TemplateResponse(
         request,
         "grupos.html",
-        {"ctx": ctx, "channels": channels, "niches": niches, "error": error},
+        {
+            "ctx": ctx,
+            "channels": channels,
+            "niches": niches,
+            "error": error,
+            "growth": growth,
+            "wa_rows": wa_rows,
+            "wa_error": wa_error,
+            "wa_session": session,
+        },
         status_code=code,
     )
 
 
 @router.get("/grupos", response_class=HTMLResponse)
-async def groups_page(request: Request, db: Db, ctx: Admin) -> Response:
-    return await _render_groups(request, db, ctx)
+async def groups_page(
+    request: Request, db: Db, ctx: Admin, wa_client: WaClient, erro: str | None = None
+) -> Response:
+    error = (
+        "Não deu para ligar esse grupo. Confira se o número está no grupo e é admin."
+        if erro == "grupo"
+        else None
+    )
+    return await _render_groups(request, db, ctx, error, wa_client=wa_client)
 
 
 @router.post("/grupos", response_class=HTMLResponse)

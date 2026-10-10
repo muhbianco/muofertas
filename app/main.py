@@ -25,6 +25,7 @@ from app.models import CatalogProduct, CollectionRun, PriceObservation
 from app.panel.auth import AuthContext, LoginRequiredError, require_admin
 from app.panel.distribution_routes import router as distribution_router
 from app.panel.routes import router as panel_router
+from app.panel.whatsapp_routes import router as whatsapp_router
 
 # Só o próprio painel; imagem de produto vem do CDN do ML. Sem script, sem estilo inline.
 CSP = (
@@ -47,9 +48,10 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     if watcher is not None:
         with contextlib.suppress(TimeoutError):
             await asyncio.wait_for(watcher, timeout=10)
-    client = getattr(app.state, "ml_client", None)
-    if client is not None:
-        await client.aclose()
+    for name in ("ml_client", "wa_client"):
+        client = getattr(app.state, name, None)
+        if client is not None:
+            await client.aclose()
     await dispose_engine()
 
 
@@ -61,6 +63,7 @@ app.mount(
 )
 app.include_router(panel_router)
 app.include_router(distribution_router)
+app.include_router(whatsapp_router)
 
 
 @app.middleware("http")

@@ -166,6 +166,26 @@ mão**.
   - lembrete a cada 6 horas;
   - um e-mail ao resolver.
 
+## Fase 2b — número e grupos pela WuzAPI (10/10/2026)
+- **Número** (painel): a sessão `megapromooz` é criada na WuzAPI da `muconnect`, pela rede
+  interna `http://wuzapi:8080`.
+  - Pareamento por QR ou por código; o número digitado para o código não fica gravado.
+  - O estado (pareado, JID do chip) aparece mascarado na tela.
+- **Tokens no Env da stack, nunca no banco:**
+  - `WUZAPI_ADMIN_TOKEN` (copiado do serviço `wuzapi_wuzapi` no host);
+  - `WUZAPI_SESSION_TOKEN` (sorteado no host).
+  - O token admin enxerga todas as sessões da instância, inclusive as dos lojistas. O cliente
+    só o usa para criar a sessão e ler a sessão pelo id; não há método de listar.
+- **Grupos:**
+  - a tela mostra os grupos em que o chip está, com o número de membros;
+  - "Ligar" grava o JID no grupo do painel e traz o link de convite oficial;
+  - "Só admins enviam" liga o modo anúncio.
+- **Audiência:** o vigia grava a cada hora o tamanho de cada grupo ligado (`channel_stat`, uma
+  linha por dia). Só contagens: os telefones dos membros não são gravados nem logados (LGPD).
+- **Alerta `whatsapp_desconectado`:** número que já esteve pareado e saiu da sessão.
+- **Envio automático:** continua desligado até o suporte do ML responder sobre publicação
+  automatizada (D18). O ML segue por Links → Postar.
+
 **Limites conhecidos:**
 - Sem imagem: o WhatsApp monta a prévia do link curto. Ela pode ser apagada antes de enviar.
 - A política vale no momento de abrir o WhatsApp. O registro do envio é o toque em "Postei".

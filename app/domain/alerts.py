@@ -7,6 +7,8 @@ buraco que não volta. Por isso o que importa avisar é a coleta parada, não ca
 - `coleta_parada`: nenhuma atualização de preço concluída em 6 horas.
 - `erros_ml`: 20 ou mais erros de integração na última hora.
 - `fila_atrasada`: produtos vencidos há mais de 1 hora (o coletor não dá conta).
+- `whatsapp_desconectado`: o número já pareado saiu da sessão (logout, banimento, 14 dias sem o
+  celular). A WuzAPI desiste de reconectar sozinha; sem aviso, os grupos ficam mudos.
 
 Um alerta abre uma vez, é lembrado a cada 6 horas enquanto continuar valendo e fecha sozinho.
 """
@@ -29,6 +31,7 @@ TITLES = {
     "coleta_parada": "Coleta de preços parada",
     "erros_ml": "Muitos erros na API do Mercado Livre",
     "fila_atrasada": "Coletor atrasado",
+    "whatsapp_desconectado": "WhatsApp desconectado",
 }
 
 
@@ -40,6 +43,7 @@ class HealthFacts:
     errors_last_hour: int
     products_active: int
     products_overdue: int
+    whatsapp_down: bool = False
 
 
 def _hhmm(at: datetime) -> str:
@@ -64,6 +68,10 @@ def firing(facts: HealthFacts) -> dict[str, str]:
         out["fila_atrasada"] = (
             f"{facts.products_overdue} de {facts.products_active} produtos com leitura atrasada "
             "há mais de 1 hora."
+        )
+    if facts.whatsapp_down:
+        out["whatsapp_desconectado"] = (
+            "O número da MegaPromoOz saiu da sessão do WhatsApp. Reconecte em Número."
         )
     return out
 

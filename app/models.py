@@ -6,11 +6,12 @@ coleta, erros, avaliações, operador, grupos e publicações. Cupom entra numa 
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -325,6 +326,8 @@ class Channel(Base):
     window_end_hour: Mapped[int] = mapped_column(Integer, default=22)
     paused: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    # 0008: grupo de verdade no WhatsApp (JID `…@g.us`), ligado pela tela Grupos.
+    wa_jid: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
 
 
 class Publication(Base):
@@ -390,3 +393,33 @@ class Alert(Base):
     resolved_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     notified_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     resolution_notified_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
+class WaSession(Base):
+    """A sessão da MegaPromoOz na WuzAPI (0008). Uma linha só; o token fica no Env, não aqui."""
+
+    __tablename__ = "wa_session"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(40), unique=True)
+    external_id: Mapped[str] = mapped_column(String(64))
+    jid: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    logged_in: Mapped[bool] = mapped_column(Boolean, default=False)
+    checked_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class ChannelStat(Base):
+    """Tamanho do grupo por dia (0008): só contagens, nunca quem são os membros (LGPD)."""
+
+    __tablename__ = "channel_stat"
+    __table_args__ = (UniqueConstraint("channel_id", "day"),)
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channel.id", ondelete="CASCADE"))
+    day: Mapped[date] = mapped_column(Date)
+    members: Mapped[int] = mapped_column(Integer)
+    admins: Mapped[int] = mapped_column(Integer)
+    captured_at: Mapped[datetime] = mapped_column(UTCDateTime())

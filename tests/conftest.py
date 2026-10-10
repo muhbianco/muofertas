@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import Settings
-from app.core.database import get_session
+from app.core.database import get_session, get_sessionmaker
 from app.main import app
 from app.models import Base
 from app.panel import routes
@@ -60,6 +60,7 @@ async def client(sessions: async_sessionmaker[AsyncSession]) -> AsyncIterator[ht
                 raise
 
     app.dependency_overrides[get_session] = override
+    app.dependency_overrides[get_sessionmaker] = lambda: sessions
     routes.throttle = LoginThrottle()
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:

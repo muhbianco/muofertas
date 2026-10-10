@@ -29,12 +29,22 @@ from app.domain.alerts import (
     mail_for,
     should_remind,
 )
-from app.models import Alert, CatalogProduct, CollectionRun, IntegrationError, WorkerLease
+from app.integrations.wuzapi import WuzapiClient, WuzapiError
+from app.models import (
+    Alert,
+    CatalogProduct,
+    CollectionRun,
+    IntegrationError,
+    WaSession,
+    WorkerLease,
+)
+from app.whatsapp import service as wa
 
 logger = get_logger(__name__)
 ALERT_LEASE = "alerts"
 OPEN_LIMIT = 50
 RESOLUTION_RETRY = timedelta(days=1)
+WHATSAPP_FRESH = timedelta(hours=1)
 
 
 async def gather_facts(db: AsyncSession, now: datetime) -> HealthFacts:
@@ -68,6 +78,15 @@ async def gather_facts(db: AsyncSession, now: datetime) -> HealthFacts:
             )
         )
     ).scalar_one()
+    session = (await db.execute(select(WaSession).limit(1))).scalar_one_or_none()
+    # Só alerta número que já esteve pareado (tem JID) e foi conferido há pouco.
+    whatsapp_down = bool(
+        session is not None
+        and session.jid
+        and not session.logged_in
+        and session.checked_at is not None
+        and now - session.checked_at < WHATSAPP_FRESH
+    )
     return HealthFacts(
         now=now,
         lease_expires_at=lease.expires_at if lease else None,
@@ -75,6 +94,7 @@ async def gather_facts(db: AsyncSession, now: datetime) -> HealthFacts:
         errors_last_hour=errors,
         products_active=active,
         products_overdue=overdue,
+        whatsapp_down=whatsapp_down,
     )
 
 
@@ -182,6 +202,7 @@ async def check_once(
     settings: Settings,
     holder: str,
     now: datetime | None = None,
+    wa_client: WuzapiClient | None = None,
 ) -> int:
     """Um ciclo do vigia. Devolve quantos e-mails saíram."""
     now = now or utcnow()
@@ -189,6 +210,12 @@ async def check_once(
         sessions, holder, settings.alert_check_seconds * 2, name=ALERT_LEASE
     ):
         return 0
+    if wa_client is not None:
+        try:
+            await wa.tick(sessions, wa_client, settings, now)
+        except WuzapiError as exc:
+            # WuzAPI fora não derruba o vigia; o estado fica o da última leitura boa.
+            logger.warning("vigia: WuzAPI não respondeu", extra={"error": str(exc)[:120]})
     async with sessions() as db, db.begin():
         facts = await gather_facts(db, now)
         current = firing(facts)
@@ -214,12 +241,14 @@ async def alert_loop(
     sessions: async_sessionmaker[AsyncSession], settings: Settings, stop: asyncio.Event
 ) -> None:
     holder = holder_id()
+    wa_client = WuzapiClient(settings)
     async with httpx.AsyncClient(timeout=10.0) as http:
         while not stop.is_set():
             try:
-                await check_once(sessions, http, settings, holder)
+                await check_once(sessions, http, settings, holder, wa_client=wa_client)
             except (SQLAlchemyError, OSError) as exc:
                 # Banco fora: o próximo ciclo tenta de novo; o /health/ready já denuncia a queda.
                 logger.warning("vigia de alertas falhou", extra={"error": type(exc).__name__})
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(stop.wait(), timeout=settings.alert_check_seconds)
+    await wa_client.aclose()

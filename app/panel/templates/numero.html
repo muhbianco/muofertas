@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Número{% endblock %}
+{% block content %}
+<h1>Número do WhatsApp</h1>
+{% if error %}<p class="erro">{{ error }}</p>{% endif %}
+
+{% if not configured %}
+  <p class="vazio">O WhatsApp ainda não está configurado no servidor (faltam as chaves da WuzAPI no Env da stack).</p>
+{% elif not session %}
+  <article class="bloco">
+    <p>Cria a sessão da MegaPromoOz na WuzAPI (instância interna) e abre o pareamento. Use o <b>chip dedicado</b>, nunca o seu número pessoal.</p>
+    <form method="post" action="/numero/conectar">
+      <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+      <button class="botao aprovar" type="submit">Criar sessão e conectar</button>
+    </form>
+  </article>
+{% elif session.logged_in %}
+  <article class="bloco">
+    <p class="ok"><b>Conectado</b>{% if number %} como {{ number }}{% endif %}.</p>
+    <p class="linha">Conferido {{ session.checked_at | local }}. Se cair, chega e-mail de alerta.</p>
+    <p class="nota-pix">O envio automático para os grupos continua desligado até o suporte do ML responder se publicação automatizada é permitida. Por enquanto: Fila → Links → Postar.</p>
+  </article>
+  <h2>Desconectar</h2>
+  <form class="formulario" method="post" action="/numero/sair">
+    <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+    <label class="marcar"><input type="checkbox" name="confirm" value="sim"> Desfazer o pareamento (para usar de novo, só com QR ou código)</label>
+    <button class="botao bloquear" type="submit">Desconectar o número</button>
+  </form>
+{% else %}
+  {% if code %}
+  <article class="bloco">
+    <h2>Código de pareamento</h2>
+    <p class="codigo">{{ code }}</p>
+    <p class="nota-pix">No celular do chip: WhatsApp → Aparelhos conectados → Conectar aparelho → <b>Conectar com número de telefone</b>, e digite o código.</p>
+    <a class="botao rejeitar" href="/numero">Já digitei, conferir</a>
+  </article>
+  {% else %}
+  <article class="bloco">
+    <h2>Parear pelo QR</h2>
+    {% if qr %}
+      <img class="qr" src="{{ qr }}" alt="QR de pareamento">
+      <p class="nota-pix">No celular do chip: WhatsApp → Aparelhos conectados → Conectar aparelho, e aponte para o QR. Ele troca a cada ~20 s: se vencer, atualize a página.</p>
+    {% else %}
+      <p class="nota-pix">Sem QR agora (o aparelho pode ter pedido outro método). Use o código abaixo ou atualize.</p>
+    {% endif %}
+    <a class="botao rejeitar" href="/numero">Atualizar</a>
+  </article>
+  <article class="bloco">
+    <h2>Ou parear com código</h2>
+    <p class="nota-pix">Mais fácil quando o painel está aberto no próprio celular do chip.</p>
+    <form class="formulario" method="post" action="/numero/codigo">
+      <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+      <label>Número do chip (com 55 e DDD)<input name="phone" inputmode="numeric" maxlength="20" placeholder="5511999998888" required></label>
+      <button class="botao aprovar" type="submit">Gerar código</button>
+    </form>
+  </article>
+  {% endif %}
+  <form method="post" action="/numero/conectar">
+    <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+    <button class="botao rejeitar" type="submit">Reabrir a conexão</button>
+  </form>
+{% endif %}
+{% endblock %}

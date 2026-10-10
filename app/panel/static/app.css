@@ -97,3 +97,8 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .mensagem { white-space: pre-wrap; word-break: break-word; background: #faf5e8; border: 1px solid var(--linha); border-radius: 12px; padding: 12px; font: 15px/1.45 system-ui, sans-serif; }
 .item { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--linha); color: var(--tinta); text-decoration: none; }
 .item img, .item .sem-foto { width: 56px; height: 56px; object-fit: contain; border-radius: 8px; background: var(--creme); display: block; }
+.qr { display: block; width: 100%; max-width: 280px; margin: 8px auto; image-rendering: pixelated; background: #fff; }
+.codigo { font: 700 30px/1.2 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 3px; text-align: center; margin: 10px 0; }
+.item-wa { border-top: 1px solid var(--linha); padding: 10px 0; }
+.item-wa p { margin: 0 0 6px; }
+.formulario.duas { grid-template-columns: 1fr auto; align-items: center; }
