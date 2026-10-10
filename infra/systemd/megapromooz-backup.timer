@@ -1,0 +1,15 @@
+[Unit]
+Description=Backup diário do schema megapromooz
+
+[Timer]
+# 03:35 UTC: entre o mucommerce (03:25) e a plataforma (03:45); madrugada no Brasil e longe da janela em que os deploys costumam rodar — o dump usa
+# --single-transaction, que é consistente para DML mas não protege contra DDL de uma migration.
+# O minuto quebrado evita disputar CPU com todo cron que roda em hora cheia.
+OnCalendar=*-*-* 03:35:00 UTC
+# Servidor desligado na hora marcada não pode significar um dia sem backup.
+Persistent=true
+# Espalha o disparo em até 4 min para não coincidir com outros timers.
+RandomizedDelaySec=4min
+
+[Install]
+WantedBy=timers.target

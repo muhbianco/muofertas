@@ -69,6 +69,34 @@ set -a; . ~/.secrets/megapromooz/ml-app.env; set +a; DATABASE_URL_OVERRIDE=sqlit
 5. A partir daí: **push na `main` = deploy** (Woodpecker: build → migração → StackUpdate).
    Depois de cada deploy, conferir o Chatwoot (exceção ao congelamento do App Review).
 
+## Backup (schema `megapromooz` → Backblaze B2, diário às 03:35 UTC)
+Mesmo desenho do Mu Tower:
+- **Fluxo:** dump, zstd, GPG simétrico, **confere decifrando**, envia ao B2 e confere o tamanho
+  no bucket.
+- **Retenção:** quem apaga é o próprio bucket, por regra de ciclo de vida (`daily/` 8 dias,
+  `weekly/` 35). A chave não tem permissão de apagar.
+
+Uma vez, na hel1:
+1. **No B2:** bucket privado só desta stack, com as regras de ciclo de vida acima, e uma app key
+   restrita a ele.
+2. **Credenciais**, digitadas no terminal da hel1:
+   ```bash
+   bash /usr/src/muofertas/infra/backup/set-backup-credentials-hel1.sh
+   ```
+   Isso grava `/root/.megapromooz-backup.env`. Guardar a senha de cifragem fora da hel1.
+3. **Instalar o timer:**
+   ```bash
+   bash /usr/src/muofertas/infra/backup/install-backup-hel1.sh
+   ```
+4. **Primeiro backup e restore de prova** (o restore de prova, todo mês):
+   ```bash
+   systemctl start megapromooz-backup.service
+   ```
+
+   ```bash
+   bash /usr/src/muofertas/infra/backup/restore-test.sh
+   ```
+
 ## Rollback
 ```bash
 ROLLBACK=1 infra/scripts/deploy.sh <sha12 anterior>

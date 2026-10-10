@@ -1,0 +1,19 @@
+[Unit]
+Description=Backup cifrado do schema megapromooz para fora da hel1
+Documentation=https://github.com/muhbianco/muofertas/blob/main/infra/backup/backup.sh
+After=network-online.target docker.service mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/src/muofertas/infra/backup/backup.sh
+# O script já usa nice/ionice no que pesa; isto cobre o resto do processo.
+Nice=19
+IOSchedulingClass=idle
+# Falha de backup não pode passar em silêncio: fica no journal com o código de saída.
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target
