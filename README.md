@@ -42,6 +42,16 @@ DATABASE_URL_OVERRIDE=sqlite+aiosqlite:///./local-e2e.db .venv/Scripts/python -m
 set -a; . ~/.secrets/megapromooz/ml-app.env; set +a; DATABASE_URL_OVERRIDE=sqlite+aiosqlite:///./local-e2e.db .venv/Scripts/python -m app.cli run-once
 ```
 
+## Produção (hel1)
+- Stack `megapromooz` (Portainer id 17), criada em 10/10/2026 na tag `7eaa91a9a576`, com os
+  serviços `megapromooz_megapromooz-web` e `megapromooz_megapromooz-worker`.
+- Checkout em `/usr/src/muofertas`.
+- Segredos só em arquivos do host, modo 600:
+  - `/root/.megapromooz.env`: senhas do banco, geradas pelo `provision-db.sh`;
+  - `/root/.megapromooz-ml.env`: app do ML;
+  - `/root/.megapromooz-stack.env`: o Env da criação da stack, com `DB_PASSWORD` e as chaves do ML.
+- Pendente: ativar o repositório no Woodpecker. Até lá, push na `main` não faz deploy.
+
 ## Primeiro deploy (uma vez)
 1. **Repositório** no GitHub e ativação no Woodpecker (`ci.muhbianco.com.br`).
 2. **Banco** na hel1, como root e a partir de um checkout do repo:
