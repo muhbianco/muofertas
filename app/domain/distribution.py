@@ -6,8 +6,9 @@
 - Link de afiliado do ML: só o curto oficial do gerador (`meli.la` ou `/sec/`), nunca alterado
   (termos do afiliado 1.8).
 - Revalidação: o preço da oferta escolhida é relido antes de postar; subiu mais de 3%, não sai.
-- Mensagem: `#publi` na primeira linha (CONAR), preço com a hora da verificação e nada calculado
-  por nós sobre o histórico do ML (P6).
+- Mensagem: começa por `#publi` (CDC art. 36 e guia CONAR 2026: publicidade identificável em
+  primeiro plano), preço com a hora da verificação e nada calculado por nós sobre o histórico do
+  ML (P6). O aviso completo de afiliado fica na descrição do grupo.
 - Pix: a API não traz o desconto do Pix (sondagem de 10/10/2026). O operador pode digitar o que a
   página mostra; entra se for menor que o preço e no máximo 30% abaixo (proteção contra digitação).
 """
@@ -37,6 +38,10 @@ AFFILIATE_HOSTS = frozenset({"meli.la", "mercadolivre.com", "www.mercadolivre.co
 NICHE_EMOJI = {"ferramentas": "🔧", "beleza": "💄", "tenis-esporte": "👟"}
 MAX_NAME = 120
 PIX_MAX_DISCOUNT = 0.30
+# O Pix é visto pelo operador na aprovação; depois disso a mensagem sai sem ele.
+PIX_VALID_FOR = timedelta(hours=3)
+# Variação no intervalo do envio automático: grupos não recebem no mesmo minuto exato.
+MAX_JITTER_SECONDS = 600
 
 
 def format_brl(cents: int | None) -> str:
@@ -49,6 +54,17 @@ def format_brl(cents: int | None) -> str:
 def product_page_url(permalink: str | None, external_id: str) -> str:
     """Página do produto de catálogo no ML (/p/MLB…), mesmo quando a API não trouxe o link."""
     return permalink or f"https://www.mercadolivre.com.br/p/{external_id}"
+
+
+def build_affiliate_url(target_url: str, *, tag: str, tool_id: str) -> str:
+    """Link de afiliado no formato do ML: página da oferta + `matt_word` (etiqueta) +
+    `matt_tool` (código do afiliado). O link curto do gerador leva ainda um `ref` cifrado que
+    não dá para reproduzir; se a atribuição vale sem ele é o teste da etiqueta `teste1`
+    (decisão do dono em 10/10/2026 de automatizar o link, ciente da cláusula 3.1.2)."""
+    if not ML_TAG_RE.match(tag) or not tool_id.isdigit():
+        raise LinkError("etiqueta ou código de afiliado inválido")
+    query = f"matt_word={tag}&matt_tool={tool_id}&forceInApp=true"
+    return f"{target_url}{'&' if '?' in target_url else '?'}{query}"
 
 
 def offer_page_url(permalink: str | None, external_id: str, item_id: str | None) -> str:
@@ -162,6 +178,27 @@ def is_fresh(checked_at: datetime | None, now: datetime) -> bool:
     return checked_at is not None and now - checked_at <= FRESH_FOR_SEND
 
 
+def pix_to_show(
+    pix_cents: int | None, pix_at: datetime | None, price_cents: int, checked_at: datetime
+) -> int | None:
+    """O Pix informado vale por 3 horas e só enquanto continua abaixo do preço relido."""
+    if pix_cents is None or pix_at is None:
+        return None
+    if checked_at - pix_at > PIX_VALID_FOR or pix_cents >= price_cents:
+        return None
+    return pix_cents
+
+
+def jitter(publication_id: int) -> timedelta:
+    """De 0 a 10 minutos, fixo por publicação (o mesmo item não "anda" entre ciclos)."""
+    return timedelta(seconds=(publication_id * 7919) % MAX_JITTER_SECONDS)
+
+
+def label_of(niche_name: str) -> str:
+    """ "Beleza: maquiagem, perfumes e cuidados" → "BELEZA"."""
+    return niche_name.split(":", 1)[0].strip().upper()
+
+
 # --------------------------------------------------------------------------- mensagem
 
 
@@ -182,8 +219,7 @@ def render_message(
         name = name[: MAX_NAME - 1].rstrip() + "…"
     return "\n".join(
         [
-            "#publi · link de afiliado (posso receber comissão)",
-            f"{NICHE_EMOJI.get(niche_slug, '🛍️')} {niche_name.upper()} · preço verificado em "
+            f"#publi · {NICHE_EMOJI.get(niche_slug, '🛍️')} {label_of(niche_name)} · preço de "
             f"{local:%d/%m} às {local:%H:%M}",
             f"{name}{' · loja oficial' if official else ''}",
             (

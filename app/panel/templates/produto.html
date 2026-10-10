@@ -42,9 +42,11 @@
 {% else %}<p class="vazio">Ainda não avaliado.</p>{% endif %}
 
 <h2>Decidir</h2>
+<label class="pix-aprovar">Pix na página (opcional)
+  <input form="aprovar-{{ prod.id }}" name="pix" inputmode="decimal" maxlength="20" placeholder="ex.: 49,90"></label>
 <div class="acoes">
   {% for value, label, cls in [('approved', 'Aprovar', 'aprovar'), ('rejected', 'Rejeitar', 'rejeitar'), ('blocked', 'Bloquear', 'bloquear')] %}
-  <form method="post" action="/decisao">
+  <form method="post" action="/decisao"{% if value == 'approved' %} id="aprovar-{{ prod.id }}"{% endif %}>
     <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
     <input type="hidden" name="product_id" value="{{ prod.id }}">
     {% if p.evaluations %}<input type="hidden" name="evaluation_id" value="{{ p.evaluations[0].id }}">{% endif %}

@@ -28,6 +28,9 @@ class FakeWuzapi:
     groups: list[dict[str, Any]] = field(default_factory=list)
     calls: list[str] = field(default_factory=list)
     down: bool = False
+    # envio: ok | refuse (500) | timeout (depois de enviar) | connect (nem conectou)
+    send_mode: str = "ok"
+    sent: list[dict[str, Any]] = field(default_factory=list)
 
     def transport(self) -> httpx.MockTransport:
         return httpx.MockTransport(self._handle)
@@ -80,6 +83,16 @@ class FakeWuzapi:
         if path == "/session/logout":
             self.logged_in = False
             return self._ok({"Details": "Logged out"})
+        if path == "/chat/send/text":
+            body = json.loads(request.content)
+            if self.send_mode == "connect":
+                raise httpx.ConnectError("sem rota", request=request)
+            if self.send_mode == "refuse":
+                return httpx.Response(500, json={"error": "failed to send"})
+            self.sent.append(body)
+            if self.send_mode == "timeout":
+                raise httpx.ReadTimeout("sem resposta", request=request)
+            return self._ok({"Details": "Sent", "Id": f"MSG{len(self.sent)}"})
         if path == "/group/list":
             return self._ok({"Groups": self.groups})
         if path == "/group/invitelink":

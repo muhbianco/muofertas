@@ -368,6 +368,10 @@ class Publication(Base):
     checked_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     # 0006: preço do Pix que o operador viu na página (a API não traz).
     pix_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # 0009: quando o Pix foi visto, e o envio automático (no máximo uma vez).
+    pix_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    sending_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    external_message_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     note: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())

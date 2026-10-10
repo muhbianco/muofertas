@@ -21,6 +21,12 @@
     <label>Das (h)<input name="window_start_hour" type="number" min="0" max="23" required value="{{ c.window_start_hour if c else 8 }}"></label>
     <label>Até (h)<input name="window_end_hour" type="number" min="1" max="24" required value="{{ c.window_end_hour if c else 22 }}"></label>
   </div>
+  <label>Envio
+    <select name="transport">
+      <option value="manual" {% if not c or c.transport != 'wuzapi' %}selected{% endif %}>Manual (Postar pelo celular)</option>
+      <option value="wuzapi" {% if c and c.transport == 'wuzapi' %}selected{% endif %}>Automático pelo chip (precisa do grupo ligado)</option>
+    </select>
+  </label>
   <label class="marcar"><input type="checkbox" name="paused" value="1" {% if c and c.paused %}checked{% endif %}> Pausado (nada é publicado)</label>
   <button class="botao aprovar" type="submit">{{ label }}</button>
 </form>

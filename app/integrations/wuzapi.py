@@ -27,9 +27,15 @@ logger = get_logger(__name__)
 
 
 class WuzapiError(Exception):
-    def __init__(self, message: str, *, status: int | None = None) -> None:
+    """`maybe_sent`: a requisição pode ter chegado (timeout depois de enviar). Envio nessa
+    situação nunca é repetido sozinho: duplicata no grupo custa mais que uma oferta perdida."""
+
+    def __init__(
+        self, message: str, *, status: int | None = None, maybe_sent: bool = False
+    ) -> None:
         super().__init__(message)
         self.status = status
+        self.maybe_sent = maybe_sent
 
 
 class WuzapiNotConfiguredError(WuzapiError):
@@ -139,8 +145,10 @@ class WuzapiClient:
             response = await self._http.request(
                 method, path, headers=headers, params=params, json=json
             )
+        except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            raise WuzapiError("a WuzAPI não respondeu") from exc  # nem chegou a enviar
         except httpx.HTTPError as exc:
-            raise WuzapiError("a WuzAPI não respondeu") from exc
+            raise WuzapiError("a WuzAPI não respondeu", maybe_sent=True) from exc
         if response.status_code >= 400:
             detail = _detail(response)
             logger.warning("WuzAPI recusou", extra={"path": path, "status": response.status_code})
@@ -215,6 +223,17 @@ class WuzapiClient:
         raw = data.get("Groups") if isinstance(data, dict) else None
         groups = [summarize_group(g) for g in raw or [] if isinstance(g, dict)]
         return sorted((g for g in groups if g), key=lambda g: g.name.lower())
+
+    async def send_text(self, chat_jid: str, body: str) -> str:
+        """`POST /chat/send/text` para o grupo (`Phone` = JID `…@g.us`; o parseJID da 1.0.9
+        aceita JID completo). Sem prévia de link: a prévia faria o servidor abrir o link de
+        afiliado, um clique de robô."""
+        data = await self._request(
+            "POST",
+            "/chat/send/text",
+            json={"Phone": chat_jid, "Body": body, "LinkPreview": False},
+        )
+        return str((data or {}).get("Id") or "") if isinstance(data, dict) else ""
 
     async def invite_link(self, group_jid: str) -> str:
         data = await self._request("GET", "/group/invitelink", params={"groupJID": group_jid})

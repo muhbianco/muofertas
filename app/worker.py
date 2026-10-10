@@ -20,12 +20,14 @@ from app.core.config import Settings, settings
 from app.core.database import SessionFactory, dispose_engine
 from app.core.lease import acquire_lease, holder_id, release_lease
 from app.core.logging import configure_logging, get_logger
+from app.distribution.sender import send_due
 from app.evaluation.service import Evaluator
 from app.integrations.mercadolivre import (
     CallBudgetExceededError,
     MercadoLivreClient,
     RateLimitedError,
 )
+from app.integrations.wuzapi import WuzapiClient
 
 logger = get_logger(__name__)
 RATE_LIMIT_PAUSE_SECONDS = 15 * 60
@@ -34,6 +36,7 @@ RATE_LIMIT_PAUSE_SECONDS = 15 * 60
 async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
     holder = holder_id()
     client = MercadoLivreClient(cfg)
+    wa_client = WuzapiClient(cfg)
     collector = Collector(SessionFactory, client, cfg)
     evaluator = Evaluator(SessionFactory)
     logger.info(
@@ -45,22 +48,28 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
             try:
                 if not await acquire_lease(SessionFactory, holder, cfg.worker_lease_seconds):
                     pause = cfg.worker_lease_seconds / 2
-                elif cfg.collector_enabled:
-                    await collector.discover_due()
-                    stats = await collector.refresh_due()
-                    await evaluator.evaluate_due()
-                    if stats.seen:
-                        logger.info(
-                            "lote atualizado",
-                            extra={
-                                "seen": stats.seen,
-                                "changed": stats.changed,
-                                "errors": stats.errors,
-                                "calls": stats.calls,
-                                "calls_this_hour": client.calls_this_hour,
-                            },
-                        )
-                        pause = 0.5  # ainda pode haver lote vencido
+                else:
+                    if cfg.collector_enabled:
+                        await collector.discover_due()
+                        stats = await collector.refresh_due()
+                        await evaluator.evaluate_due()
+                        if stats.seen:
+                            logger.info(
+                                "lote atualizado",
+                                extra={
+                                    "seen": stats.seen,
+                                    "changed": stats.changed,
+                                    "errors": stats.errors,
+                                    "calls": stats.calls,
+                                    "calls_this_hour": client.calls_this_hour,
+                                },
+                            )
+                            pause = 0.5  # ainda pode haver lote vencido
+                    if cfg.autosend_enabled:
+                        # Só com o lease: um envio por vez, nunca dois workers no mesmo grupo.
+                        sent = await send_due(SessionFactory, client, wa_client, utcnow())
+                        if sent:
+                            logger.info("envio automático", extra={"sent": sent})
             except RateLimitedError:
                 logger.warning(
                     "ML respondeu 429; pausa longa", extra={"pause_s": RATE_LIMIT_PAUSE_SECONDS}
@@ -78,6 +87,7 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
     finally:
         await release_lease(SessionFactory, holder)
         await client.aclose()
+        await wa_client.aclose()
         logger.info("worker encerrado", extra={"holder": holder})
 
 

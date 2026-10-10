@@ -35,6 +35,7 @@ from app.models import (
     CatalogProduct,
     CollectionRun,
     IntegrationError,
+    Publication,
     WaSession,
     WorkerLease,
 )
@@ -95,6 +96,13 @@ async def gather_facts(db: AsyncSession, now: datetime) -> HealthFacts:
         products_active=active,
         products_overdue=overdue,
         whatsapp_down=whatsapp_down,
+        uncertain_sends=(
+            await db.execute(
+                select(func.count())
+                .select_from(Publication)
+                .where(Publication.state.in_(("unknown", "failed")))
+            )
+        ).scalar_one(),
     )
 
 

@@ -186,6 +186,45 @@ mão**.
 - **Envio automático:** continua desligado até o suporte do ML responder sobre publicação
   automatizada (D18). O ML segue por Links → Postar.
 
+## Fase 2c — envio automático (10/10/2026)
+**Decisão do dono** (revoga D18 e o "link só manual" da §6.4): automatizar o link e o envio do ML,
+**ciente** da cláusula 3.1.2 dos termos do afiliado (venda ligada a robô pode não ser paga).
+
+**Link:**
+- Não há robô no portal do ML nem sessão gravada.
+- A aprovação já monta `página da oferta + matt_word=<etiqueta> + matt_tool=19964746 +
+  forceInApp=true`. É o formato visto no link curto real; o curto leva ainda um `ref` cifrado,
+  que não dá para reproduzir.
+- **Atribuição a confirmar:** etiqueta `teste1`, cliques reais e métricas do portal depois de 3 h.
+
+**Envio:**
+- Grupo com "Envio: automático" (precisa estar ligado ao WhatsApp).
+- O worker, sob o lease, pega a publicação pronta mais antiga de cada grupo, dentro da janela, do
+  intervalo (mais 0 a 10 min de variação) e do teto do dia.
+- Antes de enviar, relê o preço da oferta do link:
+  - subiu mais de 3% ou saiu do ar: `skipped`;
+  - caiu: vale o preço novo.
+- Envia pela WuzAPI (`/chat/send/text`, `Phone` = JID do grupo, sem prévia de link).
+
+**No máximo uma vez:**
+- `sending` é gravado antes da chamada.
+- Com resposta: `sent` (com o id da mensagem) ou `failed`.
+- Timeout depois de enviar: `unknown`, com alerta. O operador confere em Postar ("Saiu no grupo" ou
+  "Não saiu: enviar").
+- Sem conexão alguma: volta para `ready`.
+- `sending` esquecido há 10 minutos vira `unknown`.
+
+**Pix:**
+- Informado ao aprovar, ao lado do botão.
+- Vale por 3 horas e só enquanto continua abaixo do preço relido.
+
+**Mensagem:**
+- Começa por `#publi · <emoji> <NICHO> · preço de dd/mm às hh:mm`. A frase sobre comissão saiu da
+  mensagem.
+- A identificação publicitária fica, por exigência legal: CDC art. 36 e guia CONAR 2026, que cita
+  afiliados.
+- O aviso completo de afiliado vai na descrição dos grupos.
+
 **Limites conhecidos:**
 - Sem imagem: o WhatsApp monta a prévia do link curto. Ela pode ser apagada antes de enviar.
 - A política vale no momento de abrir o WhatsApp. O registro do envio é o toque em "Postei".

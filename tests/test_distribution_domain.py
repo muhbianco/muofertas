@@ -100,10 +100,11 @@ def test_message_starts_with_publi_and_has_check_time() -> None:
         url="https://meli.la/abc",
     )
     lines = text.split("\n")
-    assert lines[0] == "#publi · link de afiliado (posso receber comissão)"
-    assert lines[1] == "🔧 FERRAMENTAS · preço verificado em 21/10 às 15:00"
-    assert lines[2].endswith("… · loja oficial") and len(lines[2]) < 140
-    assert lines[3] == "💰 R$ 389,90 no Mercado Livre"
+    # #publi em primeiro plano, numa linha só com o nicho e a hora (CDC 36, CONAR 2026)
+    assert lines[0] == "#publi · 🔧 FERRAMENTAS · preço de 21/10 às 15:00"
+    assert lines[1].endswith("… · loja oficial") and len(lines[1]) < 140
+    assert lines[2] == "💰 R$ 389,90 no Mercado Livre"
+    assert "comissão" not in text
     assert lines[-1] == "🛒 https://meli.la/abc"
     assert "abaixo" not in text  # nada calculado sobre histórico do ML (P6)
     assert unquote(share_url(text).removeprefix("https://wa.me/?text=")) == text

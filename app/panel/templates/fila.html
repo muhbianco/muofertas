@@ -44,9 +44,11 @@
     </div>
     {% if c.reasons %}<ul class="motivos">{% for r in c.reasons %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
   </div>
+  <label class="pix-aprovar">Pix na página (opcional)
+    <input form="aprovar-{{ c.product_id }}" name="pix" inputmode="decimal" maxlength="20" placeholder="ex.: 49,90"></label>
   <div class="acoes">
     {% for value, label, cls in [('approved', 'Aprovar', 'aprovar'), ('rejected', 'Rejeitar', 'rejeitar'), ('blocked', 'Bloquear', 'bloquear')] %}
-    <form method="post" action="/decisao">
+    <form method="post" action="/decisao"{% if value == 'approved' %} id="aprovar-{{ c.product_id }}"{% endif %}>
       <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
       <input type="hidden" name="product_id" value="{{ c.product_id }}">
       {% if c.evaluation_id %}<input type="hidden" name="evaluation_id" value="{{ c.evaluation_id }}">{% endif %}

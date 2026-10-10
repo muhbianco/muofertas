@@ -102,3 +102,5 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .item-wa { border-top: 1px solid var(--linha); padding: 10px 0; }
 .item-wa p { margin: 0 0 6px; }
 .formulario.duas { grid-template-columns: 1fr auto; align-items: center; }
+.pix-aprovar { grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--cinza); }
+.pix-aprovar input { width: 120px; font-size: 15px; padding: 8px; border-radius: 10px; border: 1px solid var(--linha); }

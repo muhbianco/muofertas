@@ -2,11 +2,32 @@
 {% block title %}Postar{% endblock %}
 {% block content %}
 <h1>Postar</h1>
-{% if not groups %}<p class="vazio">Nada pronto para postar. Aprove na Fila e gere os links em Links.</p>{% endif %}
+{% if attention %}
+<article class="bloco">
+  <h2>Conferir no grupo</h2>
+  {% for pub, name in attention %}
+  <div class="item-wa">
+    <p><b>{{ name }}</b> · {% if pub.state == 'sending' %}enviando agora{% else %}<span class="erro">{{ pub.note or pub.state }}</span>{% endif %}</p>
+    {% if pub.state != 'sending' %}
+    <div class="acoes">
+      {% for value, label, cls in [('saiu', 'Saiu no grupo', 'aprovar'), ('nao-saiu', 'Não saiu: enviar', 'rejeitar')] %}
+      <form method="post" action="/postar/{{ pub.id }}/conferido">
+        <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+        <input type="hidden" name="outcome" value="{{ value }}">
+        <button class="{{ cls }}" type="submit">{{ label }}</button>
+      </form>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</article>
+{% endif %}
+{% if not groups %}<p class="vazio">Nada esperando. Aprove na Fila: nos grupos automáticos o envio sai sozinho no próximo horário livre.</p>{% endif %}
 {% for g in groups %}
 <article class="bloco">
-  <h2>{{ g.channel.name }}</h2>
-  {% if g.block %}<p class="erro">Agora não: {{ g.block }}.</p>{% else %}<p class="linha ok">Pode enviar agora.</p>{% endif %}
+  <h2>{{ g.channel.name }}{% if g.channel.transport == 'wuzapi' %} <span class="selo oficial">automático</span>{% endif %}</h2>
+  {% if g.block %}<p class="linha">Próximo envio: {{ g.block }}.</p>{% elif g.channel.transport == 'wuzapi' %}<p class="linha ok">Sai sozinho nos próximos minutos.</p>{% else %}<p class="linha ok">Pode enviar agora.</p>{% endif %}
   {% for r in g.rows %}
   <a class="item" href="/postar/{{ r.pub.id }}">
     {% if r.image_url %}<img src="{{ r.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="sem-foto"></span>{% endif %}
@@ -15,4 +36,13 @@
   {% endfor %}
 </article>
 {% endfor %}
+{% if recent %}
+<h2>Últimos 2 dias</h2>
+<table>
+  {% for pub, name, channel_name in recent %}
+  <tr><td>{{ (pub.sent_at or pub.created_at) | local }}</td><td>{{ name }}<br><small>{{ channel_name }}</small></td>
+    <td>{% if pub.state == 'sent' %}<span class="ok">enviada</span>{% if pub.actor %} · {{ pub.actor }}{% endif %}{% else %}<span class="erro">não saiu</span>: {{ pub.note or '' }}{% endif %}</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
 {% endblock %}

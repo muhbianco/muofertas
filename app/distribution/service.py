@@ -22,12 +22,14 @@ from app.domain.distribution import (
     PixError,
     PriorPost,
     Recheck,
+    build_affiliate_url,
     check_pix,
     is_fresh,
     local_day_start,
     offer_page_url,
     parse_affiliate_links,
     parse_brl,
+    pix_to_show,
     recheck_offer,
     render_message,
     repeat_block_reason,
@@ -50,6 +52,10 @@ class DistributionError(Exception):
     """Ação recusada, com mensagem pronta para o operador."""
 
 
+class PixRejectedError(DistributionError):
+    """Pix informado na aprovação fora da regra (menor que o preço, até 30% abaixo)."""
+
+
 def policy_of(channel: Channel) -> ChannelPolicy:
     return ChannelPolicy(
         max_per_day=channel.max_per_day,
@@ -66,6 +72,8 @@ def policy_of(channel: Channel) -> ChannelPolicy:
 @dataclass
 class ApprovalResult:
     created: int = 0
+    ready: int = 0  # já com link (montado na aprovação)
+    automatic: int = 0  # vão sozinhas para o grupo
     skipped: list[str] | None = None
     no_channel: bool = False
 
@@ -77,11 +85,21 @@ async def publications_for_approval(
     evaluation: OfferEvaluation,
     decision: OperatorDecision,
     now: datetime,
+    pix_cents: int | None = None,
+    affiliate_tool_id: str = "",
 ) -> ApprovalResult:
-    """Uma publicação por grupo do nicho. Repetida em 7 dias ou grupo pausado: `skipped`."""
+    """Uma publicação por grupo do nicho. Repetida em 7 dias ou grupo pausado: `skipped`.
+
+    `pix_cents`: o Pix que o operador viu na página ao aprovar (vale por 3 horas).
+    """
     result = ApprovalResult(skipped=[])
     if evaluation.price_cents is None or product.niche_id is None:
         raise DistributionError("esta avaliação não tem preço válido para publicar")
+    if pix_cents is not None:
+        try:
+            check_pix(pix_cents, evaluation.price_cents)
+        except PixError as exc:
+            raise PixRejectedError(str(exc)) from exc
     channels = list(
         (
             await db.execute(
@@ -116,7 +134,7 @@ async def publications_for_approval(
                     Publication.channel_id == channel.id,
                     Publication.dedup_key == dedup_key,
                     Publication.created_at >= now - DEDUP_WINDOW,
-                    Publication.state.in_(("awaiting_link", "ready", "sent")),
+                    Publication.state.in_(("awaiting_link", "ready", "sending", "unknown", "sent")),
                 )
                 .order_by(Publication.created_at.desc())
                 .limit(PRIOR_LIMIT)
@@ -130,6 +148,12 @@ async def publications_for_approval(
         )
         if reason is None and channel.paused:
             reason = "grupo pausado"
+        target_url = offer_page_url(product.permalink, product.external_id, item_id)
+        link = (
+            build_affiliate_url(target_url, tag=channel.ml_tag, tool_id=affiliate_tool_id)
+            if affiliate_tool_id and channel.ml_tag and not reason
+            else None
+        )
         db.add(
             Publication(
                 channel_id=channel.id,
@@ -138,11 +162,15 @@ async def publications_for_approval(
                 decision_id=decision.id,
                 idempotency_key=key,
                 dedup_key=dedup_key,
-                state="skipped" if reason else "awaiting_link",
+                state="skipped" if reason else ("ready" if link else "awaiting_link"),
                 tier=evaluation.tier,
                 item_id=item_id,
-                target_url=offer_page_url(product.permalink, product.external_id, item_id),
+                target_url=target_url,
+                affiliate_url=link,
+                link_at=now if link else None,
                 approved_price_cents=evaluation.price_cents,
+                pix_price_cents=pix_cents,
+                pix_at=now if pix_cents is not None else None,
                 note=reason,
                 created_at=now,
             )
@@ -152,6 +180,10 @@ async def publications_for_approval(
             result.skipped.append(f"{channel.name}: {reason}")
         else:
             result.created += 1
+            if link:
+                result.ready += 1
+                if channel.transport == "wuzapi" and channel.wa_jid:
+                    result.automatic += 1
     return result
 
 
@@ -214,8 +246,9 @@ async def fetch_recheck(
 def apply_recheck(pub: Publication, recheck: Recheck, now: datetime) -> None:
     pub.checked_at = now
     pub.checked_price_cents = recheck.price_cents
-    pub.pix_price_cents = None  # o Pix é conferido de novo junto com o preço
-    pub.message = None  # remontada com o preço e a hora novos
+    pub.message = (
+        None  # remontada com o preço e a hora novos (o Pix vale pela hora em que foi visto)
+    )
     if recheck.status == "gone":
         pub.note = "a oferta saiu do ar"
     elif recheck.status == "price_up":
@@ -260,7 +293,9 @@ async def message_for(db: AsyncSession, pub: Publication) -> str:
         checked_at=pub.checked_at,
         official=bool(evaluation and evaluation.used_official),
         url=pub.affiliate_url,
-        pix_cents=pub.pix_price_cents,
+        pix_cents=pix_to_show(
+            pub.pix_price_cents, pub.pix_at, pub.checked_price_cents, pub.checked_at
+        ),
     )
 
 
@@ -275,6 +310,7 @@ async def set_pix(db: AsyncSession, pub: Publication, text: str, now: datetime) 
     except PixError as exc:
         raise DistributionError(str(exc)) from exc
     pub.pix_price_cents = pix
+    pub.pix_at = now if pix is not None else None
     pub.message = await message_for(db, pub)
 
 

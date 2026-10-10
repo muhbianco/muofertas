@@ -82,6 +82,11 @@ class Settings(BaseSettings):
     wuzapi_session_token: SecretStr = SecretStr("")
     wuzapi_session_name: str = "megapromooz"
     wuzapi_timeout_seconds: float = 15.0
+    # Envio automático para grupos com transporte "wuzapi" (decisão do dono, 10/10/2026).
+    autosend_enabled: bool = True
+    # Código de afiliado do ML (`matt_tool`, público: vai em todo link). Com ele e a etiqueta
+    # do grupo, o link nasce na aprovação; vazio, o link vem colado pela tela Links.
+    ml_affiliate_tool_id: str = ""
 
     @property
     def database_url(self) -> str:

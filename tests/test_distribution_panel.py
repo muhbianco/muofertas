@@ -178,7 +178,7 @@ async def test_manual_flow_from_approval_to_posted_once(
     share = re.search(r'href="(https://wa\.me/\?text=[^"]+)"', detail)
     assert share is not None
     text = unquote(share.group(1).replace("&amp;", "&").removeprefix("https://wa.me/?text="))
-    assert text.startswith("#publi · link de afiliado")
+    assert text.startswith("#publi · 🛍️ OBSERVAÇÃO · preço de ")
     assert "R$ 1.299,00 no Mercado Livre" in text and text.endswith("https://meli.la/2AbC9")
 
     # Pix visto na página pelo operador: entra na mensagem; valor absurdo é recusado

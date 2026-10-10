@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
@@ -66,6 +67,7 @@ class ChannelForm:
     window_start_hour: int
     window_end_hour: int
     paused: bool
+    transport: str = "manual"
 
 
 def _validate(form: ChannelForm, niche_ids: set[int]) -> str | None:
@@ -85,6 +87,8 @@ def _validate(form: ChannelForm, niche_ids: set[int]) -> str | None:
         return "intervalo: de 5 a 600 minutos"
     if not (0 <= form.window_start_hour < form.window_end_hour <= 24):
         return "janela: início antes do fim, entre 0h e 24h"
+    if form.transport not in ("manual", "wuzapi"):
+        return "envio: manual ou automático"
     return None
 
 
@@ -163,6 +167,7 @@ async def save_group(
     ml_tag: Annotated[str | None, Form(max_length=30)] = None,
     invite_url: Annotated[str | None, Form(max_length=255)] = None,
     paused: Annotated[str | None, Form()] = None,
+    transport: Annotated[str, Form(max_length=12)] = "manual",
     channel_id: int | None = None,
 ) -> Response:
     check_csrf(ctx, csrf)
@@ -176,6 +181,7 @@ async def save_group(
         window_start_hour=window_start_hour,
         window_end_hour=window_end_hour,
         paused=paused == "1",
+        transport=transport,
     )
     niche_ids = set((await db.execute(select(Niche.id).limit(50))).scalars())
     error = _validate(form, niche_ids)
@@ -197,6 +203,14 @@ async def save_group(
         if found is None:
             raise HTTPException(status_code=404)
         channel = found
+    if form.transport == "wuzapi" and not channel.wa_jid:
+        return await _render_groups(
+            request,
+            db,
+            ctx,
+            "envio automático só com o grupo ligado ao WhatsApp (seção 'No WhatsApp do chip')",
+            422,
+        )
     for key, value in vars(form).items():
         setattr(channel, key, value)
     logger.info("grupo salvo", extra={"channel": form.name, "user": ctx.username})
@@ -334,8 +348,41 @@ async def post_list(request: Request, db: Db, ctx: Admin) -> Response:
                 channel, await service.channel_status(db, channel, now), []
             )
         groups[pub.channel_id].rows.append(ReadyRow(pub, name or "", image))
+    attention = list(
+        (
+            await db.execute(
+                select(Publication, CatalogProduct.name)
+                .join(CatalogProduct, CatalogProduct.id == Publication.product_id)
+                .where(Publication.state.in_(("unknown", "failed", "sending")))
+                .order_by(Publication.id.desc())
+                .limit(LIST_LIMIT)
+            )
+        ).all()
+    )
+    recent = list(
+        (
+            await db.execute(
+                select(Publication, CatalogProduct.name, Channel.name)
+                .join(CatalogProduct, CatalogProduct.id == Publication.product_id)
+                .join(Channel, Channel.id == Publication.channel_id)
+                .where(
+                    Publication.state.in_(("sent", "skipped")),
+                    Publication.created_at >= now - timedelta(days=2),
+                )
+                .order_by(Publication.id.desc())
+                .limit(30)
+            )
+        ).all()
+    )
     return templates.TemplateResponse(
-        request, "postar.html", {"ctx": ctx, "groups": list(groups.values())}
+        request,
+        "postar.html",
+        {
+            "ctx": ctx,
+            "groups": list(groups.values()),
+            "attention": attention,
+            "recent": recent,
+        },
     )
 
 
@@ -440,6 +487,31 @@ async def posted(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if changed:
         logger.info("publicação enviada", extra={"publication_id": pub_id, "user": ctx.username})
+    return _see_other("/postar")
+
+
+@router.post("/postar/{pub_id}/conferido")
+async def checked_in_group(
+    db: Db,
+    ctx: Admin,
+    pub_id: int,
+    outcome: Annotated[str, Form(pattern="^(saiu|nao-saiu|de-novo)$")],
+    csrf: Annotated[str | None, Form()] = None,
+) -> Response:
+    """Envio incerto ou recusado: o operador olha o grupo e diz o que aconteceu."""
+    check_csrf(ctx, csrf)
+    pub = await _publication(db, pub_id)
+    if pub.state not in ("unknown", "failed"):
+        raise HTTPException(status_code=409, detail="nada a conferir nesta publicação")
+    if outcome == "saiu":
+        pub.state, pub.sent_at, pub.actor = "sent", pub.sending_at or utcnow(), ctx.username
+    else:
+        pub.state, pub.sending_at = "ready", None  # volta para a fila do envio
+    pub.note = None
+    logger.info(
+        "envio conferido",
+        extra={"publication_id": pub_id, "outcome": outcome, "user": ctx.username},
+    )
     return _see_other("/postar")
 
 

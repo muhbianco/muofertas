@@ -32,6 +32,7 @@ TITLES = {
     "erros_ml": "Muitos erros na API do Mercado Livre",
     "fila_atrasada": "Coletor atrasado",
     "whatsapp_desconectado": "WhatsApp desconectado",
+    "envio_incerto": "Envio para grupo sem confirmação",
 }
 
 
@@ -44,6 +45,7 @@ class HealthFacts:
     products_active: int
     products_overdue: int
     whatsapp_down: bool = False
+    uncertain_sends: int = 0
 
 
 def _hhmm(at: datetime) -> str:
@@ -68,6 +70,11 @@ def firing(facts: HealthFacts) -> dict[str, str]:
         out["fila_atrasada"] = (
             f"{facts.products_overdue} de {facts.products_active} produtos com leitura atrasada "
             "há mais de 1 hora."
+        )
+    if facts.uncertain_sends:
+        out["envio_incerto"] = (
+            f"{facts.uncertain_sends} envio(s) sem confirmação ou recusado(s): confira no grupo "
+            "e marque em Postar (o robô não reenvia sozinho)."
         )
     if facts.whatsapp_down:
         out["whatsapp_desconectado"] = (

@@ -1,0 +1,288 @@
+"""Envio automático (Fase 2c): aprovar → link montado → envio pelo chip, no máximo uma vez."""
+
+from __future__ import annotations
+
+import json
+from datetime import UTC, datetime, timedelta
+
+import httpx
+import pytest
+from pydantic import SecretStr
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.core.config import Settings
+from app.distribution.sender import send_due
+from app.distribution.service import publications_for_approval
+from app.domain.distribution import build_affiliate_url, pix_to_show
+from app.integrations import mercadolivre as ml
+from app.integrations.mercadolivre import MercadoLivreClient
+from app.integrations.wuzapi import WuzapiClient
+from app.models import (
+    CatalogProduct,
+    Channel,
+    Niche,
+    OfferEvaluation,
+    OperatorDecision,
+    Publication,
+)
+from tests.fake_ml import FakeML
+from tests.fake_wuzapi import ADMIN, SESSION, FakeWuzapi
+
+ITEM = "MLB7083641270"
+GROUP = "120363333333333333@g.us"
+# 15h em Brasília: dentro da janela padrão (8h às 22h)
+NOW = datetime(2026, 10, 21, 18, 0, tzinfo=UTC)
+
+
+@pytest.fixture(autouse=True)
+def no_backoff(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(ml, "_backoff", lambda attempt: 0.0)
+
+
+def test_affiliate_url_and_pix_window() -> None:
+    url = build_affiliate_url(
+        "https://www.mercadolivre.com.br/p/MLB1?pdp_filters=item_id:MLB9",
+        tag="megapromooz",
+        tool_id="19964746",
+    )
+    assert url.endswith(
+        "?pdp_filters=item_id:MLB9&matt_word=megapromooz&matt_tool=19964746&forceInApp=true"
+    )
+    assert pix_to_show(4950, NOW, 5500, NOW + timedelta(hours=2)) == 4950
+    assert pix_to_show(4950, NOW, 5500, NOW + timedelta(hours=4)) is None  # venceu
+    assert pix_to_show(4950, NOW, 4900, NOW) is None  # preço caiu abaixo do Pix
+
+
+def cfg() -> Settings:
+    return Settings(
+        database_url_override="sqlite+aiosqlite://",
+        ml_client_id="x",
+        ml_client_secret=SecretStr("y"),
+        ml_requests_per_second=1000.0,
+        wuzapi_base_url="http://wuzapi.test",
+        wuzapi_admin_token=SecretStr(ADMIN),
+        wuzapi_session_token=SecretStr(SESSION),
+    )
+
+
+async def approve(
+    sessions: async_sessionmaker[AsyncSession], *, transport: str = "wuzapi", pix: int | None = None
+) -> int:
+    async with sessions() as session, session.begin():
+        niche = Niche(slug="tenis-esporte", name="Tênis e Esporte", active=True, created_at=NOW)
+        session.add(niche)
+        await session.flush()
+        session.add(
+            Channel(
+                niche_id=niche.id,
+                name="MegaPromoOz - Tênis e Esportes",
+                transport=transport,
+                ml_tag="megapromooz",
+                wa_jid=GROUP,
+                max_per_day=10,
+                min_interval_minutes=40,
+                window_start_hour=8,
+                window_end_hour=22,
+                paused=False,
+                created_at=NOW,
+            )
+        )
+        product = CatalogProduct(
+            marketplace="mercadolivre",
+            external_id="MLBP1",
+            niche_id=niche.id,
+            name="Bicicleta Ergométrica Bike Spinning 6kg",
+            discovered_via="highlights",
+            active=True,
+            tier="warm",
+            next_check_at=NOW,
+            consecutive_failures=0,
+            first_seen_at=NOW,
+        )
+        session.add(product)
+        await session.flush()
+        ev = OfferEvaluation(
+            product_id=product.id,
+            evaluated_at=NOW,
+            trigger="price_change",
+            ruleset="v2",
+            tier="boa",
+            score=70.0,
+            price_cents=44990,
+            used_official=True,
+            snapshot=json.dumps({"offer_item_id": ITEM}),
+        )
+        session.add(ev)
+        decision = OperatorDecision(
+            product_id=product.id, decision="approved", actor="dono", decided_at=NOW
+        )
+        session.add(decision)
+        await session.flush()
+        result = await publications_for_approval(
+            session,
+            product=product,
+            evaluation=ev,
+            decision=decision,
+            now=NOW,
+            pix_cents=pix,
+            affiliate_tool_id="19964746",
+        )
+    assert result.created == 1 and result.ready == 1
+    async with sessions() as session:
+        pub = (await session.execute(select(Publication))).scalar_one()
+    assert pub.state == "ready" and pub.affiliate_url and "matt_tool=19964746" in pub.affiliate_url
+    return pub.id
+
+
+async def run(
+    sessions: async_sessionmaker[AsyncSession],
+    wa: FakeWuzapi,
+    *,
+    price: float = 449.90,
+    now: datetime = NOW,
+) -> int:
+    fake_ml = FakeML(offers={"MLBP1": [{"item_id": ITEM, "price": price, "currency_id": "BRL"}]})
+    ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
+    wa_client = WuzapiClient(cfg(), transport=wa.transport())
+    try:
+        return await send_due(sessions, ml_client, wa_client, now)
+    finally:
+        await ml_client.aclose()
+        await wa_client.aclose()
+
+
+async def state(sessions: async_sessionmaker[AsyncSession]) -> Publication:
+    async with sessions() as session:
+        return (await session.execute(select(Publication))).scalar_one()
+
+
+async def test_approved_offer_goes_to_the_group_once(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await approve(sessions, pix=40490)
+    wa = FakeWuzapi()
+    assert await run(sessions, wa) == 1
+    assert await run(sessions, wa, now=NOW + timedelta(minutes=1)) == 0  # já foi
+    assert len(wa.sent) == 1
+    sent = wa.sent[0]
+    assert sent["Phone"] == GROUP and sent["LinkPreview"] is False
+    assert sent["Body"].startswith("#publi · ")
+    assert "R$ 404,90 no Pix (R$ 449,90 nas outras formas)" in sent["Body"]
+    assert "matt_word=megapromooz&matt_tool=19964746" in sent["Body"]
+    pub = await state(sessions)
+    assert (pub.state, pub.actor, pub.external_message_id) == ("sent", "envio automático", "MSG1")
+
+
+async def test_price_up_and_window_and_manual_groups_do_not_send(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await approve(sessions)
+    wa = FakeWuzapi()
+    night = datetime(2026, 10, 22, 2, 0, tzinfo=UTC)  # 23h em Brasília
+    assert await run(sessions, wa, now=night) == 0 and not wa.sent
+    assert await run(sessions, wa, price=479.90) == 0  # subiu 6,7%
+    pub = await state(sessions)
+    assert pub.state == "skipped" and "subiu" in (pub.note or "") and not wa.sent
+
+
+async def test_manual_group_is_never_sent_automatically(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await approve(sessions, transport="manual")
+    wa = FakeWuzapi()
+    assert await run(sessions, wa) == 0 and not wa.sent
+
+
+@pytest.mark.parametrize(
+    ("mode", "expected"),
+    [("timeout", "unknown"), ("refuse", "failed"), ("connect", "ready")],
+)
+async def test_send_failures_never_resend_blindly(
+    sessions: async_sessionmaker[AsyncSession], mode: str, expected: str
+) -> None:
+    await approve(sessions)
+    wa = FakeWuzapi(send_mode=mode)
+    assert await run(sessions, wa) == 0
+    pub = await state(sessions)
+    assert pub.state == expected
+    # incerto ou recusado: a próxima rodada não tenta de novo sozinha
+    wa.send_mode = "ok"
+    again = await run(sessions, wa, now=NOW + timedelta(minutes=5))
+    assert again == (1 if expected == "ready" else 0)
+
+
+async def test_interrupted_send_becomes_unknown(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    pub_id = await approve(sessions)
+    async with sessions() as session, session.begin():
+        pub = await session.get(Publication, pub_id)
+        assert pub is not None
+        pub.state, pub.sending_at = "sending", NOW - timedelta(minutes=11)
+    wa = FakeWuzapi()
+    assert await run(sessions, wa) == 0 and not wa.sent
+    assert (await state(sessions)).state == "unknown"
+
+
+async def test_panel_approval_with_pix_and_group_checks(
+    client: httpx.AsyncClient,
+    sessions: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import re
+
+    from app.core.config import settings
+    from tests.test_panel import login, seed_admin
+
+    monkeypatch.setattr(settings, "ml_affiliate_tool_id", "19964746")
+    secret = await seed_admin(sessions)
+    pub_id = await approve(sessions, transport="manual")
+    async with sessions() as session, session.begin():
+        # recomeça do zero o produto aprovado no helper: a aprovação agora vem pelo painel
+        pub = await session.get(Publication, pub_id)
+        assert pub is not None
+        await session.delete(pub)
+        channel = (await session.execute(select(Channel))).scalar_one()
+        channel.wa_jid = None
+        product = (await session.execute(select(CatalogProduct))).scalar_one()
+        product.last_tier, product.last_score = "boa", 70.0
+        ev_id = (await session.execute(select(OfferEvaluation.id))).scalar_one()
+    assert (await login(client, secret)).status_code == 303
+    page = (await client.get("/grupos")).text
+    csrf = re.search(r'name="csrf" value="([^"]+)"', page)
+    assert csrf is not None
+    token = csrf.group(1)
+
+    form = {
+        "csrf": token,
+        "name": channel.name,
+        "niche_id": channel.niche_id,
+        "ml_tag": "megapromooz",
+        "max_per_day": 10,
+        "min_interval_minutes": 40,
+        "window_start_hour": 8,
+        "window_end_hour": 22,
+        "transport": "wuzapi",
+    }
+    refused = await client.post(f"/grupos/{channel.id}", data=form)
+    assert refused.status_code == 422 and "grupo ligado ao WhatsApp" in refused.text
+
+    base = {"csrf": token, "product_id": product.id, "evaluation_id": ev_id, "decision": "approved"}
+    bad = await client.post("/decisao", data={**base, "pix": "500,00"})
+    assert bad.headers["location"].endswith("aviso=pix")
+    async with sessions() as session:
+        assert (await session.execute(select(Publication))).scalar_one_or_none() is None
+    ok = await client.post("/decisao", data={**base, "pix": "404,90"})
+    assert ok.headers["location"].endswith("aviso=pronta")  # grupo manual, link já montado
+    pub = await state(sessions)
+    assert pub.state == "ready" and pub.pix_price_cents == 40490 and pub.pix_at is not None
+
+    # envio incerto: o operador confere no grupo e marca
+    async with sessions() as session, session.begin():
+        row = await session.get(Publication, pub.id)
+        assert row is not None
+        row.state, row.note = "unknown", "o WhatsApp não confirmou o envio"
+    assert "Conferir no grupo" in (await client.get("/postar")).text
+    await client.post(f"/postar/{pub.id}/conferido", data={"csrf": token, "outcome": "saiu"})
+    assert (await state(sessions)).state == "sent"
