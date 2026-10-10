@@ -129,13 +129,35 @@ def lipstick() -> str:
             f'<path d="M286,292 V196 Q286,168 312,152 L354,128 V292 Z" fill="{EMERALD}"/>')
 
 
-def avatar(glyph: str, label: str) -> str:
+def sneaker() -> str:
+    """Tênis de lado com linhas de velocidade. Sem swoosh nem três listras: nada de marca alheia."""
+    upper = ('M176,374 L170,304 Q166,254 214,248 L262,242 Q282,270 314,278 '
+             'L378,302 Q452,322 480,348 Q492,362 486,374 Z')
+    laces = "".join(
+        f'<line x1="{cx + 6}" y1="{cy - 12}" x2="{cx - 6}" y2="{cy + 12}" stroke="{CREAM}" '
+        f'stroke-width="9" stroke-linecap="round"/>'
+        for cx, cy in ((302, 282), (328, 293), (354, 304))
+    )
+    return (f'<rect x="118" y="314" width="40" height="11" rx="5.5" fill="{EMERALD}"/>'
+            f'<rect x="130" y="338" width="28" height="11" rx="5.5" fill="{EMERALD}"/>'
+            f'<path d="{upper}" fill="{EMERALD_DEEP}"/>' + laces
+            + f'<rect x="178" y="262" width="18" height="44" rx="7" fill="{GOLD}"/>'
+            f'<rect x="160" y="368" width="334" height="42" rx="21" fill="{GOLD}"/>'
+            f'<rect x="184" y="394" width="286" height="7" rx="3.5" fill="{EMERALD_DEEP}" opacity=".35"/>')
+
+
+def avatar(glyph: str, label: str, font_size: int = 32, text_length: int = 264) -> str:
     return (f'<rect width="640" height="640" fill="{EMERALD}"/>'
             f'<circle cx="320" cy="300" r="214" fill="{CREAM}"/>' + glyph
             + f'<rect x="166" y="500" width="308" height="70" rx="35" fill="{GOLD}"/>'
-            f'<text x="320" y="547" text-anchor="middle" font-family="{FONT}" font-weight="900" font-size="32" '
-            f'textLength="264" lengthAdjust="spacingAndGlyphs" fill="{EMERALD_DEEP}">{label}</text>'
+            f'<text x="320" y="{535 + font_size * 3 // 8}" text-anchor="middle" font-family="{FONT}" '
+            f'font-weight="900" font-size="{font_size}" textLength="{text_length}" '
+            f'lengthAdjust="spacingAndGlyphs" fill="{EMERALD_DEEP}">{label}</text>'
             + sparkle(486, 138, 40, GOLD))
+
+
+def avatar_sport() -> str:
+    return avatar(sneaker(), "TÊNIS E ESPORTE", font_size=27, text_length=280)
 
 
 # ---------------------------------------------------------------- saída
@@ -154,8 +176,10 @@ FILES = {
                         "MegaPromoOz, selo verificado"),
     "avatar-ferramentas.svg": (640, 640, avatar(wrench(), "FERRAMENTAS"), "MegaPromoOz Ferramentas, foto do grupo"),
     "avatar-maquiagem.svg": (640, 640, avatar(lipstick(), "MAQUIAGEM"), "MegaPromoOz Maquiagem, foto do grupo"),
+    "avatar-tenis-esporte.svg": (640, 640, avatar_sport(), "MegaPromoOz Tênis e Esporte, foto do grupo"),
 }
-SMALL = ("1-etiqueta-icone.svg", "2-lupa-icone.svg", "3-selo-icone.svg", "avatar-ferramentas.svg", "avatar-maquiagem.svg")
+SMALL = ("1-etiqueta-icone.svg", "2-lupa-icone.svg", "3-selo-icone.svg", "avatar-ferramentas.svg",
+         "avatar-maquiagem.svg", "avatar-tenis-esporte.svg")
 
 
 def data_uri(name: str) -> str:

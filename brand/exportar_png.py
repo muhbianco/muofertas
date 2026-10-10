@@ -52,6 +52,7 @@ TARGETS: dict[str, tuple[int, int, str, int, int]] = {
     "logo-transparente-texto-claro-1440x400.png": (720, 200, transparent_lockup(dark_text=False), 1440, 400),
     "grupo-ferramentas-640.png": (640, 640, m.avatar(m.wrench(), "FERRAMENTAS"), 640, 640),
     "grupo-maquiagem-640.png": (640, 640, m.avatar(m.lipstick(), "MAQUIAGEM"), 640, 640),
+    "grupo-tenis-esporte-640.png": (640, 640, m.avatar_sport(), 640, 640),
 }
 
 
@@ -98,8 +99,14 @@ def main() -> None:
     work = Path(tempfile.mkdtemp(prefix="mpo-brand-"))
     profile = work / "perfil"
     try:
+        # Com nomes na linha de comando, só esses (os outros PNGs ficam como estão).
+        wanted = set(sys.argv[1:]) or set(TARGETS)
+        unknown = wanted - set(TARGETS)
+        if unknown:
+            raise SystemExit(f"desconhecidos: {sorted(unknown)}")
         for name, spec in TARGETS.items():
-            render(exe, work, profile, name, spec)
+            if name in wanted:
+                render(exe, work, profile, name, spec)
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
