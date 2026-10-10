@@ -147,13 +147,12 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Só drop table: no MariaDB um índice que atende a FK não pode cair antes da tabela (erro 1553),
+    # e o drop da tabela já leva os índices junto.
     op.drop_table("worker_lease")
-    op.drop_index("ix_integration_error_time", table_name="integration_error")
     op.drop_table("integration_error")
     op.drop_table("collection_run")
-    op.drop_index("ix_price_observation_product_time", table_name="price_observation")
     op.drop_table("price_observation")
-    op.drop_index("ix_catalog_product_due", table_name="catalog_product")
     op.drop_table("catalog_product")
     op.drop_table("niche_category")
     op.drop_table("niche")
