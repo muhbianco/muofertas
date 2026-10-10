@@ -112,6 +112,45 @@ O dono comparou o painel com a página do ML e achou dois desvios:
 - A reputação vem de `/users/bulk` (20 por chamada), com cache de 7 dias em `marketplace_seller`.
 - A série da nota usa a mesma régua do preço. As linhas de antes da `0004` só entram na régua
   oficial.
+- **Base zerada** a pedido do dono, logo depois do deploy das regras v2. O histórico conta a
+  partir de 10/10/2026 ~18:50 UTC.
+
+## Fase 2a — envio manual pelo celular (10/10/2026)
+Enquanto o suporte do ML não responde se automação de link é permitida (P5/D18), o ML vai **só à
+mão**.
+
+**Fluxo no painel:**
+1. **Grupos:** cadastrar cada grupo com:
+   - nicho;
+   - etiqueta do ML;
+   - link de convite;
+   - política: envios por dia, intervalo e janela em hora de Brasília;
+   - pausa.
+2. **Fila → Aprovar:** cria uma publicação para cada grupo do nicho.
+   - Aprovar de novo a mesma avaliação não duplica (`idempotency_key`).
+   - O mesmo produto não volta ao mesmo grupo em 7 dias, a menos que esteja 10% mais barato e
+     seja Excelente+.
+   - O produto sai da fila até o preço mudar.
+3. **Links:** o painel lista as URLs do dia por grupo (a página do produto com a oferta
+   escolhida).
+   - O operador cola as URLs no gerador do ML, com a etiqueta do grupo, e devolve os links
+     gerados na mesma ordem.
+   - Só entra link curto oficial: `meli.la` ou `mercadolivre.com/sec/`.
+4. **Postar:**
+   - "Revalidar preço" relê **a oferta do link**, não o menor preço do produto.
+     - Preço subiu mais de 3% ou a oferta saiu do ar: não sai.
+     - Preço caiu: vale o preço novo.
+   - Com a revalidação de até 5 minutos e o grupo liberado pela política, a mensagem é montada:
+     - `#publi` na primeira linha;
+     - preço com a hora da verificação;
+     - nada calculado sobre o histórico do ML (P6).
+   - "Abrir no WhatsApp" (`wa.me/?text=`) leva o texto pronto; o operador escolhe o grupo.
+   - "Postei no grupo" registra o envio uma vez só.
+
+**Limites conhecidos:**
+- Sem imagem: o WhatsApp monta a prévia do link curto. Ela pode ser apagada antes de enviar.
+- A política vale no momento de abrir o WhatsApp. O registro do envio é o toque em "Postei".
+- WuzAPI (telas Número e envio automático) é a Fase 2b, e depende do chip.
 
 ## O que só o dono pode fazer (nesta ordem) — ML primeiro
 

@@ -7,10 +7,11 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.clock import utcnow
+from app.domain.distribution import offer_page_url, product_page_url
 from app.models import (
     CatalogProduct,
     CollectionRun,
@@ -30,8 +31,7 @@ QUEUE_LIMIT = 50
 
 
 def product_url(product: CatalogProduct) -> str:
-    """Página do produto de catálogo no ML (/p/MLB…), mesmo quando a API não trouxe o link."""
-    return product.permalink or f"https://www.mercadolivre.com.br/p/{product.external_id}"
+    return product_page_url(product.permalink, product.external_id)
 
 
 LEVELS = {
@@ -46,11 +46,7 @@ KIND = {"oficial": "loja oficial", "confiavel": "oferta confiável", "elegivel":
 
 
 def offer_url(product: CatalogProduct, item_id: str | None) -> str:
-    """Página do produto com a oferta escolhida já selecionada (sem item, a página do produto)."""
-    base = product_url(product)
-    if not item_id:
-        return base
-    return f"{base}{'&' if '?' in base else '?'}pdp_filters=item_id:{item_id}"
+    return offer_page_url(product.permalink, product.external_id, item_id)
 
 
 @dataclass
@@ -153,6 +149,12 @@ async def queue(db: AsyncSession, tiers: list[str], niche_id: int | None) -> lis
             CatalogProduct.active.is_(True),
             CatalogProduct.operator_blocked.is_(False),
             CatalogProduct.last_tier.in_(tiers),
+            # Já decidido desde a última mudança de preço: sai da fila até o preço mudar.
+            ~exists().where(
+                OperatorDecision.product_id == CatalogProduct.id,
+                OperatorDecision.decided_at
+                >= func.coalesce(CatalogProduct.last_changed_at, CatalogProduct.first_seen_at),
+            ),
         )
     )
     if niche_id is not None:

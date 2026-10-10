@@ -20,6 +20,7 @@ from app.core.database import check_database_health, dispose_engine, get_session
 from app.core.logging import configure_logging
 from app.models import CatalogProduct, CollectionRun, PriceObservation
 from app.panel.auth import AuthContext, LoginRequiredError, require_admin
+from app.panel.distribution_routes import router as distribution_router
 from app.panel.routes import router as panel_router
 
 # Só o próprio painel; imagem de produto vem do CDN do ML. Sem script, sem estilo inline.
@@ -33,6 +34,9 @@ CSP = (
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     configure_logging(settings.log_level)
     yield
+    client = getattr(app.state, "ml_client", None)
+    if client is not None:
+        await client.aclose()
     await dispose_engine()
 
 
@@ -43,6 +47,7 @@ app.mount(
     "/static", StaticFiles(directory=str(Path(__file__).parent / "panel" / "static")), name="static"
 )
 app.include_router(panel_router)
+app.include_router(distribution_router)
 
 
 @app.middleware("http")

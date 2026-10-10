@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Postar{% endblock %}
+{% block content %}
+<h1>Postar</h1>
+{% if not groups %}<p class="vazio">Nada pronto para postar. Aprove na Fila e gere os links em Links.</p>{% endif %}
+{% for g in groups %}
+<article class="bloco">
+  <h2>{{ g.channel.name }}</h2>
+  {% if g.block %}<p class="erro">Agora não: {{ g.block }}.</p>{% else %}<p class="linha ok">Pode enviar agora.</p>{% endif %}
+  {% for r in g.rows %}
+  <a class="item" href="/postar/{{ r.pub.id }}">
+    {% if r.image_url %}<img src="{{ r.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="sem-foto"></span>{% endif %}
+    <span><b>{{ r.name }}</b><br><small>aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}</small></span>
+  </a>
+  {% endfor %}
+</article>
+{% endfor %}
+{% endblock %}

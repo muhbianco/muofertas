@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Grupos{% endblock %}
+{% macro channel_form(c, action, label) %}
+<form class="formulario" method="post" action="{{ action }}">
+  <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+  <label>Nome do grupo<input name="name" maxlength="80" required value="{{ c.name if c else '' }}"></label>
+  <label>Nicho
+    <select name="niche_id" required>
+      {% for n in niches %}<option value="{{ n.id }}" {% if c and c.niche_id == n.id %}selected{% endif %}>{{ n.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Etiqueta do ML <small>(minúsculas e números, até 30; crie no portal de afiliados)</small>
+    <input name="ml_tag" maxlength="30" pattern="[a-z0-9]{1,30}" value="{{ c.ml_tag or '' if c else '' }}"></label>
+  <label>Link de convite <small>(https://chat.whatsapp.com/…)</small>
+    <input name="invite_url" type="url" maxlength="255" value="{{ c.invite_url or '' if c else '' }}"></label>
+  <div class="duas">
+    <label>Envios por dia<input name="max_per_day" type="number" min="1" max="50" required value="{{ c.max_per_day if c else 10 }}"></label>
+    <label>Intervalo (min)<input name="min_interval_minutes" type="number" min="5" max="600" required value="{{ c.min_interval_minutes if c else 40 }}"></label>
+  </div>
+  <div class="duas">
+    <label>Das (h)<input name="window_start_hour" type="number" min="0" max="23" required value="{{ c.window_start_hour if c else 8 }}"></label>
+    <label>Até (h)<input name="window_end_hour" type="number" min="1" max="24" required value="{{ c.window_end_hour if c else 22 }}"></label>
+  </div>
+  <label class="marcar"><input type="checkbox" name="paused" value="1" {% if c and c.paused %}checked{% endif %}> Pausado (nada é publicado)</label>
+  <button class="botao aprovar" type="submit">{{ label }}</button>
+</form>
+{% endmacro %}
+{% block content %}
+<h1>Grupos</h1>
+<p class="nota-pix">Cada grupo recebe as ofertas aprovadas do seu nicho. Horários em hora de Brasília. Por enquanto o envio é manual, pelo seu celular.</p>
+{% if error %}<p class="erro">{{ error }}</p>{% endif %}
+{% for c in channels %}
+<article class="bloco">
+  <h2>{{ c.name }}{% if c.paused %} <span class="selo regular">pausado</span>{% endif %}</h2>
+  {{ channel_form(c, "/grupos/" ~ c.id, "Salvar") }}
+</article>
+{% endfor %}
+<article class="bloco">
+  <h2>Novo grupo</h2>
+  {% if not niches %}<p class="vazio">Nenhum nicho cadastrado.</p>{% else %}{{ channel_form(none, "/grupos", "Criar grupo") }}{% endif %}
+</article>
+{% endblock %}

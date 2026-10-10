@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Postar oferta{% endblock %}
+{% block content %}
+<h1>{{ product.name or product.external_id }}</h1>
+<p class="linha">{{ channel.name }} · aprovada a {{ pub.approved_price_cents | brl }} · estado {{ pub.state }}</p>
+{% if error %}<p class="erro">{{ error }}</p>{% endif %}
+
+{% if pub.state == "ready" %}
+  {% if pub.checked_at %}
+  <p class="linha">Revalidado {{ pub.checked_at | local }}: {{ pub.checked_price_cents | brl }}{% if pub.note %} — <span class="erro">{{ pub.note }}</span>{% endif %}</p>
+  {% endif %}
+  {% if message %}
+    <pre class="mensagem">{{ message }}</pre>
+    {% if block %}<p class="erro">Agora não: {{ block }}.</p>{% endif %}
+    {% if share %}
+    <a class="botao aprovar" href="{{ share }}">Abrir no WhatsApp</a>
+    <p class="nota-pix">Escolha o grupo {{ channel.name }} e envie. Se o WhatsApp montar a prévia do link, pode tirar. Depois volte e marque como postada.</p>
+    <form method="post" action="/postar/{{ pub.id }}/postei">
+      <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+      <button class="botao rejeitar" type="submit">Postei no grupo</button>
+    </form>
+    {% endif %}
+  {% elif not pub.note %}
+    <p class="nota-pix">O preço precisa ter sido conferido nos últimos 5 minutos para montar a mensagem.</p>
+  {% endif %}
+  {% if not fresh or not message %}
+  <form method="post" action="/postar/{{ pub.id }}/revalidar">
+    <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+    <button class="botao aprovar" type="submit">Revalidar preço</button>
+  </form>
+  {% endif %}
+{% elif pub.state == "sent" %}
+  <p class="linha ok">Postada {{ pub.sent_at | local }} por {{ pub.actor }}.</p>
+  {% if pub.message %}<pre class="mensagem">{{ pub.message }}</pre>{% endif %}
+{% else %}
+  <p class="linha">{{ pub.note or '' }}</p>
+{% endif %}
+
+{% if pub.state in ("awaiting_link", "ready") %}
+<h2>Desistir</h2>
+<form class="formulario" method="post" action="/postar/{{ pub.id }}/descartar">
+  <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+  <label>Motivo (opcional)<input name="reason" maxlength="200"></label>
+  <button class="botao bloquear" type="submit">Descartar</button>
+</form>
+{% endif %}
+<p><a href="{{ pub.target_url }}" target="_blank" rel="noopener noreferrer">ver a oferta no Mercado Livre</a></p>
+{% endblock %}

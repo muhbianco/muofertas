@@ -17,6 +17,8 @@ from app.core.clock import utcnow
 from app.core.config import settings
 from app.core.database import get_session
 from app.core.logging import get_logger
+from app.distribution.service import DistributionError, publications_for_approval
+from app.domain.distribution import format_brl
 from app.models import AdminUser, CatalogProduct, OfferEvaluation, OperatorDecision
 from app.panel import queries
 from app.panel.auth import (
@@ -36,16 +38,15 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 throttle = LoginThrottle()
 SP = ZoneInfo("America/Sao_Paulo")
 DECISIONS = {"approved": "aprovada", "rejected": "rejeitada", "blocked": "bloqueada"}
+NOTICES = {
+    "links": "Aprovada. Ela está em Links: gere o link do ML para postar.",
+    "sem-grupo": "Aprovada, mas o nicho não tem grupo cadastrado (Grupos).",
+    "repetida": "Aprovada, mas não vai agora: já foi para o grupo nos últimos 7 dias.",
+    "sem-preco": "Aprovada, mas esta avaliação não tem preço válido para publicar.",
+}
 
 Admin = Annotated[AuthContext, Depends(require_admin)]
 Db = Annotated[AsyncSession, Depends(get_session)]
-
-
-def _brl(cents: int | None) -> str:
-    if cents is None:
-        return "—"
-    reais = f"{cents / 100:,.2f}"
-    return "R$ " + reais.replace(",", "_").replace(".", ",").replace("_", ".")
 
 
 def _pct(bp: int | None) -> str:
@@ -56,7 +57,7 @@ def _local(value: datetime | None) -> str:
     return value.astimezone(SP).strftime("%d/%m %H:%M") if value else "—"
 
 
-templates.env.filters["brl"] = _brl
+templates.env.filters["brl"] = format_brl
 templates.env.filters["pct"] = _pct
 templates.env.filters["local"] = _local
 
@@ -142,7 +143,12 @@ async def logout(
 
 @router.get("/", response_class=HTMLResponse)
 async def queue_page(
-    request: Request, db: Db, ctx: Admin, nicho: str | None = None, nivel: str | None = None
+    request: Request,
+    db: Db,
+    ctx: Admin,
+    nicho: str | None = None,
+    nivel: str | None = None,
+    aviso: str | None = None,
 ) -> Response:
     niches = await queries.niches(db)
     niche = next((n for n in niches if n.slug == nicho), None)
@@ -160,6 +166,7 @@ async def queue_page(
             "nicho": niche.slug if niche else None,
             "nivel": nivel if nivel in queries.TIER_ORDER else None,
             "tier_order": queries.TIER_ORDER,
+            "notice": NOTICES.get(aviso or ""),
             "next": str(request.url.path) + (f"?{request.url.query}" if request.url.query else ""),
         },
     )
@@ -182,26 +189,52 @@ async def decide(
     product = await db.get(CatalogProduct, product_id)
     if product is None:
         raise HTTPException(status_code=404)
+    ev: OfferEvaluation | None = None
     if evaluation_id is not None:
         ev = await db.get(OfferEvaluation, evaluation_id)
         if ev is None or ev.product_id != product_id:
             raise HTTPException(status_code=422, detail="avaliação não confere")
-    db.add(
-        OperatorDecision(
-            product_id=product_id,
-            evaluation_id=evaluation_id,
-            decision=decision,
-            reason=(reason or "").strip()[:200] or None,
-            actor=ctx.username,
-            decided_at=utcnow(),
-        )
+    now = utcnow()
+    record = OperatorDecision(
+        product_id=product_id,
+        evaluation_id=evaluation_id,
+        decision=decision,
+        reason=(reason or "").strip()[:200] or None,
+        actor=ctx.username,
+        decided_at=now,
     )
+    db.add(record)
     if decision == "blocked":
         product.operator_blocked = True
+    notice = None
+    if decision == "approved" and ev is not None:
+        await db.flush()
+        try:
+            result = await publications_for_approval(
+                db, product=product, evaluation=ev, decision=record, now=now
+            )
+        except DistributionError:
+            notice = "sem-preco"
+        else:
+            if result.no_channel:
+                notice = "sem-grupo"
+            elif result.created:
+                notice = "links"
+            elif result.skipped:
+                notice = "repetida"
     logger.info(
-        "decisão", extra={"product_id": product_id, "decision": decision, "user": ctx.username}
+        "decisão",
+        extra={
+            "product_id": product_id,
+            "decision": decision,
+            "user": ctx.username,
+            "notice": notice,
+        },
     )
-    return RedirectResponse(_safe_next(next), status_code=status.HTTP_303_SEE_OTHER)
+    target = _safe_next(next)
+    if notice:
+        target += ("&" if "?" in target else "?") + f"aviso={notice}"
+    return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
 
 
 # --------------------------------------------------------------------------- páginas

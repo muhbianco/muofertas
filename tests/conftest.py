@@ -9,6 +9,7 @@ os.environ.setdefault("ML_CLIENT_SECRET", "test-secret")
 
 from collections.abc import AsyncIterator
 
+import httpx
 import pytest
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -18,7 +19,11 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import Settings
+from app.core.database import get_session
+from app.main import app
 from app.models import Base
+from app.panel import routes
+from app.panel.security import LoginThrottle
 
 
 @pytest.fixture
@@ -41,3 +46,22 @@ def settings() -> Settings:
         ml_hourly_call_cap=10_000,
         database_url_override="sqlite+aiosqlite://",
     )
+
+
+@pytest.fixture
+async def client(sessions: async_sessionmaker[AsyncSession]) -> AsyncIterator[httpx.AsyncClient]:
+    async def override() -> AsyncIterator[AsyncSession]:
+        async with sessions() as session:
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+
+    app.dependency_overrides[get_session] = override
+    routes.throttle = LoginThrottle()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()

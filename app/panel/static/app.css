@@ -78,3 +78,22 @@ th { background: #faf5e8; font-weight: 600; }
 .sair { background: transparent; color: var(--creme); border: 1px solid rgba(255,255,255,.4); border-radius: 10px; padding: 6px 10px; font-size: 14px; }
 .oferta { font-size: 13px; color: var(--cinza); margin-top: 2px; }
 .nota-pix { font-size: 12px; color: var(--cinza); margin: 0 0 10px; }
+.bloco { background: #fff; border: 1px solid var(--linha); border-radius: 14px; padding: 12px; margin: 0 0 14px; }
+.bloco h2 { margin-top: 2px; }
+.formulario { display: grid; gap: 10px; }
+.formulario label, .bloco > label { display: grid; gap: 4px; font-size: 14px; }
+.formulario label small { color: var(--cinza); }
+.formulario input, .formulario select, textarea {
+  width: 100%; font-size: 16px; padding: 10px; border-radius: 10px; border: 1px solid var(--linha); background: #fff; color: var(--tinta);
+  font-family: inherit;
+}
+textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+.formulario .marcar { display: flex; gap: 8px; align-items: center; }
+.formulario .marcar input { width: auto; }
+.duas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.botao { display: block; text-align: center; line-height: 48px; text-decoration: none; margin: 8px 0; }
+.passos { font-size: 14px; color: var(--cinza); padding-left: 20px; }
+.aviso { background: #e6f4ee; color: var(--esm-esc); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.mensagem { white-space: pre-wrap; word-break: break-word; background: #faf5e8; border: 1px solid var(--linha); border-radius: 12px; padding: 12px; font: 15px/1.45 system-ui, sans-serif; }
+.item { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--linha); color: var(--tinta); text-decoration: none; }
+.item img, .item .sem-foto { width: 56px; height: 56px; object-fit: contain; border-radius: 8px; background: var(--creme); display: block; }

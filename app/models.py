@@ -1,8 +1,7 @@
-"""Modelos do núcleo do coletor (Fase 1).
+"""Modelos da MegaPromoOz.
 
-Só o necessário para o histórico começar a rodar: nichos e suas categorias, produtos de catálogo
-monitorados, observações de preço, execuções de coleta, erros de integração e o lease do worker.
-Oferta, decisão, publicação e cupom entram nas próximas migrations.
+Nichos e suas categorias, produtos de catálogo monitorados, observações de preço, execuções de
+coleta, erros, avaliações, operador, grupos e publicações. Cupom entra numa próxima migration.
 """
 
 from __future__ import annotations
@@ -303,3 +302,70 @@ class WorkerLease(Base):
     name: Mapped[str] = mapped_column(String(40), primary_key=True)
     holder: Mapped[str] = mapped_column(String(80))
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class Channel(Base):
+    """Grupo de WhatsApp de um nicho, com a etiqueta do ML e a política de envio (0005).
+
+    `transport` diz quem envia: `manual` (o operador posta pelo celular a partir do painel) ou,
+    na Fase 2b, `wuzapi`. Horários da janela em hora de Brasília.
+    """
+
+    __tablename__ = "channel"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    niche_id: Mapped[int] = mapped_column(ForeignKey("niche.id"))
+    name: Mapped[str] = mapped_column(String(80), unique=True)
+    transport: Mapped[str] = mapped_column(String(12), default="manual")
+    ml_tag: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    invite_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    max_per_day: Mapped[int] = mapped_column(Integer, default=10)
+    min_interval_minutes: Mapped[int] = mapped_column(Integer, default=40)
+    window_start_hour: Mapped[int] = mapped_column(Integer, default=8)
+    window_end_hour: Mapped[int] = mapped_column(Integer, default=22)
+    paused: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class Publication(Base):
+    """Uma oferta aprovada a caminho de um grupo (0005). Nunca é apagada: é a prova do envio.
+
+    Estados: `awaiting_link` (falta o link de afiliado do ML) → `ready` → `sent`; ou `skipped`
+    (repetida, nicho pausado) e `discarded` (o operador desistiu ou o preço subiu).
+    `idempotency_key` impede duas publicações da mesma avaliação no mesmo grupo.
+    """
+
+    __tablename__ = "publication"
+    __table_args__ = (
+        Index("ix_publication_channel_dedup", "channel_id", "dedup_key", "created_at"),
+        Index("ix_publication_state", "state", "created_at"),
+        Index("ix_publication_channel_sent", "channel_id", "sent_at"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channel.id"))
+    product_id: Mapped[int] = mapped_column(ForeignKey("catalog_product.id"))
+    evaluation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("offer_evaluation.id", ondelete="SET NULL"), nullable=True
+    )
+    decision_id: Mapped[int | None] = mapped_column(
+        ForeignKey("operator_decision.id", ondelete="SET NULL"), nullable=True
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(80), unique=True)
+    dedup_key: Mapped[str] = mapped_column(String(64))
+    state: Mapped[str] = mapped_column(String(16))
+    tier: Mapped[str] = mapped_column(String(12))
+    item_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    target_url: Mapped[str] = mapped_column(String(512))
+    affiliate_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    approved_price_cents: Mapped[int] = mapped_column(BigInteger)
+    checked_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    checked_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    note: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    link_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    sent_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    actor: Mapped[str | None] = mapped_column(String(40), nullable=True)

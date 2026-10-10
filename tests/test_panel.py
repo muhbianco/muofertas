@@ -4,16 +4,12 @@ import base64
 import json
 import re
 import time
-from collections.abc import AsyncIterator
 
 import httpx
-import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.clock import utcnow
-from app.core.database import get_session
-from app.main import app
 from app.models import (
     AdminUser,
     CatalogProduct,
@@ -23,7 +19,6 @@ from app.models import (
     OperatorDecision,
     PriceObservation,
 )
-from app.panel import routes
 from app.panel.security import (
     TOTP_STEP_SECONDS,
     LoginThrottle,
@@ -60,25 +55,6 @@ def test_throttle_per_ip() -> None:
     assert not t.allowed("1.1.1.1", now=101.0)
     assert t.allowed("2.2.2.2", now=101.0)
     assert t.allowed("1.1.1.1", now=100.0 + 16 * 60)  # janela andou
-
-
-@pytest.fixture
-async def client(sessions: async_sessionmaker[AsyncSession]) -> AsyncIterator[httpx.AsyncClient]:
-    async def override() -> AsyncIterator[AsyncSession]:
-        async with sessions() as session:
-            try:
-                yield session
-                await session.commit()
-            except Exception:
-                await session.rollback()
-                raise
-
-    app.dependency_overrides[get_session] = override
-    routes.throttle = LoginThrottle()
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
-        yield c
-    app.dependency_overrides.clear()
 
 
 async def seed_admin(sessions: async_sessionmaker[AsyncSession]) -> str:
