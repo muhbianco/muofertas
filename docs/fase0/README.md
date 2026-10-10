@@ -147,6 +147,25 @@ mão**.
    - "Abrir no WhatsApp" (`wa.me/?text=`) leva o texto pronto; o operador escolhe o grupo.
    - "Postei no grupo" registra o envio uma vez só.
 
+- **Pix:** a API não traz o desconto do Pix. A oferta só tem `price` e `original_price`, e
+  `sale_price` dá 403 para afiliado. Scraping do ML é vedado.
+  - O operador digita o preço do Pix que vê na página.
+  - Entra se for menor que o anúncio e até 30% abaixo.
+  - A mensagem mostra os dois preços.
+
+**Alertas** (o processo web vigia, com lease próprio):
+- Quando disparam:
+  - worker sem renovar o lease há 10 minutos;
+  - nenhuma atualização de preço em 6 horas;
+  - 20 ou mais erros do ML em uma hora;
+  - produtos com leitura atrasada há mais de 1 hora.
+- Aparecem na Saúde e num aviso na Fila.
+- E-mail pelo fluxo próprio `megapromooz-email` no n8n, quando `ALERT_EMAIL_*` estiverem no Env
+  da stack:
+  - um e-mail ao abrir;
+  - lembrete a cada 6 horas;
+  - um e-mail ao resolver.
+
 **Limites conhecidos:**
 - Sem imagem: o WhatsApp monta a prévia do link curto. Ela pode ser apagada antes de enviar.
 - A política vale no momento de abrir o WhatsApp. O registro do envio é o toque em "Postei".

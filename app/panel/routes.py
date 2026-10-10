@@ -167,6 +167,7 @@ async def queue_page(
             "nivel": nivel if nivel in queries.TIER_ORDER else None,
             "tier_order": queries.TIER_ORDER,
             "notice": NOTICES.get(aviso or ""),
+            "open_alerts": await queries.open_alerts(db),
             "next": str(request.url.path) + (f"?{request.url.query}" if request.url.query else ""),
         },
     )

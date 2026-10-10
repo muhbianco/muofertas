@@ -371,3 +371,22 @@ class Publication(Base):
     link_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     sent_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     actor: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+
+class Alert(Base):
+    """Alerta crítico da operação (0007): abre uma vez, é lembrado e fecha sozinho."""
+
+    __tablename__ = "alert"
+    __table_args__ = (Index("ix_alert_state_kind", "state", "kind"),)
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    kind: Mapped[str] = mapped_column(String(40))
+    state: Mapped[str] = mapped_column(String(10))  # open | resolved
+    message: Mapped[str] = mapped_column(String(255))
+    opened_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    last_seen_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    resolved_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    notified_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    resolution_notified_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)

@@ -12,18 +12,13 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import os
 import signal
-import socket
-from datetime import timedelta
-
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.collector.service import Collector
 from app.core.clock import utcnow
 from app.core.config import Settings, settings
 from app.core.database import SessionFactory, dispose_engine
+from app.core.lease import acquire_lease, holder_id, release_lease
 from app.core.logging import configure_logging, get_logger
 from app.evaluation.service import Evaluator
 from app.integrations.mercadolivre import (
@@ -31,53 +26,9 @@ from app.integrations.mercadolivre import (
     MercadoLivreClient,
     RateLimitedError,
 )
-from app.models import WorkerLease
 
 logger = get_logger(__name__)
-LEASE_NAME = "collector"
 RATE_LIMIT_PAUSE_SECONDS = 15 * 60
-
-
-def holder_id() -> str:
-    return f"{socket.gethostname()}:{os.getpid()}"[:80]
-
-
-async def acquire_lease(
-    sessions: async_sessionmaker[AsyncSession],
-    holder: str,
-    ttl_seconds: int,
-    *,
-    name: str = LEASE_NAME,
-) -> bool:
-    """Pega ou renova o lease. A linha fica travada (FOR UPDATE): nunca há dois líderes."""
-    now = utcnow()
-    async with sessions() as session, session.begin():
-        lease = (
-            await session.execute(
-                select(WorkerLease).where(WorkerLease.name == name).with_for_update()
-            )
-        ).scalar_one_or_none()
-        if lease is None:
-            session.add(
-                WorkerLease(
-                    name=name, holder=holder, expires_at=now + timedelta(seconds=ttl_seconds)
-                )
-            )
-            return True
-        if lease.holder == holder or lease.expires_at <= now:
-            lease.holder = holder
-            lease.expires_at = now + timedelta(seconds=ttl_seconds)
-            return True
-        return False
-
-
-async def release_lease(
-    sessions: async_sessionmaker[AsyncSession], holder: str, *, name: str = LEASE_NAME
-) -> None:
-    async with sessions() as session, session.begin():
-        lease = await session.get(WorkerLease, name)
-        if lease is not None and lease.holder == holder:
-            lease.expires_at = utcnow()
 
 
 async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:

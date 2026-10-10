@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -14,9 +16,10 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.alerts.service import alert_loop
 from app.core.clock import utcnow
 from app.core.config import settings
-from app.core.database import check_database_health, dispose_engine, get_session
+from app.core.database import SessionFactory, check_database_health, dispose_engine, get_session
 from app.core.logging import configure_logging
 from app.models import CatalogProduct, CollectionRun, PriceObservation
 from app.panel.auth import AuthContext, LoginRequiredError, require_admin
@@ -33,7 +36,17 @@ CSP = (
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     configure_logging(settings.log_level)
+    stop = asyncio.Event()
+    watcher = (
+        asyncio.create_task(alert_loop(SessionFactory, settings, stop))
+        if settings.alerts_enabled
+        else None
+    )
     yield
+    stop.set()
+    if watcher is not None:
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(watcher, timeout=10)
     client = getattr(app.state, "ml_client", None)
     if client is not None:
         await client.aclose()

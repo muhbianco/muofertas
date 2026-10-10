@@ -67,6 +67,14 @@ class Settings(BaseSettings):
     worker_idle_seconds: float = 5.0
     worker_lease_seconds: int = 60
 
+    # --- alertas (o processo web vigia; e-mail pelo fluxo próprio do produto no n8n) ------
+    alerts_enabled: bool = True
+    alert_check_seconds: int = 300
+    alert_email_webhook_url: str = ""
+    alert_email_webhook_token: SecretStr = SecretStr("")
+    alert_email_to: str = ""
+    panel_url: str = "https://ofertas.muhbianco.com.br"
+
     @property
     def database_url(self) -> str:
         if self.database_url_override:

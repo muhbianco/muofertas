@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.clock import utcnow
 from app.domain.distribution import offer_page_url, product_page_url
 from app.models import (
+    Alert,
     CatalogProduct,
     CollectionRun,
     IntegrationError,
@@ -365,6 +366,13 @@ class Health:
     observations_24h: int
     products_active: int
     lease: WorkerLease | None
+    alerts: list[Alert] = field(default_factory=list)
+
+
+async def open_alerts(db: AsyncSession) -> int:
+    return (
+        await db.execute(select(func.count()).select_from(Alert).where(Alert.state == "open"))
+    ).scalar_one()
 
 
 async def health(db: AsyncSession) -> Health:
@@ -408,4 +416,11 @@ async def health(db: AsyncSession) -> Health:
         )
     ).scalar_one()
     lease = await db.get(WorkerLease, "collector")
-    return Health(runs, errors_24h, recent_errors, int(calls), observations, products, lease)
+    alerts = list(
+        (
+            await db.execute(select(Alert).order_by(Alert.state.desc(), Alert.id.desc()).limit(15))
+        ).scalars()
+    )
+    return Health(
+        runs, errors_24h, recent_errors, int(calls), observations, products, lease, alerts
+    )

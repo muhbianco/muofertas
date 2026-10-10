@@ -2,6 +2,16 @@
 {% block title %}Saúde{% endblock %}
 {% block content %}
 <h1>Saúde do coletor</h1>
+{% if h.alerts %}
+<h2>Alertas</h2>
+<table>
+  <tr><th>Desde</th><th>Alerta</th><th>Estado</th></tr>
+  {% for a in h.alerts %}
+  <tr><td>{{ a.opened_at | local }}</td><td>{{ a.message }}</td>
+    <td>{% if a.state == "open" %}<span class="erro">aberto</span>{% if a.notified_at %} · e-mail {{ a.notified_at | local }}{% endif %}{% else %}<span class="ok">resolvido {{ a.resolved_at | local }}</span>{% endif %}</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
 <table>
   <tr><th>Worker</th><td>{% if h.lease and h.lease.expires_at > now %}<span class="ok">ativo</span> ({{ h.lease.holder }}){% else %}<span class="erro">sem líder</span>{% endif %}</td></tr>
   <tr><th>Produtos vigiados</th><td>{{ h.products_active }}</td></tr>

@@ -3,6 +3,7 @@
 {% block content %}
 <h1>Fila de aprovação</h1>
 {% if notice %}<p class="aviso">{{ notice }}</p>{% endif %}
+{% if open_alerts %}<p class="erro">⚠ {{ open_alerts }} alerta{{ 's' if open_alerts > 1 }} aberto{{ 's' if open_alerts > 1 }}: <a href="/saude">ver Saúde</a></p>{% endif %}
 <form class="filtros" method="get" action="/">
   <select name="nicho" aria-label="Nicho">
     <option value="">Todos os nichos</option>

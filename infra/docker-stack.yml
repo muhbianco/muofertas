@@ -25,6 +25,10 @@ x-env: &env
   ML_CLIENT_SECRET: ${ML_CLIENT_SECRET}
   ML_REQUESTS_PER_SECOND: "1.0"
   ML_HOURLY_CALL_CAP: "2500"
+  # Alertas por e-mail (fluxo megapromooz-email no n8n). Vazios: alerta só no painel.
+  ALERT_EMAIL_WEBHOOK_URL: ${ALERT_EMAIL_WEBHOOK_URL:-}
+  ALERT_EMAIL_WEBHOOK_TOKEN: ${ALERT_EMAIL_WEBHOOK_TOKEN:-}
+  ALERT_EMAIL_TO: ${ALERT_EMAIL_TO:-}
 
 # Rotação de log por container: sem isto, um serviço falante enche o disco da VPS em semanas.
 x-logging: &logging
