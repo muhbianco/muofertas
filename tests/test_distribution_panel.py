@@ -250,3 +250,11 @@ async def test_approval_without_group_warns(
     location = await approve(client, csrf, product_id, ev_id)
     assert location.endswith("aviso=sem-grupo")
     assert "não tem grupo cadastrado" in (await client.get(location)).text
+    # o caso de 10/10/2026: aprovou antes de cadastrar o grupo. O produto não some da fila;
+    # cadastrado o grupo, aprovar de novo leva para Links.
+    assert "Galaxy A17" in (await client.get("/")).text
+    async with sessions() as session:
+        niche_id = (await session.execute(select(Niche.id))).scalar_one()
+    await create_group(client, csrf, niche_id)
+    assert (await approve(client, csrf, product_id, ev_id)).endswith("aviso=links")
+    assert "Galaxy A17" not in (await client.get("/")).text

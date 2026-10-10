@@ -23,6 +23,7 @@ from app.models import (
     OfferEvaluation,
     OperatorDecision,
     PriceObservation,
+    Publication,
     WorkerLease,
 )
 
@@ -142,6 +143,7 @@ async def tier_counts(db: AsyncSession, niche_id: int | None) -> dict[str, int]:
 
 
 async def queue(db: AsyncSession, tiers: list[str], niche_id: int | None) -> list[Card]:
+    since_change = func.coalesce(CatalogProduct.last_changed_at, CatalogProduct.first_seen_at)
     rank = case({t: i for i, t in enumerate(TIER_ORDER)}, value=CatalogProduct.last_tier, else_=99)
     q = (
         select(CatalogProduct, Niche.name)
@@ -150,11 +152,17 @@ async def queue(db: AsyncSession, tiers: list[str], niche_id: int | None) -> lis
             CatalogProduct.active.is_(True),
             CatalogProduct.operator_blocked.is_(False),
             CatalogProduct.last_tier.in_(tiers),
-            # Já decidido desde a última mudança de preço: sai da fila até o preço mudar.
+            # Resolvido desde a última mudança de preço sai da fila até o preço mudar:
+            # rejeitado, ou aprovado que virou publicação. Aprovado sem grupo no nicho continua
+            # na fila (a aprovação não levou a lugar nenhum).
             ~exists().where(
                 OperatorDecision.product_id == CatalogProduct.id,
-                OperatorDecision.decided_at
-                >= func.coalesce(CatalogProduct.last_changed_at, CatalogProduct.first_seen_at),
+                OperatorDecision.decision == "rejected",
+                OperatorDecision.decided_at >= since_change,
+            ),
+            ~exists().where(
+                Publication.product_id == CatalogProduct.id,
+                Publication.created_at >= since_change,
             ),
         )
     )
