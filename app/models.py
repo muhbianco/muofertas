@@ -120,6 +120,8 @@ class CatalogProduct(Base):
     last_evaluated_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     last_tier: Mapped[str | None] = mapped_column(String(12), nullable=True)
     last_score: Mapped[float | None] = mapped_column(Numeric(5, 1, asdecimal=False), nullable=True)
+    # Painel (0003): o operador tira o produto da fila de vez.
+    operator_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class PriceObservation(Base):
@@ -209,6 +211,56 @@ class OfferEvaluation(Base):
     real_discount_bp: Mapped[int | None] = mapped_column(Integer, nullable=True)
     reference_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     snapshot: Mapped[str] = mapped_column(Text)  # JSON da Evaluation
+
+
+class AdminUser(Base):
+    """Operador do painel. Senha em argon2; segundo fator TOTP (Google Authenticator)."""
+
+    __tablename__ = "admin_user"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(40), unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    totp_secret: Mapped[str] = mapped_column(String(64))
+    # Último passo TOTP aceito: o mesmo código não entra duas vezes (replay).
+    totp_last_step: Mapped[int] = mapped_column(BigInteger, default=0)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    last_login_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
+class AdminSession(Base):
+    """Sessão do painel. O cookie leva o token; o banco guarda só o hash dele."""
+
+    __tablename__ = "admin_session"
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    csrf_token: Mapped[str] = mapped_column(String(64))
+    user_id: Mapped[int] = mapped_column(ForeignKey("admin_user.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class OperatorDecision(Base):
+    """Decisão do operador sobre uma avaliação (só insert: aprovar, rejeitar, bloquear)."""
+
+    __tablename__ = "operator_decision"
+    __table_args__ = (Index("ix_operator_decision_product_time", "product_id", "decided_at"),)
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    product_id: Mapped[int] = mapped_column(ForeignKey("catalog_product.id", ondelete="CASCADE"))
+    evaluation_id: Mapped[int | None] = mapped_column(
+        ForeignKey("offer_evaluation.id", ondelete="SET NULL"), nullable=True
+    )
+    decision: Mapped[str] = mapped_column(String(12))  # approved | rejected | blocked
+    reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    actor: Mapped[str] = mapped_column(String(40))
+    decided_at: Mapped[datetime] = mapped_column(UTCDateTime())
 
 
 class WorkerLease(Base):

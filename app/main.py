@@ -1,12 +1,16 @@
-"""API web. Na Fase 1 só saúde e estado do coletor; o painel entra em seguida."""
+"""API web: saúde e o painel do operador (ofertas.muhbianco.com.br)."""
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from datetime import timedelta
+from pathlib import Path
+from typing import Annotated
 
-from fastapi import Depends, FastAPI, Response, status
+from fastapi import Depends, FastAPI, Request, Response, status
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +19,14 @@ from app.core.config import settings
 from app.core.database import check_database_health, dispose_engine, get_session
 from app.core.logging import configure_logging
 from app.models import CatalogProduct, CollectionRun, PriceObservation
+from app.panel.auth import AuthContext, LoginRequiredError, require_admin
+from app.panel.routes import router as panel_router
+
+# Só o próprio painel; imagem de produto vem do CDN do ML. Sem script, sem estilo inline.
+CSP = (
+    "default-src 'self'; img-src 'self' https://http2.mlstatic.com data:; style-src 'self'; "
+    "script-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+)
 
 
 @asynccontextmanager
@@ -27,6 +39,30 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title="MegaPromoOz", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan
 )
+app.mount(
+    "/static", StaticFiles(directory=str(Path(__file__).parent / "panel" / "static")), name="static"
+)
+app.include_router(panel_router)
+
+
+@app.middleware("http")
+async def security_headers(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    response = await call_next(request)
+    response.headers["Content-Security-Policy"] = CSP
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    if not request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.exception_handler(LoginRequiredError)
+async def login_required(_: Request, __: LoginRequiredError) -> Response:
+    return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.get("/health/live")
@@ -45,8 +81,11 @@ async def ready(response: Response) -> dict[str, str]:
 
 
 @app.get("/health/collector")
-async def collector_health(session: AsyncSession = Depends(get_session)) -> dict[str, object]:
-    """Para monitoração: o coletor está andando? (sem dado de produto, só contagens)."""
+async def collector_health(
+    _: Annotated[AuthContext, Depends(require_admin)],
+    session: Annotated[AsyncSession, Depends(get_session)],
+) -> dict[str, object]:
+    """Contagens do coletor (só logado: o painel é público na internet)."""
     since = utcnow() - timedelta(hours=1)
     last_ok = (
         await session.execute(

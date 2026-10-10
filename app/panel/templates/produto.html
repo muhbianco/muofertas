@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Produto{% endblock %}
+{% block content %}
+{% set prod = p.product %}
+{% set s = p.latest_snapshot %}
+<h1>{{ prod.name or prod.external_id }}</h1>
+<p class="linha">{{ p.niche or '—' }} · {{ prod.brand or 'sem marca' }} · camada {{ prod.tier }} ·
+  <a href="{{ url }}" target="_blank" rel="noopener noreferrer">ver no Mercado Livre</a></p>
+
+<div>
+  {% if prod.last_tier %}<span class="selo {{ prod.last_tier }}">{{ prod.last_tier }}</span>{% endif %}
+  {% if s.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}
+  <span class="preco">{{ s.price_cents | brl }}</span>
+</div>
+
+<h2>Histórico (90 dias)</h2>
+<div class="grafico">
+  {% if spark.min %}
+  <svg viewBox="0 0 320 90" role="img" aria-label="Histórico de preço">
+    <polyline fill="none" stroke="#0e8a62" stroke-width="2" points="{{ spark.min }}"/>
+    {% if spark.official %}<polyline fill="none" stroke="#f2a900" stroke-width="2" stroke-dasharray="4 3" points="{{ spark.official }}"/>{% endif %}
+  </svg>
+  <div class="legenda"><span><i class="leg-min"></i>menor preço</span><span><i class="leg-of"></i>loja oficial</span>
+    <span>de {{ spark.lo | brl }} a {{ spark.hi | brl }}</span></div>
+  {% else %}<p class="vazio">Sem observações ainda.</p>{% endif %}
+</div>
+
+<h2>Por que esta nota</h2>
+{% if s %}
+<table>
+  <tr><th>Nota</th><td>{{ s.score }} ({{ s.tier }}) · regras {{ s.ruleset }}</td></tr>
+  <tr><th>Desconto real</th><td>{% if s.real_discount is not none %}{{ '%.0f' % (s.real_discount * 100) }}% abaixo de {{ s.reference_cents | brl }}{% else %}não comprovado (histórico curto){% endif %}</td></tr>
+  <tr><th>Componentes</th><td>{% for k, v in s.components.items() %}{{ k }} {{ v }}{% if not loop.last %} · {% endif %}{% endfor %}</td></tr>
+  {% if reasons %}<tr><th>Motivos</th><td><ul class="motivos">{% for r in reasons %}<li>{{ r }}</li>{% endfor %}</ul></td></tr>{% endif %}
+</table>
+{% else %}<p class="vazio">Ainda não avaliado.</p>{% endif %}
+
+<h2>Decidir</h2>
+<div class="acoes">
+  {% for value, label, cls in [('approved', 'Aprovar', 'aprovar'), ('rejected', 'Rejeitar', 'rejeitar'), ('blocked', 'Bloquear', 'bloquear')] %}
+  <form method="post" action="/decisao">
+    <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+    <input type="hidden" name="product_id" value="{{ prod.id }}">
+    {% if p.evaluations %}<input type="hidden" name="evaluation_id" value="{{ p.evaluations[0].id }}">{% endif %}
+    <input type="hidden" name="decision" value="{{ value }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="{{ cls }}" type="submit">{{ label }}</button>
+  </form>
+  {% endfor %}
+</div>
+
+<h2>Últimas observações</h2>
+<table>
+  <tr><th>Quando</th><th>Menor</th><th>Oficial</th><th>Ofertas</th></tr>
+  {% for o in p.observations[-10:] | reverse %}
+  <tr><td>{{ o.observed_at | local }}</td><td>{{ o.min_price_cents | brl }}</td><td>{{ o.min_official_price_cents | brl }}</td><td>{{ o.offers_count }}</td></tr>
+  {% endfor %}
+</table>
+
+{% if p.decisions %}
+<h2>Decisões</h2>
+<table>
+  {% for d in p.decisions %}<tr><td>{{ d.decided_at | local }}</td><td>{{ decisions_label.get(d.decision, d.decision) }}</td><td>{{ d.actor }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+{% endblock %}

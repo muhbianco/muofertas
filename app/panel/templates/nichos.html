@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Nichos{% endblock %}
+{% block content %}
+<h1>Nichos</h1>
+<p class="linha">As regras e categorias vêm de <code>config/nichos.json</code> e são aplicadas a cada deploy.</p>
+{% for r in rows %}
+<h2>{{ r.niche.name }}</h2>
+<table>
+  <tr><th>Comissão</th><td>{{ '%.0f' % (r.niche.commission_rate_bp / 100) }}% · {% if r.niche.require_official %}só loja oficial{% else %}qualquer vendedor (marcas de risco: só oficial){% endif %}</td></tr>
+  <tr><th>Produtos</th><td>{% for t in tier_order %}{% if r.counts.get(t) %}{{ t }} {{ r.counts[t] }} · {% endif %}{% endfor %}{% if r.counts.get('sem nota') %}sem nota {{ r.counts['sem nota'] }}{% endif %}</td></tr>
+  <tr><th>Categorias</th><td>{% for c in r.categories %}{{ c.name }}{% if not c.active %} (inativa){% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</td></tr>
+</table>
+{% endfor %}
+{% endblock %}

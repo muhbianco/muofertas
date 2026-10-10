@@ -1,0 +1,243 @@
+"""Rotas do painel (HTML server-side, formulários comuns, pensado para celular)."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+from typing import Annotated
+from zoneinfo import ZoneInfo
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.templating import Jinja2Templates
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.clock import utcnow
+from app.core.config import settings
+from app.core.database import get_session
+from app.core.logging import get_logger
+from app.models import AdminUser, CatalogProduct, OfferEvaluation, OperatorDecision
+from app.panel import queries
+from app.panel.auth import (
+    SESSION_COOKIE,
+    SESSION_TTL,
+    AuthContext,
+    check_csrf,
+    create_session,
+    destroy_session,
+    require_admin,
+)
+from app.panel.security import LoginThrottle, verify_password, verify_totp
+
+logger = get_logger(__name__)
+router = APIRouter()
+templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+throttle = LoginThrottle()
+SP = ZoneInfo("America/Sao_Paulo")
+DECISIONS = {"approved": "aprovada", "rejected": "rejeitada", "blocked": "bloqueada"}
+
+Admin = Annotated[AuthContext, Depends(require_admin)]
+Db = Annotated[AsyncSession, Depends(get_session)]
+
+
+def _brl(cents: int | None) -> str:
+    if cents is None:
+        return "—"
+    reais = f"{cents / 100:,.2f}"
+    return "R$ " + reais.replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+def _pct(bp: int | None) -> str:
+    return "—" if bp is None else f"{bp / 100:.0f}%"
+
+
+def _local(value: datetime | None) -> str:
+    return value.astimezone(SP).strftime("%d/%m %H:%M") if value else "—"
+
+
+templates.env.filters["brl"] = _brl
+templates.env.filters["pct"] = _pct
+templates.env.filters["local"] = _local
+
+
+def _safe_next(target: str | None) -> str:
+    """Só caminho relativo do próprio painel (evita redirect aberto)."""
+    if target and target.startswith("/") and not target.startswith("//") and "\\" not in target:
+        return target
+    return "/"
+
+
+# --------------------------------------------------------------------------- login
+
+
+@router.get("/login", response_class=HTMLResponse)
+async def login_form(request: Request) -> Response:
+    return templates.TemplateResponse(request, "login.html", {"error": None})
+
+
+@router.post("/login", response_class=HTMLResponse)
+async def login(
+    request: Request,
+    db: Db,
+    username: Annotated[str, Form(max_length=40)],
+    password: Annotated[str, Form(max_length=200)],
+    code: Annotated[str, Form(max_length=10)],
+) -> Response:
+    ip = request.client.host if request.client else "?"
+    if not throttle.allowed(ip):
+        logger.warning("login bloqueado pelo freio", extra={"ip": ip})
+        return templates.TemplateResponse(
+            request,
+            "login.html",
+            {"error": "Muitas tentativas. Espere alguns minutos."},
+            status_code=429,
+        )
+    user = (
+        await db.execute(select(AdminUser).where(AdminUser.username == username.strip()))
+    ).scalar_one_or_none()
+    password_ok = verify_password(password, user.password_hash if user else None)
+    step = (
+        verify_totp(user.totp_secret, code, user.totp_last_step)
+        if user and user.active and password_ok
+        else None
+    )
+    if user is None or not password_ok or step is None:
+        throttle.failure(ip)
+        logger.warning("login recusado", extra={"ip": ip})
+        return templates.TemplateResponse(
+            request, "login.html", {"error": "Usuário, senha ou código inválidos."}, status_code=401
+        )
+    throttle.success(ip)
+    user.totp_last_step = step
+    user.last_login_at = utcnow()
+    token, _ = await create_session(db, user)
+    logger.info("login", extra={"user": user.username})
+    response = RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
+    response.set_cookie(
+        SESSION_COOKIE,
+        token,
+        max_age=int(SESSION_TTL.total_seconds()),
+        httponly=True,
+        secure=settings.environment == "production",
+        samesite="strict",
+        path="/",
+    )
+    return response
+
+
+@router.post("/logout")
+async def logout(
+    request: Request, db: Db, ctx: Admin, csrf: Annotated[str | None, Form()] = None
+) -> Response:
+    check_csrf(ctx, csrf)
+    await destroy_session(db, request.cookies.get(SESSION_COOKIE))
+    response = RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
+    response.delete_cookie(SESSION_COOKIE, path="/")
+    return response
+
+
+# --------------------------------------------------------------------------- fila
+
+
+@router.get("/", response_class=HTMLResponse)
+async def queue_page(
+    request: Request, db: Db, ctx: Admin, nicho: str | None = None, nivel: str | None = None
+) -> Response:
+    niches = await queries.niches(db)
+    niche = next((n for n in niches if n.slug == nicho), None)
+    tiers = [nivel] if nivel in queries.TIER_ORDER else queries.QUEUE_DEFAULT_TIERS
+    cards = await queries.queue(db, tiers, niche.id if niche else None)
+    counts = await queries.tier_counts(db, niche.id if niche else None)
+    return templates.TemplateResponse(
+        request,
+        "fila.html",
+        {
+            "ctx": ctx,
+            "cards": cards,
+            "counts": counts,
+            "niches": niches,
+            "nicho": niche.slug if niche else None,
+            "nivel": nivel if nivel in queries.TIER_ORDER else None,
+            "tier_order": queries.TIER_ORDER,
+            "next": str(request.url.path) + (f"?{request.url.query}" if request.url.query else ""),
+        },
+    )
+
+
+@router.post("/decisao")
+async def decide(
+    db: Db,
+    ctx: Admin,
+    product_id: Annotated[int, Form()],
+    decision: Annotated[str, Form()],
+    csrf: Annotated[str | None, Form()] = None,
+    evaluation_id: Annotated[int | None, Form()] = None,
+    reason: Annotated[str | None, Form(max_length=200)] = None,
+    next: Annotated[str | None, Form()] = None,
+) -> Response:
+    check_csrf(ctx, csrf)
+    if decision not in DECISIONS:
+        raise HTTPException(status_code=422, detail="decisão inválida")
+    product = await db.get(CatalogProduct, product_id)
+    if product is None:
+        raise HTTPException(status_code=404)
+    if evaluation_id is not None:
+        ev = await db.get(OfferEvaluation, evaluation_id)
+        if ev is None or ev.product_id != product_id:
+            raise HTTPException(status_code=422, detail="avaliação não confere")
+    db.add(
+        OperatorDecision(
+            product_id=product_id,
+            evaluation_id=evaluation_id,
+            decision=decision,
+            reason=(reason or "").strip()[:200] or None,
+            actor=ctx.username,
+            decided_at=utcnow(),
+        )
+    )
+    if decision == "blocked":
+        product.operator_blocked = True
+    logger.info(
+        "decisão", extra={"product_id": product_id, "decision": decision, "user": ctx.username}
+    )
+    return RedirectResponse(_safe_next(next), status_code=status.HTTP_303_SEE_OTHER)
+
+
+# --------------------------------------------------------------------------- páginas
+
+
+@router.get("/produto/{product_id}", response_class=HTMLResponse)
+async def product_detail(request: Request, db: Db, ctx: Admin, product_id: int) -> Response:
+    page = await queries.product_page(db, product_id)
+    if page is None:
+        raise HTTPException(status_code=404)
+    return templates.TemplateResponse(
+        request,
+        "produto.html",
+        {
+            "ctx": ctx,
+            "p": page,
+            "url": queries.product_url(page.product),
+            "reasons": queries.reasons(page.latest_snapshot),
+            "spark": queries.sparkline(page.observations),
+            "decisions_label": DECISIONS,
+            "next": f"/produto/{product_id}",
+        },
+    )
+
+
+@router.get("/nichos", response_class=HTMLResponse)
+async def niches_page(request: Request, db: Db, ctx: Admin) -> Response:
+    return templates.TemplateResponse(
+        request,
+        "nichos.html",
+        {"ctx": ctx, "rows": await queries.niche_overview(db), "tier_order": queries.TIER_ORDER},
+    )
+
+
+@router.get("/saude", response_class=HTMLResponse)
+async def health_page(request: Request, db: Db, ctx: Admin) -> Response:
+    return templates.TemplateResponse(
+        request, "saude.html", {"ctx": ctx, "h": await queries.health(db), "now": utcnow()}
+    )

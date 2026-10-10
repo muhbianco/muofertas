@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Saúde{% endblock %}
+{% block content %}
+<h1>Saúde do coletor</h1>
+<table>
+  <tr><th>Worker</th><td>{% if h.lease and h.lease.expires_at > now %}<span class="ok">ativo</span> ({{ h.lease.holder }}){% else %}<span class="erro">sem líder</span>{% endif %}</td></tr>
+  <tr><th>Produtos vigiados</th><td>{{ h.products_active }}</td></tr>
+  <tr><th>Preços gravados (24 h)</th><td>{{ h.observations_24h }}</td></tr>
+  <tr><th>Chamadas ao ML (1 h)</th><td>{{ h.calls_last_hour }}</td></tr>
+  <tr><th>Erros de integração (24 h)</th><td>{% if h.errors_24h %}<span class="erro">{{ h.errors_24h }}</span>{% else %}<span class="ok">0</span>{% endif %}</td></tr>
+</table>
+
+<h2>Últimas execuções</h2>
+<table>
+  <tr><th>Início</th><th>Tipo</th><th>Estado</th><th>Vistos/mud.</th><th>Cham.</th></tr>
+  {% for r in h.runs %}
+  <tr><td>{{ r.started_at | local }}</td><td>{{ r.source }}</td><td>{{ r.status }}</td><td>{{ r.items_seen }}/{{ r.items_changed }}</td><td>{{ r.calls }}</td></tr>
+  {% endfor %}
+</table>
+
+{% if h.recent_errors %}
+<h2>Erros recentes</h2>
+<table>
+  {% for e in h.recent_errors %}<tr><td>{{ e.occurred_at | local }}</td><td>{{ e.source }}</td><td>{{ e.http_status or '' }} {{ e.error_code or '' }}</td><td>{{ e.path or '' }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+{% endblock %}

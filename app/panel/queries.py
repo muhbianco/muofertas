@@ -1,0 +1,322 @@
+"""Leituras do painel. Toda lista tem LIMIT; filtros só de listas fechadas (allowlist)."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Any
+
+from sqlalchemy import case, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.clock import utcnow
+from app.models import (
+    CatalogProduct,
+    CollectionRun,
+    IntegrationError,
+    Niche,
+    NicheCategory,
+    OfferEvaluation,
+    OperatorDecision,
+    PriceObservation,
+    WorkerLease,
+)
+
+TIER_ORDER = ["excepcional", "excelente", "boa", "suspeita", "regular", "bloqueada"]
+QUEUE_DEFAULT_TIERS = ["excepcional", "excelente", "boa", "suspeita"]
+QUEUE_LIMIT = 50
+
+
+def product_url(product: CatalogProduct) -> str:
+    """Página do produto de catálogo no ML (/p/MLB…), mesmo quando a API não trouxe o link."""
+    return product.permalink or f"https://www.mercadolivre.com.br/p/{product.external_id}"
+
+
+@dataclass
+class Card:
+    product_id: int
+    evaluation_id: int | None
+    name: str
+    niche: str
+    image_url: str | None
+    permalink: str | None
+    tier: str
+    score: float | None
+    price_cents: int | None
+    reference_cents: int | None
+    real_discount_bp: int | None
+    used_official: bool
+    reasons: list[str] = field(default_factory=list)
+
+
+def reasons(snapshot: dict[str, Any]) -> list[str]:
+    labels = {
+        "G1_preco_velho": "preço desatualizado",
+        "G2_sem_oferta": "sem oferta à venda",
+        "G7_sem_loja_oficial": "sem loja oficial (exigida)",
+        "G8_titulo_de_copia": "título de cópia/réplica",
+        "S1_subiu_para_descer": "subiu antes de cair",
+        "S2_desconto_alto_demais": "desconto alto demais",
+        "S4_muito_abaixo_da_loja_oficial": "muito abaixo da loja oficial",
+    }
+    out = [labels.get(g, g) for g in snapshot.get("gates_failed", [])]
+    out += [labels.get(s, s) for s in snapshot.get("signals", [])]
+    out += list(snapshot.get("notes", []))
+    return out
+
+
+async def niches(db: AsyncSession) -> list[Niche]:
+    return list((await db.execute(select(Niche).order_by(Niche.id).limit(50))).scalars())
+
+
+async def tier_counts(db: AsyncSession, niche_id: int | None) -> dict[str, int]:
+    q = select(CatalogProduct.last_tier, func.count()).where(
+        CatalogProduct.active.is_(True), CatalogProduct.operator_blocked.is_(False)
+    )
+    if niche_id is not None:
+        q = q.where(CatalogProduct.niche_id == niche_id)
+    rows = (await db.execute(q.group_by(CatalogProduct.last_tier))).tuples().all()
+    return {tier or "sem nota": count for tier, count in rows}
+
+
+async def queue(db: AsyncSession, tiers: list[str], niche_id: int | None) -> list[Card]:
+    rank = case({t: i for i, t in enumerate(TIER_ORDER)}, value=CatalogProduct.last_tier, else_=99)
+    q = (
+        select(CatalogProduct, Niche.name)
+        .join(Niche, Niche.id == CatalogProduct.niche_id)
+        .where(
+            CatalogProduct.active.is_(True),
+            CatalogProduct.operator_blocked.is_(False),
+            CatalogProduct.last_tier.in_(tiers),
+        )
+    )
+    if niche_id is not None:
+        q = q.where(CatalogProduct.niche_id == niche_id)
+    rows = (
+        await db.execute(q.order_by(rank, CatalogProduct.last_score.desc()).limit(QUEUE_LIMIT))
+    ).all()
+    ids = [p.id for p, _ in rows]
+    latest = await _latest_evaluations(db, ids)
+    cards = []
+    for product, niche_name in rows:
+        ev = latest.get(product.id)
+        snap = json.loads(ev.snapshot) if ev else {}
+        cards.append(
+            Card(
+                product_id=product.id,
+                evaluation_id=ev.id if ev else None,
+                name=product.name or product.external_id,
+                niche=niche_name,
+                image_url=product.image_url,
+                permalink=product_url(product),
+                tier=product.last_tier or "",
+                score=product.last_score,
+                price_cents=ev.price_cents if ev else None,
+                reference_cents=ev.reference_cents if ev else None,
+                real_discount_bp=ev.real_discount_bp if ev else None,
+                used_official=bool(ev and ev.used_official),
+                reasons=reasons(snap),
+            )
+        )
+    return cards
+
+
+async def _latest_evaluations(
+    db: AsyncSession, product_ids: list[int]
+) -> dict[int, OfferEvaluation]:
+    if not product_ids:
+        return {}
+    latest = (
+        select(func.max(OfferEvaluation.id))
+        .where(OfferEvaluation.product_id.in_(product_ids))
+        .group_by(OfferEvaluation.product_id)
+    )
+    rows = (
+        await db.execute(select(OfferEvaluation).where(OfferEvaluation.id.in_(latest)))
+    ).scalars()
+    return {r.product_id: r for r in rows}
+
+
+@dataclass
+class ProductPage:
+    product: CatalogProduct
+    niche: str | None
+    observations: list[PriceObservation]
+    evaluations: list[OfferEvaluation]
+    decisions: list[OperatorDecision]
+    latest_snapshot: dict[str, Any]
+
+
+async def product_page(db: AsyncSession, product_id: int) -> ProductPage | None:
+    product = await db.get(CatalogProduct, product_id)
+    if product is None:
+        return None
+    niche = await db.get(Niche, product.niche_id) if product.niche_id else None
+    since = utcnow() - timedelta(days=90)
+    observations = list(
+        (
+            await db.execute(
+                select(PriceObservation)
+                .where(
+                    PriceObservation.product_id == product_id, PriceObservation.observed_at >= since
+                )
+                .order_by(PriceObservation.observed_at)
+                .limit(1000)
+            )
+        ).scalars()
+    )
+    evaluations = list(
+        (
+            await db.execute(
+                select(OfferEvaluation)
+                .where(OfferEvaluation.product_id == product_id)
+                .order_by(OfferEvaluation.id.desc())
+                .limit(10)
+            )
+        ).scalars()
+    )
+    decisions = list(
+        (
+            await db.execute(
+                select(OperatorDecision)
+                .where(OperatorDecision.product_id == product_id)
+                .order_by(OperatorDecision.id.desc())
+                .limit(10)
+            )
+        ).scalars()
+    )
+    snap = json.loads(evaluations[0].snapshot) if evaluations else {}
+    return ProductPage(
+        product, niche.name if niche else None, observations, evaluations, decisions, snap
+    )
+
+
+def sparkline(
+    observations: list[PriceObservation], width: int = 320, height: int = 90
+) -> dict[str, Any]:
+    """Pontos (degrau) do menor preço e do menor preço de loja oficial, já em coordenadas SVG."""
+    if not observations:
+        return {"min": "", "official": "", "lo": None, "hi": None}
+    prices = [o.min_price_cents for o in observations] + [
+        o.min_official_price_cents for o in observations if o.min_official_price_cents
+    ]
+    lo, hi = min(prices), max(prices)
+    t0 = observations[0].observed_at.timestamp()
+    t1 = max(utcnow().timestamp(), t0 + 1)
+    span = hi - lo or 1
+
+    def xy(at: datetime, price: int) -> str:
+        x = 4 + (width - 8) * (at.timestamp() - t0) / (t1 - t0)
+        y = height - 4 - (height - 8) * (price - lo) / span
+        return f"{x:.1f},{y:.1f}"
+
+    def path(values: list[tuple[datetime, int | None]]) -> str:
+        pts: list[str] = []
+        prev: int | None = None
+        for at, price in values:
+            if price is None:
+                prev = None
+                continue
+            if prev is not None:
+                pts.append(xy(at, prev))  # degrau: o preço anterior vale até aqui
+            pts.append(xy(at, price))
+            prev = price
+        if prev is not None:
+            pts.append(xy(utcnow(), prev))
+        return " ".join(pts)
+
+    return {
+        "min": path([(o.observed_at, o.min_price_cents) for o in observations]),
+        "official": path([(o.observed_at, o.min_official_price_cents) for o in observations]),
+        "lo": lo,
+        "hi": hi,
+    }
+
+
+@dataclass
+class NicheRow:
+    niche: Niche
+    categories: list[NicheCategory]
+    counts: dict[str, int]
+
+
+async def niche_overview(db: AsyncSession) -> list[NicheRow]:
+    all_niches = await niches(db)
+    cats = list(
+        (await db.execute(select(NicheCategory).order_by(NicheCategory.id).limit(500))).scalars()
+    )
+    counts_rows = (
+        (
+            await db.execute(
+                select(CatalogProduct.niche_id, CatalogProduct.last_tier, func.count())
+                .where(CatalogProduct.active.is_(True))
+                .group_by(CatalogProduct.niche_id, CatalogProduct.last_tier)
+            )
+        )
+        .tuples()
+        .all()
+    )
+    counts: dict[int, dict[str, int]] = {}
+    for niche_id, tier, count in counts_rows:
+        if niche_id is not None:
+            counts.setdefault(niche_id, {})[tier or "sem nota"] = count
+    return [
+        NicheRow(n, [c for c in cats if c.niche_id == n.id], counts.get(n.id, {}))
+        for n in all_niches
+    ]
+
+
+@dataclass
+class Health:
+    runs: list[CollectionRun]
+    errors_24h: int
+    recent_errors: list[IntegrationError]
+    calls_last_hour: int
+    observations_24h: int
+    products_active: int
+    lease: WorkerLease | None
+
+
+async def health(db: AsyncSession) -> Health:
+    now = utcnow()
+    runs = list(
+        (
+            await db.execute(select(CollectionRun).order_by(CollectionRun.id.desc()).limit(20))
+        ).scalars()
+    )
+    errors_24h = (
+        await db.execute(
+            select(func.count())
+            .select_from(IntegrationError)
+            .where(IntegrationError.occurred_at >= now - timedelta(hours=24))
+        )
+    ).scalar_one()
+    recent_errors = list(
+        (
+            await db.execute(
+                select(IntegrationError).order_by(IntegrationError.id.desc()).limit(10)
+            )
+        ).scalars()
+    )
+    calls = (
+        await db.execute(
+            select(func.coalesce(func.sum(CollectionRun.calls), 0)).where(
+                CollectionRun.started_at >= now - timedelta(hours=1)
+            )
+        )
+    ).scalar_one()
+    observations = (
+        await db.execute(
+            select(func.count())
+            .select_from(PriceObservation)
+            .where(PriceObservation.observed_at >= now - timedelta(hours=24))
+        )
+    ).scalar_one()
+    products = (
+        await db.execute(
+            select(func.count()).select_from(CatalogProduct).where(CatalogProduct.active.is_(True))
+        )
+    ).scalar_one()
+    lease = await db.get(WorkerLease, "collector")
+    return Health(runs, errors_24h, recent_errors, int(calls), observations, products, lease)

@@ -13,7 +13,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 
 from app.collector.service import MARKETPLACE, Collector
 from app.core.clock import utcnow
@@ -115,6 +115,65 @@ async def stats() -> None:
     print("observações de preço:", observations)
 
 
+def _prompt_admin() -> tuple[str, str, str]:
+    """Pergunta tudo antes do loop assíncrono. Senha e segredo só aparecem neste terminal."""
+    import getpass
+    import sys
+
+    from app.panel.security import new_totp_secret, otpauth_uri, verify_totp
+
+    if not sys.stdin.isatty():
+        raise SystemExit("rode num terminal interativo: senha e código são digitados")
+    username = input("usuário do painel: ").strip()
+    if not username or len(username) > 40:
+        raise SystemExit("usuário inválido")
+    password = getpass.getpass("senha (mínimo 12 caracteres): ")
+    if len(password) < 12 or password != getpass.getpass("repita a senha: "):
+        raise SystemExit("senha curta ou diferente; nada foi gravado")
+    secret = new_totp_secret()
+    grouped = " ".join(secret[i : i + 4] for i in range(0, len(secret), 4))
+    print()
+    print("No Google Authenticator: + > Inserir chave de configuração")
+    print(f"  conta: MegaPromoOz ({username})")
+    print(f"  chave: {grouped}   (tipo: baseada em tempo)")
+    print(f"  ou, num leitor de QR: {otpauth_uri(secret, username)}")
+    print()
+    code = input("código de 6 dígitos que o app mostra agora: ")
+    if verify_totp(secret, code, last_step=0) is None:
+        raise SystemExit("código não confere (relógio do celular certo?); nada foi gravado")
+    return username, password, secret
+
+
+async def save_admin(username: str, password: str, secret: str) -> None:
+    from app.models import AdminSession, AdminUser
+    from app.panel.security import hash_password
+
+    async with SessionFactory() as session, session.begin():
+        user = (
+            await session.execute(select(AdminUser).where(AdminUser.username == username))
+        ).scalar_one_or_none()
+        if user is None:
+            user = AdminUser(
+                username=username,
+                password_hash=hash_password(password),
+                totp_secret=secret,
+                totp_last_step=0,
+                active=True,
+                created_at=utcnow(),
+            )
+            session.add(user)
+            action = "criado"
+        else:
+            user.password_hash = hash_password(password)
+            user.totp_secret = secret
+            user.totp_last_step = 0
+            user.active = True
+            await session.flush()
+            await session.execute(delete(AdminSession).where(AdminSession.user_id == user.id))
+            action = "atualizado (sessões antigas encerradas)"
+    print(f"operador {username} {action}.")
+
+
 def main() -> None:
     configure_logging(settings.log_level)
     parser = argparse.ArgumentParser(prog="app.cli")
@@ -123,11 +182,13 @@ def main() -> None:
     seed.add_argument("path", type=Path)
     sub.add_parser("run-once")
     sub.add_parser("stats")
+    sub.add_parser("create-admin", help="cria ou redefine o operador do painel (interativo)")
     args = parser.parse_args()
-    # Arquivo lido antes do loop assíncrono (sem I/O bloqueante dentro dele).
+    # Arquivo e perguntas antes do loop assíncrono (sem I/O bloqueante dentro dele).
     seed_data = (
         json.loads(args.path.read_text(encoding="utf-8")) if args.command == "seed-niches" else {}
     )
+    admin = _prompt_admin() if args.command == "create-admin" else None
 
     async def runner() -> None:
         try:
@@ -135,6 +196,8 @@ def main() -> None:
                 await seed_niches(seed_data)
             elif args.command == "run-once":
                 await run_once()
+            elif admin is not None:
+                await save_admin(*admin)
             else:
                 await stats()
         finally:

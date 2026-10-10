@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Entrar{% endblock %}
+{% block content %}
+<form class="login" method="post" action="/login" autocomplete="on">
+  <h1>MegaPromoOz · painel</h1>
+  <label for="username">Usuário</label>
+  <input id="username" name="username" autocomplete="username" autocapitalize="none" required maxlength="40">
+  <label for="password">Senha</label>
+  <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="200">
+  <label for="code">Código do autenticador</label>
+  <input id="code" name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" autocomplete="one-time-code" required maxlength="10">
+  <button class="botao" type="submit">Entrar</button>
+  {% if error %}<p class="erro">{{ error }}</p>{% endif %}
+</form>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Fila{% endblock %}
+{% block content %}
+<h1>Fila de aprovação</h1>
+<form class="filtros" method="get" action="/">
+  <select name="nicho" aria-label="Nicho">
+    <option value="">Todos os nichos</option>
+    {% for n in niches %}<option value="{{ n.slug }}" {% if n.slug == nicho %}selected{% endif %}>{{ n.name }}</option>{% endfor %}
+  </select>
+  <select name="nivel" aria-label="Nível">
+    <option value="">Excepcional a suspeita</option>
+    {% for t in tier_order %}<option value="{{ t }}" {% if t == nivel %}selected{% endif %}>{{ t }}</option>{% endfor %}
+  </select>
+  <button type="submit">Filtrar</button>
+</form>
+<div class="contagem">
+  {% for t in tier_order %}{% if counts.get(t) %}<span>{{ t }}: {{ counts[t] }}</span>{% endif %}{% endfor %}
+  {% if counts.get('sem nota') %}<span>sem nota: {{ counts['sem nota'] }}</span>{% endif %}
+</div>
+
+{% if not cards %}
+<p class="vazio">Nada na fila agora. Nas primeiras semanas isso é esperado: sem ~10 dias de histórico nenhum desconto está comprovado.</p>
+{% endif %}
+
+{% for c in cards %}
+<article class="card">
+  {% if c.image_url %}<img src="{{ c.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<div class="sem-foto"></div>{% endif %}
+  <div>
+    <div><span class="selo {{ c.tier }}">{{ c.tier }}</span>{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
+    <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
+    <div class="linha">{{ c.niche }}</div>
+    <div class="preco">{{ c.price_cents | brl }}</div>
+    <div class="linha">
+      {% if c.real_discount_bp is not none %}{{ c.real_discount_bp | pct }} abaixo da referência ({{ c.reference_cents | brl }}){% else %}desconto ainda não comprovado{% endif %}
+    </div>
+    {% if c.reasons %}<ul class="motivos">{% for r in c.reasons %}<li>{{ r }}</li>{% endfor %}</ul>{% endif %}
+  </div>
+  <div class="acoes">
+    {% for value, label, cls in [('approved', 'Aprovar', 'aprovar'), ('rejected', 'Rejeitar', 'rejeitar'), ('blocked', 'Bloquear', 'bloquear')] %}
+    <form method="post" action="/decisao">
+      <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+      <input type="hidden" name="product_id" value="{{ c.product_id }}">
+      {% if c.evaluation_id %}<input type="hidden" name="evaluation_id" value="{{ c.evaluation_id }}">{% endif %}
+      <input type="hidden" name="decision" value="{{ value }}">
+      <input type="hidden" name="next" value="{{ next }}">
+      <button class="{{ cls }}" type="submit">{{ label }}</button>
+    </form>
+    {% endfor %}
+  </div>
+</article>
+{% endfor %}
+{% endblock %}

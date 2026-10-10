@@ -3,6 +3,10 @@ uvicorn[standard]==0.52.0
 pydantic==2.13.4
 pydantic-settings==2.14.2
 httpx==0.28.1
+# Painel (mesmas versões da api-commerce): templates, formulários e hash de senha (argon2).
+Jinja2==3.1.6
+python-multipart==0.0.32
+pwdlib[argon2]==0.3.0
 SQLAlchemy[asyncio]==2.0.51
 asyncmy==0.2.11
 alembic==1.18.5
