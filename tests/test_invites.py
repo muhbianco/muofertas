@@ -17,7 +17,7 @@ from app.panel import invites
 from app.panel.security import TOTP_STEP_SECONDS, totp_at
 from tests.test_panel import login, seed_admin
 
-PASSWORD = "senha-do-primo-123"
+PASSWORD = "senha-do-primo-123"  # gitleaks:allow (senha falsa de teste)
 
 
 @pytest.fixture
@@ -130,7 +130,7 @@ async def test_invite_without_email_shows_link_once_and_attempts_are_capped(
             data={
                 "username": "x1",
                 "password": PASSWORD,
-                "password_again": "outra-senha-123",
+                "password_again": "outra-senha-123",  # gitleaks:allow (senha falsa de teste)
                 "code": "1",
             },
         )
