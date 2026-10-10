@@ -9,11 +9,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.clock import utcnow
 from app.core.config import settings
+from app.core.database import get_sessionmaker
 from app.core.logging import get_logger
 from app.distribution import service
+from app.distribution.sender import resend_now
 from app.distribution.service import DistributionError
 from app.domain.distribution import INVITE_PREFIX, ML_TAG_RE, is_fresh, share_url
 from app.integrations.mercadolivre import MercadoLivreClient
@@ -47,6 +50,7 @@ async def get_ml_client(request: Request) -> MercadoLivreClient:
 
 Ml = Annotated[MercadoLivreClient, Depends(get_ml_client)]
 WaClient = Annotated[WuzapiClient, Depends(get_wa_client)]
+Sessions = Annotated[async_sessionmaker[AsyncSession], Depends(get_sessionmaker)]
 
 
 def _see_other(url: str) -> RedirectResponse:
@@ -512,6 +516,29 @@ async def checked_in_group(
         "envio conferido",
         extra={"publication_id": pub_id, "outcome": outcome, "user": ctx.username},
     )
+    return _see_other("/postar")
+
+
+@router.post("/postar/{pub_id}/reenviar")
+async def resend(
+    db: Db,
+    ctx: Admin,
+    client: Ml,
+    wa_client: WaClient,
+    sm: Sessions,
+    pub_id: int,
+    csrf: Annotated[str | None, Form()] = None,
+) -> Response:
+    """Cópia da publicação enviada, mandada já (fora do intervalo): pedido explícito do dono."""
+    check_csrf(ctx, csrf)
+    await db.commit()  # a cópia nasce em transação própria, antes da rede
+    try:
+        copy_id = await resend_now(
+            sm, client, wa_client, publication_id=pub_id, actor=ctx.username, now=utcnow()
+        )
+    except DistributionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    logger.info("reenvio", extra={"publication_id": pub_id, "copy": copy_id, "user": ctx.username})
     return _see_other("/postar")
 
 

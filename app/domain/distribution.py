@@ -36,7 +36,7 @@ INVITE_PREFIX = "https://chat.whatsapp.com/"
 # Saída do "Gerador de produtos recomendados" do ML: curto oficial em meli.la ou /sec/.
 AFFILIATE_HOSTS = frozenset({"meli.la", "mercadolivre.com", "www.mercadolivre.com"})
 NICHE_EMOJI = {"ferramentas": "🔧", "beleza": "💄", "tenis-esporte": "👟"}
-MAX_NAME = 120
+MAX_NAME = 90
 PIX_MAX_DISCOUNT = 0.30
 # O Pix é visto pelo operador na aprovação; depois disso a mensagem sai sem ele.
 PIX_VALID_FOR = timedelta(hours=3)
@@ -213,25 +213,37 @@ def render_message(
     url: str,
     pix_cents: int | None = None,
 ) -> str:
+    """Formato do WhatsApp: *negrito*, _itálico_ e blocos separados por linha em branco.
+
+    `#publi` abre a mensagem (identificação em primeiro plano); o resto é para ler no celular.
+    """
     local = checked_at.astimezone(SP)
-    name = product_name.strip()
-    if len(name) > MAX_NAME:
-        name = name[: MAX_NAME - 1].rstrip() + "…"
-    return "\n".join(
-        [
-            f"#publi · {NICHE_EMOJI.get(niche_slug, '🛍️')} {label_of(niche_name)} · preço de "
-            f"{local:%d/%m} às {local:%H:%M}",
-            f"{name}{' · loja oficial' if official else ''}",
-            (
-                f"💰 {format_brl(pix_cents)} no Pix ({format_brl(price_cents)} nas outras formas)"
-                " no Mercado Livre"
-                if pix_cents
-                else f"💰 {format_brl(price_cents)} no Mercado Livre"
-            ),
-            "Preço e estoque podem mudar a qualquer momento.",
-            f"🛒 {url}",
-        ]
-    )
+    lines = [
+        f"#publi · {NICHE_EMOJI.get(niche_slug, '🛍️')} *{label_of(niche_name)}*",
+        "",
+        f"*{short_name(product_name)}*",
+    ]
+    if official:
+        lines.append("✅ Loja oficial")
+    lines += ["", f"💰 *{format_brl(price_cents)}* no Mercado Livre"]
+    if pix_cents:
+        lines.append(f"⚡ *{format_brl(pix_cents)} no Pix*")
+    lines += [
+        "",
+        f"👉 {url}",
+        "",
+        f"_Preço conferido em {local:%d/%m} às {local:%H:%M}; pode mudar a qualquer momento._",
+    ]
+    return "\n".join(lines)
+
+
+def short_name(product_name: str) -> str:
+    """Título do anúncio sem os marcadores do WhatsApp e cortado na palavra (até 90)."""
+    name = " ".join(product_name.translate(str.maketrans("", "", "*_~`")).split())
+    if len(name) <= MAX_NAME:
+        return name
+    cut = name[: MAX_NAME - 1].rsplit(" ", 1)[0].rstrip(" ,.-\u2013")
+    return cut + "…"
 
 
 class PixError(ValueError):

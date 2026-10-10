@@ -101,11 +101,13 @@ def test_message_starts_with_publi_and_has_check_time() -> None:
     )
     lines = text.split("\n")
     # #publi em primeiro plano, numa linha só com o nicho e a hora (CDC 36, CONAR 2026)
-    assert lines[0] == "#publi · 🔧 FERRAMENTAS · preço de 21/10 às 15:00"
-    assert lines[1].endswith("… · loja oficial") and len(lines[1]) < 140
-    assert lines[2] == "💰 R$ 389,90 no Mercado Livre"
+    assert lines[0] == "#publi · 🔧 *FERRAMENTAS*"
+    assert lines[2].startswith("*Parafusadeira X") and lines[2].endswith("…*")
+    assert len(lines[2]) <= 92 and lines[3] == "✅ Loja oficial"
+    assert "💰 *R$ 389,90* no Mercado Livre" in lines
+    assert "👉 https://meli.la/abc" in lines
+    assert lines[-1] == "_Preço conferido em 21/10 às 15:00; pode mudar a qualquer momento._"
     assert "comissão" not in text
-    assert lines[-1] == "🛒 https://meli.la/abc"
     assert "abaixo" not in text  # nada calculado sobre histórico do ML (P6)
     assert unquote(share_url(text).removeprefix("https://wa.me/?text=")) == text
 
@@ -148,4 +150,4 @@ def test_message_with_pix_shows_both_prices() -> None:
         url="https://meli.la/x",
         pix_cents=4950,
     )
-    assert "💰 R$ 49,50 no Pix (R$ 55,00 nas outras formas) no Mercado Livre" in text
+    assert "💰 *R$ 55,00* no Mercado Livre\n⚡ *R$ 49,50 no Pix*" in text

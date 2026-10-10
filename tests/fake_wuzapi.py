@@ -30,6 +30,7 @@ class FakeWuzapi:
     down: bool = False
     # envio: ok | refuse (500) | timeout (depois de enviar) | connect (nem conectou)
     send_mode: str = "ok"
+    image_mode: str = "ok"  # ok | refuse (400: a foto não saiu, o texto pode ir)
     sent: list[dict[str, Any]] = field(default_factory=list)
 
     def transport(self) -> httpx.MockTransport:
@@ -93,6 +94,12 @@ class FakeWuzapi:
             if self.send_mode == "timeout":
                 raise httpx.ReadTimeout("sem resposta", request=request)
             return self._ok({"Details": "Sent", "Id": f"MSG{len(self.sent)}"})
+        if path == "/chat/send/image":
+            body = json.loads(request.content)
+            if self.image_mode == "refuse":
+                return httpx.Response(400, json={"error": "could not decode image"})
+            self.sent.append(body)
+            return self._ok({"Details": "Sent", "Id": f"IMG{len(self.sent)}"})
         if path == "/group/list":
             return self._ok({"Groups": self.groups})
         if path == "/group/invitelink":

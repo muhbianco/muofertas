@@ -178,15 +178,15 @@ async def test_manual_flow_from_approval_to_posted_once(
     share = re.search(r'href="(https://wa\.me/\?text=[^"]+)"', detail)
     assert share is not None
     text = unquote(share.group(1).replace("&amp;", "&").removeprefix("https://wa.me/?text="))
-    assert text.startswith("#publi · 🛍️ OBSERVAÇÃO · preço de ")
-    assert "R$ 1.299,00 no Mercado Livre" in text and text.endswith("https://meli.la/2AbC9")
+    assert text.startswith("#publi · 🛍️ *OBSERVAÇÃO*\n")
+    assert "💰 *R$ 1.299,00* no Mercado Livre" in text and "👉 https://meli.la/2AbC9" in text
 
     # Pix visto na página pelo operador: entra na mensagem; valor absurdo é recusado
     bad_pix = await client.post(f"/postar/{pub.id}/pix", data={"csrf": csrf, "pix": "500,00"})
     assert bad_pix.headers["location"].endswith("erro=pix")
     await client.post(f"/postar/{pub.id}/pix", data={"csrf": csrf, "pix": "1.169,10"})
     detail = (await client.get(f"/postar/{pub.id}")).text
-    assert "R$ 1.169,10 no Pix (R$ 1.299,00 nas outras formas)" in detail
+    assert "⚡ *R$ 1.169,10 no Pix*" in detail
     assert 'value="1169,10"' in detail
 
     # postei: uma vez só

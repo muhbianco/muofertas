@@ -168,7 +168,7 @@ async def test_approved_offer_goes_to_the_group_once(
     sent = wa.sent[0]
     assert sent["Phone"] == GROUP and sent["LinkPreview"] is False
     assert sent["Body"].startswith("#publi · ")
-    assert "R$ 404,90 no Pix (R$ 449,90 nas outras formas)" in sent["Body"]
+    assert "⚡ *R$ 404,90 no Pix*" in sent["Body"]
     assert "matt_word=megapromooz&matt_tool=19964746" in sent["Body"]
     pub = await state(sessions)
     assert (pub.state, pub.actor, pub.external_message_id) == ("sent", "envio automático", "MSG1")
@@ -286,3 +286,98 @@ async def test_panel_approval_with_pix_and_group_checks(
     assert "Conferir no grupo" in (await client.get("/postar")).text
     await client.post(f"/postar/{pub.id}/conferido", data={"csrf": token, "outcome": "saiu"})
     assert (await state(sessions)).state == "sent"
+
+
+IMAGE_URL = "https://http2.mlstatic.com/D_NQ_NP_745785-MLA114987927277_072026-F.jpg"
+JPEG = bytes.fromhex("ffd8ffe000104a46494600") + b"0" * 64
+
+
+def image_server(request: httpx.Request) -> httpx.Response:
+    return httpx.Response(200, content=JPEG, headers={"content-type": "image/jpeg"})
+
+
+async def run_with_photo(
+    sessions: async_sessionmaker[AsyncSession], wa: FakeWuzapi, image_url: str
+) -> int:
+    async with sessions() as session, session.begin():
+        product = (await session.execute(select(CatalogProduct))).scalar_one()
+        product.image_url = image_url
+    fake_ml = FakeML(offers={"MLBP1": [{"item_id": ITEM, "price": 449.90, "currency_id": "BRL"}]})
+    ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
+    wa_client = WuzapiClient(cfg(), transport=wa.transport())
+    images = httpx.AsyncClient(transport=httpx.MockTransport(image_server))
+    try:
+        return await send_due(sessions, ml_client, wa_client, NOW, images=images)
+    finally:
+        await ml_client.aclose()
+        await wa_client.aclose()
+        await images.aclose()
+
+
+async def test_post_goes_as_product_photo_with_caption(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await approve(sessions)
+    wa = FakeWuzapi()
+    assert await run_with_photo(sessions, wa, IMAGE_URL) == 1
+    (sent,) = wa.sent
+    assert sent["Image"].startswith("data:image/jpeg;base64,")
+    assert sent["Caption"].startswith("#publi · ") and "Body" not in sent
+    assert (await state(sessions)).external_message_id == "IMG1"
+
+
+async def test_refused_photo_falls_back_to_text_and_foreign_host_is_never_fetched(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await approve(sessions)
+    wa = FakeWuzapi(image_mode="refuse")
+    assert await run_with_photo(sessions, wa, IMAGE_URL) == 1
+    (sent,) = wa.sent
+    assert "Body" in sent and "Image" not in sent  # a foto não saiu; foi o texto
+
+    from app.integrations.images import fetch_product_image
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(image_server)) as http:
+        assert await fetch_product_image(http, "https://evil.example/x.jpg") is None
+        assert await fetch_product_image(http, "http://http2.mlstatic.com/x.jpg") is None
+        assert (await fetch_product_image(http, IMAGE_URL) or "").startswith("data:image/jpeg")
+
+
+async def test_resend_now_copies_and_sends_immediately(
+    client: httpx.AsyncClient,
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    import re
+
+    from app.main import app
+    from app.panel.distribution_routes import get_ml_client
+    from app.panel.whatsapp_routes import get_wa_client
+    from tests.test_panel import login, seed_admin
+
+    await approve(sessions)
+    wa = FakeWuzapi()
+    assert await run(sessions, wa) == 1
+    fake_ml = FakeML(offers={"MLBP1": [{"item_id": ITEM, "price": 449.90, "currency_id": "BRL"}]})
+    ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
+    wa_client = WuzapiClient(cfg(), transport=wa.transport())
+    app.dependency_overrides[get_ml_client] = lambda: ml_client
+    app.dependency_overrides[get_wa_client] = lambda: wa_client
+    try:
+        secret = await seed_admin(sessions)
+        assert (await login(client, secret)).status_code == 303
+        page = (await client.get("/postar")).text
+        assert "Reenviar agora" in page
+        token = re.search(r'name="csrf" value="([^"]+)"', page)
+        assert token is not None
+        async with sessions() as session:
+            original = (await session.execute(select(Publication))).scalar_one()
+        r = await client.post(f"/postar/{original.id}/reenviar", data={"csrf": token.group(1)})
+        assert r.status_code == 303
+    finally:
+        await ml_client.aclose()
+        await wa_client.aclose()
+    assert len(wa.sent) == 2  # dentro do intervalo de 40 min, mas foi pedido explícito
+    async with sessions() as session:
+        rows = list((await session.execute(select(Publication).order_by(Publication.id))).scalars())
+    assert [r.state for r in rows] == ["sent", "sent"]
+    assert rows[1].idempotency_key == rows[0].idempotency_key + ":r1"

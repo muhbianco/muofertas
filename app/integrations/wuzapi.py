@@ -235,6 +235,15 @@ class WuzapiClient:
         )
         return str((data or {}).get("Id") or "") if isinstance(data, dict) else ""
 
+    async def send_image(self, chat_jid: str, data_uri: str, caption: str) -> str:
+        """`POST /chat/send/image`: foto do produto com a mensagem na legenda."""
+        data = await self._request(
+            "POST",
+            "/chat/send/image",
+            json={"Phone": chat_jid, "Image": data_uri, "Caption": caption},
+        )
+        return str((data or {}).get("Id") or "") if isinstance(data, dict) else ""
+
     async def invite_link(self, group_jid: str) -> str:
         data = await self._request("GET", "/group/invitelink", params={"groupJID": group_jid})
         link = str((data or {}).get("InviteLink") or "") if isinstance(data, dict) else ""

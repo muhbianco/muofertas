@@ -14,6 +14,8 @@ import asyncio
 import contextlib
 import signal
 
+import httpx
+
 from app.collector.service import Collector
 from app.core.clock import utcnow
 from app.core.config import Settings, settings
@@ -37,6 +39,7 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
     holder = holder_id()
     client = MercadoLivreClient(cfg)
     wa_client = WuzapiClient(cfg)
+    images = httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0))
     collector = Collector(SessionFactory, client, cfg)
     evaluator = Evaluator(SessionFactory)
     logger.info(
@@ -67,7 +70,9 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                             pause = 0.5  # ainda pode haver lote vencido
                     if cfg.autosend_enabled:
                         # Só com o lease: um envio por vez, nunca dois workers no mesmo grupo.
-                        sent = await send_due(SessionFactory, client, wa_client, utcnow())
+                        sent = await send_due(
+                            SessionFactory, client, wa_client, utcnow(), images=images
+                        )
                         if sent:
                             logger.info("envio automático", extra={"sent": sent})
             except RateLimitedError:
@@ -88,6 +93,7 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
         await release_lease(SessionFactory, holder)
         await client.aclose()
         await wa_client.aclose()
+        await images.aclose()
         logger.info("worker encerrado", extra={"holder": holder})
 
 

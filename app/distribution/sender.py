@@ -15,7 +15,8 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+import httpx
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.logging import get_logger
@@ -27,6 +28,7 @@ from app.distribution.service import (
     message_for,
 )
 from app.domain.distribution import jitter
+from app.integrations.images import fetch_product_image
 from app.integrations.mercadolivre import MercadoLivreClient
 from app.integrations.wuzapi import WuzapiClient, WuzapiError
 from app.models import CatalogProduct, Channel, Publication
@@ -120,6 +122,7 @@ async def send_one(
     channel_id: int,
     publication_id: int,
     now: datetime,
+    images: httpx.AsyncClient | None = None,
 ) -> bool:
     async with sessions() as db:
         pub = await db.get(Publication, publication_id)
@@ -131,6 +134,7 @@ async def send_one(
             return False
         external_id, item_id, approved = product.external_id, pub.item_id, pub.approved_price_cents
         jid = channel.wa_jid
+        image_url = product.image_url
 
     if not item_id:
         await _finish(sessions, publication_id, state="failed", note="sem a oferta registrada")
@@ -141,6 +145,7 @@ async def send_one(
         )
     except DistributionError:
         return False  # ML fora: tenta na próxima rodada
+    photo = await fetch_product_image(images, image_url) if images is not None else None
 
     async with sessions() as db, db.begin():
         pub = await db.get(Publication, publication_id)
@@ -160,7 +165,7 @@ async def send_one(
         message = pub.message
 
     try:
-        message_id = await wa.send_text(jid, message)
+        message_id = await _deliver(wa, jid, message, photo)
     except WuzapiError as exc:
         if exc.maybe_sent:
             await _finish(
@@ -195,11 +200,91 @@ async def send_one(
     return True
 
 
+async def _deliver(wa: WuzapiClient, jid: str, message: str, photo: str | None) -> str:
+    """Foto com a mensagem na legenda; recusa clara da foto (nada saiu) cai para texto."""
+    if photo:
+        try:
+            return await wa.send_image(jid, photo, message)
+        except WuzapiError as exc:
+            if exc.maybe_sent or exc.status is None:
+                raise  # incerto, ou a WuzAPI fora: não arrisca duplicar com o texto
+            logger.warning("foto recusada; vai só o texto", extra={"status": exc.status})
+    return await wa.send_text(jid, message)
+
+
+async def resend_now(
+    sessions: async_sessionmaker[AsyncSession],
+    ml: MercadoLivreClient,
+    wa: WuzapiClient,
+    *,
+    publication_id: int,
+    actor: str,
+    now: datetime,
+) -> int:
+    """Cópia de uma publicação enviada, mandada já, fora do intervalo (pedido explícito).
+
+    A cópia é gravada antes da rede; o envio dela segue a regra de no máximo uma vez.
+    Grupo manual: a cópia fica pronta em Postar.
+    """
+    async with sessions() as db, db.begin():
+        original = await db.get(Publication, publication_id)
+        if original is None or original.state != "sent":
+            raise DistributionError("só publicação enviada pode ser reenviada")
+        channel = await db.get(Channel, original.channel_id)
+        if channel is None:
+            raise DistributionError("grupo não encontrado")
+        copies = (
+            await db.execute(
+                select(func.count()).where(
+                    Publication.idempotency_key.like(f"{original.idempotency_key}:r%")
+                )
+            )
+        ).scalar_one()
+        copy = Publication(
+            channel_id=original.channel_id,
+            product_id=original.product_id,
+            evaluation_id=original.evaluation_id,
+            decision_id=original.decision_id,
+            idempotency_key=f"{original.idempotency_key}:r{copies + 1}"[:80],
+            dedup_key=original.dedup_key,
+            state="ready",
+            tier=original.tier,
+            item_id=original.item_id,
+            target_url=original.target_url,
+            affiliate_url=original.affiliate_url,
+            link_at=original.link_at,
+            approved_price_cents=original.approved_price_cents,
+            pix_price_cents=original.pix_price_cents,
+            pix_at=original.pix_at,
+            created_at=now,
+        )
+        db.add(copy)
+        await db.flush()
+        copy_id, channel_id = copy.id, channel.id
+        automatic = channel.transport == "wuzapi" and bool(channel.wa_jid)
+    logger.info(
+        "reenvio pedido", extra={"publication_id": publication_id, "copy": copy_id, "user": actor}
+    )
+    if automatic:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as images:
+            await send_one(
+                sessions,
+                ml,
+                wa,
+                channel_id=channel_id,
+                publication_id=copy_id,
+                now=now,
+                images=images,
+            )
+    return copy_id
+
+
 async def send_due(
     sessions: async_sessionmaker[AsyncSession],
     ml: MercadoLivreClient,
     wa: WuzapiClient,
     now: datetime,
+    images: httpx.AsyncClient | None = None,
 ) -> int:
     if not wa.configured:
         return 0
@@ -207,7 +292,13 @@ async def send_due(
     sent = 0
     for channel_id, publication_id in await _due(sessions, now):
         if await send_one(
-            sessions, ml, wa, channel_id=channel_id, publication_id=publication_id, now=now
+            sessions,
+            ml,
+            wa,
+            channel_id=channel_id,
+            publication_id=publication_id,
+            now=now,
+            images=images,
         ):
             sent += 1
     return sent

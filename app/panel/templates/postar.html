@@ -41,7 +41,12 @@
 <table>
   {% for pub, name, channel_name in recent %}
   <tr><td>{{ (pub.sent_at or pub.created_at) | local }}</td><td>{{ name }}<br><small>{{ channel_name }}</small></td>
-    <td>{% if pub.state == 'sent' %}<span class="ok">enviada</span>{% if pub.actor %} · {{ pub.actor }}{% endif %}{% else %}<span class="erro">não saiu</span>: {{ pub.note or '' }}{% endif %}</td></tr>
+    <td>{% if pub.state == 'sent' %}<span class="ok">enviada</span>{% if pub.actor %} · {{ pub.actor }}{% endif %}
+      <form method="post" action="/postar/{{ pub.id }}/reenviar">
+        <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+        <button class="sair-claro" type="submit">Reenviar agora</button>
+      </form>
+      {% else %}<span class="erro">não saiu</span>: {{ pub.note or '' }}{% endif %}</td></tr>
   {% endfor %}
 </table>
 {% endif %}
