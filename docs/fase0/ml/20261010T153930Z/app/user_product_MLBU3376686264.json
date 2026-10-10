@@ -1,0 +1,15 @@
+{
+  "path": "/user-products/MLBU3376686264",
+  "http_status": 403,
+  "elapsed_ms": 168,
+  "headers": {
+    "Content-Type": "application/json",
+    "Date": "Sat, 10 Oct 2026 15:39:54 GMT",
+    "X-Request-Id": "73629e18-c857-4efc-9bfe-bfc930c50c67"
+  },
+  "body": {
+    "error": "forbidden",
+    "message": "caller is not allowed to access this user product",
+    "status": 403
+  }
+}

@@ -1,0 +1,324 @@
+{
+  "path": "/products/MLB33390256",
+  "http_status": 200,
+  "elapsed_ms": 209,
+  "headers": {
+    "Content-Type": "application/json",
+    "Date": "Sat, 10 Oct 2026 15:40:38 GMT",
+    "x-request-id": "93565872-884f-4dcf-9fdf-76b6401f3c8a"
+  },
+  "body": {
+    "id": "MLB33390256",
+    "catalog_product_id": "MLB33390256",
+    "status": "active",
+    "pdp_types": [
+      "traditional"
+    ],
+    "domain_id": "MLB-DRILL_AND_SCREWDRIVER_ADAPTERS",
+    "permalink": "",
+    "name": "Jogo Adaptadores Soquetes Para Parafusadeira 3 Peças Vonder",
+    "family_name": "Jogo Adaptadores Soquetes Para Parafusadeira 3 Pçs Vonder",
+    "type": "catalog_product",
+    "buy_box_winner": null,
+    "pickers": [
+      {
+        "picker_id": "ADAPTER_SIZE",
+        "picker_name": "Tamanho do adaptador",
+        "products": [
+          {
+            "product_id": "MLB33390256",
+            "picker_label": "1/2\" 1/4\" 3/8”",
+            "picture_id": "",
+            "thumbnail": "",
+            "tags": [
+              "selected"
+            ],
+            "changes": [],
+            "permalink": "",
+            "product_name": "Vonder Jogo Adaptadores Soquetes Adaptador para furadeira - 1/2\" 1/4\" 3/8” - Kit - 3",
+            "auto_completed": false
+          },
+          {
+            "product_id": "MLB39788074",
+            "picker_label": "1/4\"",
+            "picture_id": "",
+            "thumbnail": "",
+            "tags": [],
+            "changes": [
+              [
+                "ADAPTER_SIZE",
+                "1/4\""
+              ]
+            ],
+            "permalink": "",
+            "product_name": "Vonder Jogo Adaptadores Soquetes Adaptador para furadeira - 1/4\" - Kit - 3",
+            "auto_completed": false
+          }
+        ],
+        "tags": [],
+        "attributes": [
+          {
+            "attribute_id": "ADAPTER_SIZE",
+            "template": "",
+            "position": 1
+          }
+        ],
+        "value_name_delimiter": "",
+        "hide_extra_decoration": false,
+        "secondary_picker_name": ""
+      },
+      {
+        "picker_id": "UNITS_PER_PACK",
+        "picker_name": "Quantidade de adaptadores",
+        "products": [
+          {
+            "product_id": "MLB33390256",
+            "picker_label": "3",
+            "picture_id": "",
+            "thumbnail": "",
+            "tags": [
+              "selected"
+            ],
+            "changes": [],
+            "permalink": "",
+            "product_name": "Vonder Jogo Adaptadores Soquetes Adaptador para furadeira - 1/2\" 1/4\" 3/8” - Kit - 3",
+            "auto_completed": false
+          }
+        ],
+        "tags": [],
+        "attributes": [
+          {
+            "attribute_id": "UNITS_PER_PACK",
+            "template": "",
+            "position": 1
+          }
+        ],
+        "value_name_delimiter": " ",
+        "hide_extra_decoration": false,
+        "secondary_picker_name": ""
+      }
+    ],
+    "pictures": [
+      {
+        "id": "871549-MLA100095030671_122025",
+        "url": "https://http2.mlstatic.com/D_NQ_NP_871549-MLA100095030671_122025-F.jpg",
+        "suggested_for_picker": null,
+        "max_width": 668,
+        "max_height": 1130,
+        "source_metadata": null,
+        "tags": [
+          "CAROUSEL"
+        ]
+      },
+      {
+        "id": "971806-MLA84475331729_052025",
+        "url": "https://http2.mlstatic.com/D_NQ_NP_971806-MLA84475331729_052025-F.jpg",
+        "suggested_for_picker": null,
+        "max_width": 1200,
+        "max_height": 1152,
+        "source_metadata": null,
+        "tags": [
+          "CAROUSEL"
+        ]
+      },
+      {
+        "id": "801684-MLA84178702108_052025",
+        "url": "https://http2.mlstatic.com/D_NQ_NP_801684-MLA84178702108_052025-F.jpg",
+        "suggested_for_picker": null,
+        "max_width": 996,
+        "max_height": 912,
+        "source_metadata": null,
+        "tags": [
+          "CAROUSEL"
+        ]
+      },
+      {
+        "id": "847162-MLA84178925288_052025",
+        "url": "https://http2.mlstatic.com/D_NQ_NP_847162-MLA84178925288_052025-F.jpg",
+        "suggested_for_picker": null,
+        "max_width": 820,
+        "max_height": 706,
+        "source_metadata": null,
+        "tags": [
+          "CAROUSEL"
+        ]
+      },
+      {
+        "id": "654439-MLA84475331763_052025",
+        "url": "https://http2.mlstatic.com/D_NQ_NP_654439-MLA84475331763_052025-F.jpg",
+        "suggested_for_picker": null,
+        "max_width": 877,
+        "max_height": 804,
+        "source_metadata": null,
+        "tags": [
+          "CAROUSEL"
+        ]
+      }
+    ],
+    "description_pictures": [],
+    "main_features": [
+      {
+        "text": "Jogo com 3 adaptadores para soquetes de 1/4, 3/8 e 1/2.",
+        "type": "key_value",
+        "metadata": {}
+      },
+      {
+        "text": "Fabricado em aço cromo vanádio com excelente resistência.",
+        "type": "key_value",
+        "metadata": {}
+      },
+      {
+        "text": "Torque máximo de 71 N.M.",
+        "type": "key_value",
+        "metadata": {}
+      }
+    ],
+    "disclaimers": [],
+    "attributes": [
+      {
+        "id": "BRAND",
+        "name": "Marca",
+        "value_id": "275828",
+        "value_name": "Vonder",
+        "values": [
+          {
+            "id": "275828",
+            "name": "Vonder"
+          }
+        ]
+      },
+      {
+        "id": "MODEL",
+        "name": "Modelo",
+        "value_id": "33431756",
+        "value_name": "Jogo Adaptadores Soquetes",
+        "values": [
+          {
+            "id": "33431756",
+            "name": "Jogo Adaptadores Soquetes"
+          }
+        ]
+      },
+      {
+        "id": "ADAPTER_TYPE",
+        "name": "Tipo de adaptador",
+        "value_id": "32265396",
+        "value_name": "Adaptador para furadeira",
+        "values": [
+          {
+            "id": "32265396",
+            "name": "Adaptador para furadeira"
+          }
+        ]
+      },
+      {
+        "id": "ADAPTER_SIZE",
+        "name": "Tamanho do adaptador",
+        "value_id": "50668933",
+        "value_name": "1/2\" 1/4\" 3/8”",
+        "values": [
+          {
+            "id": "50668933",
+            "name": "1/2\" 1/4\" 3/8”"
+          }
+        ]
+      },
+      {
+        "id": "SALE_FORMAT",
+        "name": "Formato de venda",
+        "value_id": "1359392",
+        "value_name": "Kit",
+        "values": [
+          {
+            "id": "1359392",
+            "name": "Kit"
+          }
+        ]
+      },
+      {
+        "id": "UNITS_PER_PACK",
+        "name": "Quantidade de embalagens",
+        "value_id": "334424",
+        "value_name": "3",
+        "values": [
+          {
+            "id": "334424",
+            "name": "3"
+          }
+        ]
+      },
+      {
+        "id": "PRODUCT_TYPES",
+        "name": "Tipos de produto",
+        "value_id": "31422316",
+        "value_name": "Ferramentas",
+        "values": [
+          {
+            "id": "31422316",
+            "name": "Ferramentas"
+          }
+        ]
+      },
+      {
+        "id": "SHANK_TYPE",
+        "name": "Tipo de haste",
+        "value_id": "31848614",
+        "value_name": "1/4",
+        "values": [
+          {
+            "id": "31848614",
+            "name": "1/4"
+          }
+        ]
+      },
+      {
+        "id": "LENGTH",
+        "name": "Comprimento",
+        "value_id": "517235",
+        "value_name": "5 cm",
+        "values": [
+          {
+            "id": "517235",
+            "name": "5 cm"
+          }
+        ]
+      },
+      {
+        "id": "PACKAGE_DATA_SOURCE",
+        "name": "Origem do dado do pacote de fábrica",
+        "value_id": "52228230",
+        "value_name": "CERTIFIED_MEASUREMENT",
+        "values": [
+          {
+            "id": "52228230",
+            "name": "CERTIFIED_MEASUREMENT"
+          }
+        ]
+      }
+    ],
+    "short_description": {
+      "type": "plaintext",
+      "content": "Jogo com 3 unidades (1/4, 3/8 e 1/2) de adaptadores de soquetes para parafusadeira. Ideal para uso em parafusadeira ou furadeira, permitindo a adaptação para uso em soquetes com encaixe quadrado de 1/4, 3/8 e 1/2. Torque máximo: 71 N.M. Fabricado em aço cromo vanádio, proporcionando excelente resistência.\n-Material: Cromo Vanádio\n-Número de peças no jogo: 3 peças"
+    },
+    "parent_id": "MLB27620509",
+    "children_ids": [],
+    "settings": {
+      "content": "fixed",
+      "listing_strategy": "catalog_required",
+      "exclusive": false,
+      "with_enhanced_pictures": false,
+      "base_site_product_id": null,
+      "ttr": "2026-10-10T10:40:40.514286673"
+    },
+    "quality_type": "COMPLETE",
+    "release_info": null,
+    "presale_info": null,
+    "enhanced_content": null,
+    "tags": [],
+    "date_created": "2024-02-16T18:30:24Z",
+    "authorized_stores": null,
+    "last_updated": "2026-10-02T07:31:29Z",
+    "grouper_id": null,
+    "experiments": {}
+  }
+}

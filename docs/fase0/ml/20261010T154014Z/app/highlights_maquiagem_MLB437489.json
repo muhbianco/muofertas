@@ -1,0 +1,119 @@
+{
+  "path": "/highlights/MLB/category/MLB437489",
+  "http_status": 200,
+  "elapsed_ms": 173,
+  "headers": {
+    "Content-Type": "application/json",
+    "Date": "Sat, 10 Oct 2026 15:40:37 GMT",
+    "x-request-id": "f39237f6-c61b-46ec-8613-f8c09396ab30"
+  },
+  "body": {
+    "query_data": {
+      "highlight_type": "BEST_SELLER",
+      "criteria": "CATEGORY",
+      "id": "MLB437489"
+    },
+    "content": [
+      {
+        "id": "MLB23535579",
+        "position": 1,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB23522659",
+        "position": 2,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB4136460605",
+        "position": 3,
+        "type": "ITEM"
+      },
+      {
+        "id": "MLB27864422",
+        "position": 4,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLBU3940033184",
+        "position": 5,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLB19942674",
+        "position": 6,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB45403584",
+        "position": 7,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB23547065",
+        "position": 8,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLBU3850546917",
+        "position": 9,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLBU3630197187",
+        "position": 10,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLB38431717",
+        "position": 11,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB22334378",
+        "position": 12,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB23765218",
+        "position": 13,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB45619899",
+        "position": 14,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB59241929",
+        "position": 15,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB52802237",
+        "position": 16,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB24206225",
+        "position": 17,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB3102417023",
+        "position": 18,
+        "type": "ITEM"
+      },
+      {
+        "id": "MLB3981985143",
+        "position": 19,
+        "type": "ITEM"
+      },
+      {
+        "id": "MLB23602998",
+        "position": 20,
+        "type": "PRODUCT"
+      }
+    ]
+  }
+}

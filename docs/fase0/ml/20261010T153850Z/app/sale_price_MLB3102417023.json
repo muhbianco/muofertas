@@ -1,0 +1,15 @@
+{
+  "path": "/items/MLB3102417023/sale_price?context=channel_marketplace",
+  "http_status": 403,
+  "elapsed_ms": 158,
+  "headers": {
+    "Content-Type": "application/json;charset=UTF-8",
+    "Date": "Sat, 10 Oct 2026 15:39:14 GMT",
+    "X-Request-Id": "e09659df-1131-40ca-a8de-39293d1d83fb"
+  },
+  "body": {
+    "error": "Access to the requested resource is forbidden",
+    "code": "access_denied",
+    "status": 403
+  }
+}

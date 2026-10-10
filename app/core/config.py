@@ -1,0 +1,95 @@
+from __future__ import annotations
+
+from functools import lru_cache
+from typing import Literal
+from urllib.parse import quote_plus
+
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+Environment = Literal["development", "staging", "production"]
+
+
+class Settings(BaseSettings):
+    """Configuração lida do ambiente (e de `.env` em desenvolvimento).
+
+    Segredos (senha do banco, client secret do ML) chegam pelo Env da stack ou pelo `.env` local
+    e nunca são logados: são `SecretStr`.
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    environment: Environment = "development"
+    log_level: str = "INFO"
+
+    # --- banco (usuário de runtime: só DML) ----------------------------------------------
+    db_host: str = "127.0.0.1"
+    db_port: int = 3306
+    db_user: str = "megapromooz_app"
+    db_password: SecretStr = SecretStr("")
+    db_name: str = "megapromooz"
+    db_pool_size: int = 3
+    db_max_overflow: int = 2
+    db_pool_recycle_seconds: int = 1800
+    db_connect_timeout_seconds: int = 10
+    # URL completa (testes usam sqlite+aiosqlite).
+    database_url_override: str = ""
+
+    # --- banco (usuário de migração: DDL só neste schema) -------------------------------
+    migrate_db_user: str = "megapromooz_migrate"
+    migrate_db_password: SecretStr = SecretStr("")
+
+    # --- Mercado Livre (token do app por client_credentials) ----------------------------
+    ml_api_base: str = "https://api.mercadolibre.com"
+    ml_client_id: str = ""
+    ml_client_secret: SecretStr = SecretStr("")
+    ml_timeout_seconds: float = 15.0
+    # Ritmo conservador: o ML não publica o limite. Sondagem de 10/10/2026: 10 chamadas seguidas
+    # sem 429. Começamos em ~1/s com teto por hora e medimos.
+    ml_requests_per_second: float = 1.0
+    ml_hourly_call_cap: int = 2500
+
+    # --- coletor ------------------------------------------------------------------------
+    collector_enabled: bool = True
+    discovery_interval_minutes: int = 360
+    tier_hot_minutes: int = 20
+    tier_warm_minutes: int = 180
+    tier_cold_minutes: int = 1440
+    heartbeat_hours: int = 24
+    refresh_batch_size: int = 40
+    worker_idle_seconds: float = 5.0
+    worker_lease_seconds: int = 60
+
+    @property
+    def database_url(self) -> str:
+        if self.database_url_override:
+            return self.database_url_override
+        return _mariadb_url(
+            self.db_user, self.db_password, self.db_host, self.db_port, self.db_name
+        )
+
+    @property
+    def migrate_database_url(self) -> str:
+        if self.database_url_override:
+            return self.database_url_override
+        return _mariadb_url(
+            self.migrate_db_user, self.migrate_db_password, self.db_host, self.db_port, self.db_name
+        )
+
+
+def _mariadb_url(user: str, password: SecretStr, host: str, port: int, name: str) -> str:
+    secret = quote_plus(password.get_secret_value())
+    return f"mysql+asyncmy://{quote_plus(user)}:{secret}@{host}:{port}/{name}?charset=utf8mb4"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()

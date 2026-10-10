@@ -1,0 +1,16 @@
+{
+  "path": "/sites/MLB/search?q=base+maquiagem&limit=5",
+  "http_status": 403,
+  "elapsed_ms": 138,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Sat, 10 Oct 2026 15:40:37 GMT",
+    "X-Request-Id": "23d9fbbe-fa86-4677-82af-0507bcab4fef"
+  },
+  "body": {
+    "message": "forbidden",
+    "error": "forbidden",
+    "status": 403,
+    "cause": []
+  }
+}

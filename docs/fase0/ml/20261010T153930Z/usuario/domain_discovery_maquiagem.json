@@ -1,0 +1,16 @@
+{
+  "path": "/sites/MLB/domain_discovery/search?q=base+maquiagem&limit=3",
+  "http_status": 403,
+  "elapsed_ms": 155,
+  "headers": {
+    "Content-Type": "application/json",
+    "Date": "Sat, 10 Oct 2026 15:39:49 GMT",
+    "X-Request-Id": "bfac4e2e-564e-435a-8dd3-b45bdd9a7371"
+  },
+  "body": {
+    "blocked_by": "PolicyAgent",
+    "code": "PA_UNAUTHORIZED_RESULT_FROM_POLICIES",
+    "status": 403,
+    "message": "At least one policy returned UNAUTHORIZED."
+  }
+}

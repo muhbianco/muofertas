@@ -1,0 +1,16 @@
+{
+  "path": "/items/bulk?ids=MLB3102417023,MLB3756906841,MLB4136460605,MLB3102417023,MLB3981985143",
+  "http_status": 400,
+  "elapsed_ms": 155,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Sat, 10 Oct 2026 15:39:14 GMT",
+    "X-Request-Id": "2a786787-6877-46ce-8586-933664948469"
+  },
+  "body": {
+    "message": "Duplicate item id: MLB3102417023",
+    "error": "bad_request",
+    "status": 400,
+    "cause": []
+  }
+}

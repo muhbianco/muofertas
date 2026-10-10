@@ -1,0 +1,212 @@
+{
+  "path": "/trends/MLB",
+  "http_status": 200,
+  "elapsed_ms": 155,
+  "headers": {
+    "Content-Type": "application/json",
+    "Date": "Sat, 10 Oct 2026 15:39:13 GMT",
+    "x-request-id": "b4a2fd73-4fda-4e37-8767-9c3bdf4b4739"
+  },
+  "body": [
+    {
+      "keyword": "cabelo maluco",
+      "url": "https://lista.mercadolivre.com.br/cabelo-maluco"
+    },
+    {
+      "keyword": "fone ouvido bluetooth",
+      "url": "https://lista.mercadolivre.com.br/fone-ouvido-bluetooth"
+    },
+    {
+      "keyword": "bicicleta",
+      "url": "https://lista.mercadolivre.com.br/bicicleta"
+    },
+    {
+      "keyword": "mochila maluca",
+      "url": "https://lista.mercadolivre.com.br/mochila-maluca"
+    },
+    {
+      "keyword": "cadeira gamer",
+      "url": "https://lista.mercadolivre.com.br/cadeira-gamer"
+    },
+    {
+      "keyword": "iphone 11",
+      "url": "https://lista.mercadolivre.com.br/iphone-11"
+    },
+    {
+      "keyword": "dia dos professores",
+      "url": "https://lista.mercadolivre.com.br/dia-dos-professores"
+    },
+    {
+      "keyword": "patins infantil",
+      "url": "https://lista.mercadolivre.com.br/patins-infantil"
+    },
+    {
+      "keyword": "microfone",
+      "url": "https://lista.mercadolivre.com.br/microfone"
+    },
+    {
+      "keyword": "dia das criancas",
+      "url": "https://lista.mercadolivre.com.br/dia-das-criancas"
+    },
+    {
+      "keyword": "starlink internet",
+      "url": "https://lista.mercadolivre.com.br/starlink-internet"
+    },
+    {
+      "keyword": "creatina growth",
+      "url": "https://lista.mercadolivre.com.br/creatina-growth"
+    },
+    {
+      "keyword": "ps5",
+      "url": "https://lista.mercadolivre.com.br/ps5"
+    },
+    {
+      "keyword": "notebook",
+      "url": "https://lista.mercadolivre.com.br/notebook"
+    },
+    {
+      "keyword": "kindle",
+      "url": "https://lista.mercadolivre.com.br/kindle"
+    },
+    {
+      "keyword": "starlink mini",
+      "url": "https://lista.mercadolivre.com.br/starlink-mini"
+    },
+    {
+      "keyword": "peptideo tesamorelin",
+      "url": "https://lista.mercadolivre.com.br/peptideo-tesamorelin"
+    },
+    {
+      "keyword": "moto eletrica adulta",
+      "url": "https://lista.mercadolivre.com.br/moto-eletrica-adulta"
+    },
+    {
+      "keyword": "h t v",
+      "url": "https://lista.mercadolivre.com.br/h-t-v"
+    },
+    {
+      "keyword": "poco x5 pro",
+      "url": "https://lista.mercadolivre.com.br/poco-x5-pro"
+    },
+    {
+      "keyword": "iphone 15",
+      "url": "https://lista.mercadolivre.com.br/iphone-15"
+    },
+    {
+      "keyword": "album copa 2026",
+      "url": "https://lista.mercadolivre.com.br/album-copa-2026"
+    },
+    {
+      "keyword": "karseell collagen",
+      "url": "https://lista.mercadolivre.com.br/karseell-collagen"
+    },
+    {
+      "keyword": "ryzen 7 5700x3d",
+      "url": "https://lista.mercadolivre.com.br/ryzen-7-5700x3d"
+    },
+    {
+      "keyword": "iphone 16",
+      "url": "https://lista.mercadolivre.com.br/iphone-16"
+    },
+    {
+      "keyword": "creatina",
+      "url": "https://lista.mercadolivre.com.br/creatina"
+    },
+    {
+      "keyword": "minoxidil kirkland",
+      "url": "https://lista.mercadolivre.com.br/minoxidil-kirkland"
+    },
+    {
+      "keyword": "poco x7 pro",
+      "url": "https://lista.mercadolivre.com.br/poco-x7-pro"
+    },
+    {
+      "keyword": "pneu 175 65 r14",
+      "url": "https://lista.mercadolivre.com.br/pneu-175-65-r14"
+    },
+    {
+      "keyword": "celular samsung",
+      "url": "https://lista.mercadolivre.com.br/celular-samsung"
+    },
+    {
+      "keyword": "masteron injetavel",
+      "url": "https://lista.mercadolivre.com.br/masteron-injetavel"
+    },
+    {
+      "keyword": "poco x8 pro",
+      "url": "https://lista.mercadolivre.com.br/poco-x8-pro"
+    },
+    {
+      "keyword": "peptideos de cobre ghk cu",
+      "url": "https://lista.mercadolivre.com.br/peptideos-de-cobre-ghk-cu"
+    },
+    {
+      "keyword": "produtos",
+      "url": "https://lista.mercadolivre.com.br/produtos"
+    },
+    {
+      "keyword": "adaptador starlink",
+      "url": "https://lista.mercadolivre.com.br/adaptador-starlink"
+    },
+    {
+      "keyword": "redmi note 12",
+      "url": "https://lista.mercadolivre.com.br/redmi-note-12"
+    },
+    {
+      "keyword": "vape cigarro eletronico",
+      "url": "https://lista.mercadolivre.com.br/vape-cigarro-eletronico"
+    },
+    {
+      "keyword": "presente dia das maes",
+      "url": "https://lista.mercadolivre.com.br/presente-dia-das-maes"
+    },
+    {
+      "keyword": "poco f8 pro",
+      "url": "https://lista.mercadolivre.com.br/poco-f8-pro"
+    },
+    {
+      "keyword": "celular xiaomi",
+      "url": "https://lista.mercadolivre.com.br/celular-xiaomi"
+    },
+    {
+      "keyword": "poco f7",
+      "url": "https://lista.mercadolivre.com.br/poco-f7"
+    },
+    {
+      "keyword": "xiaomi 17 pro max",
+      "url": "https://lista.mercadolivre.com.br/xiaomi-17-pro-max"
+    },
+    {
+      "keyword": "iphone 17 pro max",
+      "url": "https://lista.mercadolivre.com.br/iphone-17-pro-max"
+    },
+    {
+      "keyword": "airsoft",
+      "url": "https://lista.mercadolivre.com.br/airsoft"
+    },
+    {
+      "keyword": "cadeira de escritorio",
+      "url": "https://lista.mercadolivre.com.br/cadeira-de-escritorio"
+    },
+    {
+      "keyword": "pulseira borracha para rolex rubberb",
+      "url": "https://lista.mercadolivre.com.br/pulseira-borracha-para-rolex-rubberb"
+    },
+    {
+      "keyword": "vibrador",
+      "url": "https://lista.mercadolivre.com.br/vibrador"
+    },
+    {
+      "keyword": "calendario 2026",
+      "url": "https://lista.mercadolivre.com.br/calendario-2026"
+    },
+    {
+      "keyword": "rastreador veicular",
+      "url": "https://lista.mercadolivre.com.br/rastreador-veicular"
+    },
+    {
+      "keyword": "ebazar com br ltda",
+      "url": "https://lista.mercadolivre.com.br/ebazar-com-br-ltda"
+    }
+  ]
+}

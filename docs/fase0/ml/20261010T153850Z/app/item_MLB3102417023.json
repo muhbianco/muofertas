@@ -1,0 +1,16 @@
+{
+  "path": "/items/MLB3102417023",
+  "http_status": 403,
+  "elapsed_ms": 170,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Sat, 10 Oct 2026 15:39:14 GMT",
+    "X-Request-Id": "363b96a2-f133-4417-a762-5cf9dc636de9"
+  },
+  "body": {
+    "message": "Access to the requested resource is forbidden",
+    "error": "access_denied",
+    "status": 403,
+    "cause": null
+  }
+}

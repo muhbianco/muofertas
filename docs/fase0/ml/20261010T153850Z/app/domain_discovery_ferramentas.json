@@ -1,0 +1,33 @@
+{
+  "path": "/sites/MLB/domain_discovery/search?q=parafusadeira&limit=3",
+  "http_status": 200,
+  "elapsed_ms": 467,
+  "headers": {
+    "Content-Type": "application/json",
+    "Date": "Sat, 10 Oct 2026 15:39:10 GMT",
+    "X-Request-Id": "21a2971f-fd73-41bf-972b-c0784caae02f"
+  },
+  "body": [
+    {
+      "domain_id": "MLB-DRILL_AND_SCREWDRIVER_ADAPTERS",
+      "domain_name": "Adaptadores para furadeiras e parafusadeiras",
+      "category_id": "MLB271379",
+      "category_name": "Para Furadeira e Parafusadeira",
+      "attributes": []
+    },
+    {
+      "domain_id": "MLB-ELECTRIC_SCREWDRIVERS_AND_IMPACT_WRENCHES",
+      "domain_name": "Parafusadeiras elétricas e chaves de impacto",
+      "category_id": "MLB189008",
+      "category_name": "Parafusadeiras",
+      "attributes": []
+    },
+    {
+      "domain_id": "MLB-ELECTRIC_SCREWDRIVERS_AND_IMPACT_WRENCHES",
+      "domain_name": "Parafusadeiras elétricas e chaves de impacto",
+      "category_id": "MLB457298",
+      "category_name": "Chaves de Impacto",
+      "attributes": []
+    }
+  ]
+}

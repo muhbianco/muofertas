@@ -1,0 +1,16 @@
+{
+  "path": "/sites/MLB/domain_discovery/search?q=parafusadeira&limit=3",
+  "http_status": 403,
+  "elapsed_ms": 144,
+  "headers": {
+    "Content-Type": "application/json",
+    "Date": "Sat, 10 Oct 2026 15:39:09 GMT",
+    "X-Request-Id": "ef476a65-d28a-4040-83dd-83a12531cf06"
+  },
+  "body": {
+    "blocked_by": "PolicyAgent",
+    "code": "PA_UNAUTHORIZED_RESULT_FROM_POLICIES",
+    "status": 403,
+    "message": "At least one policy returned UNAUTHORIZED."
+  }
+}

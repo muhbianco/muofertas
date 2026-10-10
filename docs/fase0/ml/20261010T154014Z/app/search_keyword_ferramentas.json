@@ -1,0 +1,16 @@
+{
+  "path": "/sites/MLB/search?q=parafusadeira&limit=5",
+  "http_status": 403,
+  "elapsed_ms": 155,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Sat, 10 Oct 2026 15:40:36 GMT",
+    "X-Request-Id": "3bbb9280-9154-42b6-a8b0-a1cb93dbc7b6"
+  },
+  "body": {
+    "message": "forbidden",
+    "error": "forbidden",
+    "status": 403,
+    "cause": []
+  }
+}

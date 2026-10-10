@@ -1,0 +1,19 @@
+{
+  "path": "/sites/MLB/domain_discovery/search?q=base+maquiagem&limit=3",
+  "http_status": 200,
+  "elapsed_ms": 502,
+  "headers": {
+    "Content-Type": "application/json",
+    "Date": "Sat, 10 Oct 2026 15:40:36 GMT",
+    "X-Request-Id": "2b0898de-be1b-4e12-9b07-58e22553dd16"
+  },
+  "body": [
+    {
+      "domain_id": "MLB-FOUNDATIONS",
+      "domain_name": "Bases faciais",
+      "category_id": "MLB29871",
+      "category_name": "Bases Faciais",
+      "attributes": []
+    }
+  ]
+}

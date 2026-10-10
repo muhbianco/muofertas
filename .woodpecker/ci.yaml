@@ -1,0 +1,49 @@
+# Lint, tipos e testes (SQLite) + migrations contra MariaDB 10.11 real + gitleaks.
+when:
+  - event: [push, pull_request, manual]
+
+services:
+  mariadb:
+    image: mariadb:10.11
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: megapromooz_test
+      MARIADB_USER: megapromooz_migrate
+      MARIADB_PASSWORD: migrate
+
+steps:
+  lint-test:
+    image: python:3.12-slim
+    environment:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    commands:
+      - pip install --quiet -r requirements-dev.txt
+      - ruff check .
+      - ruff format --check .
+      - mypy app
+      - pytest -q
+      - pip install --quiet pip-audit==2.10.1
+      # PYSEC-2026-286 (asyncmy, sem versão corrigida): injeção via *chaves* de dict nos parâmetros;
+      # o SQLAlchemy sempre usa nomes gerados por ele, então nenhuma entrada chega a esse caminho.
+      - pip-audit -r requirements.txt --ignore-vuln PYSEC-2026-286
+
+  migrations-mariadb:
+    image: python:3.12-slim
+    depends_on: [lint-test]
+    environment:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      DATABASE_URL_OVERRIDE: mysql+asyncmy://megapromooz_migrate:migrate@mariadb:3306/megapromooz_test?charset=utf8mb4
+    commands:
+      - pip install --quiet -r requirements-dev.txt
+      # A imagem do MariaDB só abre a porta depois do init (o init roda com --skip-networking).
+      - for i in $(seq 1 60); do python -c "import socket; socket.create_connection(('mariadb', 3306), 2)" 2>/dev/null && break; sleep 2; done
+      - alembic upgrade head
+      - alembic downgrade base
+      - alembic upgrade head
+
+  gitleaks:
+    image: zricethezav/gitleaks:v8.30.1
+    depends_on: []
+    commands:
+      - mkdir -p /tmp/src && git archive HEAD | tar -x -C /tmp/src
+      - gitleaks dir --redact --no-banner /tmp/src

@@ -1,0 +1,179 @@
+"""Modelos do núcleo do coletor (Fase 1).
+
+Só o necessário para o histórico começar a rodar: nichos e suas categorias, produtos de catálogo
+monitorados, observações de preço, execuções de coleta, erros de integração e o lease do worker.
+Oferta, decisão, publicação e cupom entram nas próximas migrations.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    TypeDecorator,
+    UniqueConstraint,
+)
+from sqlalchemy.engine import Dialect
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+from app.core.clock import ensure_utc
+
+
+class UTCDateTime(TypeDecorator[datetime]):
+    """Grava UTC sem fuso (DATETIME do MariaDB) e devolve sempre aware em UTC."""
+
+    impl = DateTime(timezone=False)
+    cache_ok = True
+
+    def process_bind_param(self, value: datetime | None, dialect: Dialect) -> datetime | None:
+        if value is None:
+            return None
+        return ensure_utc(value).replace(tzinfo=None)
+
+    def process_result_value(self, value: datetime | None, dialect: Dialect) -> datetime | None:
+        return ensure_utc(value) if value is not None else None
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Niche(Base):
+    __tablename__ = "niche"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(40), unique=True)
+    name: Mapped[str] = mapped_column(String(80))
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class NicheCategory(Base):
+    """Categoria do marketplace que alimenta um nicho (descoberta pelos mais vendidos)."""
+
+    __tablename__ = "niche_category"
+    __table_args__ = (UniqueConstraint("niche_id", "marketplace", "external_category_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    niche_id: Mapped[int] = mapped_column(ForeignKey("niche.id", ondelete="CASCADE"))
+    marketplace: Mapped[str] = mapped_column(String(20))
+    external_category_id: Mapped[str] = mapped_column(String(32))
+    name: Mapped[str] = mapped_column(String(120))
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_discovery_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
+class CatalogProduct(Base):
+    """Produto de catálogo monitorado (no ML, a página /p/MLB…)."""
+
+    __tablename__ = "catalog_product"
+    __table_args__ = (
+        UniqueConstraint("marketplace", "external_id"),
+        Index("ix_catalog_product_due", "active", "next_check_at"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    marketplace: Mapped[str] = mapped_column(String(20))
+    external_id: Mapped[str] = mapped_column(String(32))
+    niche_id: Mapped[int | None] = mapped_column(
+        ForeignKey("niche.id", ondelete="SET NULL"), nullable=True
+    )
+    category_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    brand: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    domain_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    permalink: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    discovered_via: Mapped[str] = mapped_column(String(20))  # highlights | watchlist
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    tier: Mapped[str] = mapped_column(String(8))
+    next_check_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    last_checked_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    last_changed_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    last_observation_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    consecutive_failures: Mapped[int] = mapped_column(Integer, default=0)
+    first_seen_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    last_seen_in_highlights_at: Mapped[datetime | None] = mapped_column(
+        UTCDateTime(), nullable=True
+    )
+    best_highlight_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class PriceObservation(Base):
+    """Série de preço do produto: uma linha por mudança, mais um batimento diário."""
+
+    __tablename__ = "price_observation"
+    __table_args__ = (Index("ix_price_observation_product_time", "product_id", "observed_at"),)
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    product_id: Mapped[int] = mapped_column(ForeignKey("catalog_product.id", ondelete="CASCADE"))
+    observed_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    kind: Mapped[str] = mapped_column(String(10))  # change | heartbeat
+    currency: Mapped[str] = mapped_column(String(3), default="BRL")
+    min_price_cents: Mapped[int] = mapped_column(BigInteger)
+    min_official_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    offers_count: Mapped[int] = mapped_column(Integer)
+    official_offers_count: Mapped[int] = mapped_column(Integer)
+    deal_offers_count: Mapped[int] = mapped_column(Integer)
+    free_shipping_offers_count: Mapped[int] = mapped_column(Integer)
+    min_offer_item_id: Mapped[str] = mapped_column(String(32))
+    min_offer_seller_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    min_offer_original_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    min_offer_free_shipping: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class CollectionRun(Base):
+    __tablename__ = "collection_run"
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    source: Mapped[str] = mapped_column(String(40))  # ml_discovery | ml_refresh
+    started_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    finished_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    status: Mapped[str] = mapped_column(String(12))  # running | ok | partial | failed
+    calls: Mapped[int] = mapped_column(Integer, default=0)
+    items_seen: Mapped[int] = mapped_column(Integer, default=0)
+    items_changed: Mapped[int] = mapped_column(Integer, default=0)
+    errors: Mapped[int] = mapped_column(Integer, default=0)
+    note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
+class IntegrationError(Base):
+    __tablename__ = "integration_error"
+    __table_args__ = (Index("ix_integration_error_time", "occurred_at"),)
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    source: Mapped[str] = mapped_column(String(40))
+    run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("collection_run.id", ondelete="SET NULL"), nullable=True
+    )
+    occurred_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    http_status: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error_code: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class WorkerLease(Base):
+    """Garante um agendador só, mesmo durante deploy (se curar sozinho: lição do Mu Tower)."""
+
+    __tablename__ = "worker_lease"
+
+    name: Mapped[str] = mapped_column(String(40), primary_key=True)
+    holder: Mapped[str] = mapped_column(String(80))
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime())

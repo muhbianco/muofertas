@@ -1,0 +1,82 @@
+{
+  "path": "/items/bulk?ids=MLB3102417023,MLB3756906841,MLB4136460605,MLB3981985143,MLB5333152491,MLB6074014290,MLB7285352624,MLB4794260503,MLB5250181995,MLB5266598566",
+  "http_status": 200,
+  "elapsed_ms": 168,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Sat, 10 Oct 2026 15:40:42 GMT",
+    "X-Request-Id": "88fb4308-4f04-4255-816a-204a4416215c"
+  },
+  "body": [
+    {
+      "id": "MLB3102417023",
+      "status_code": 403,
+      "error": {
+        "message": "Access to the requested resource is forbidden"
+      }
+    },
+    {
+      "id": "MLB3756906841",
+      "status_code": 403,
+      "error": {
+        "message": "Access to the requested resource is forbidden"
+      }
+    },
+    {
+      "id": "MLB4136460605",
+      "status_code": 403,
+      "error": {
+        "message": "Access to the requested resource is forbidden"
+      }
+    },
+    {
+      "id": "MLB3981985143",
+      "status_code": 403,
+      "error": {
+        "message": "Access to the requested resource is forbidden"
+      }
+    },
+    {
+      "id": "MLB5333152491",
+      "status_code": 403,
+      "error": {
+        "message": "Access to the requested resource is forbidden"
+      }
+    },
+    {
+      "id": "MLB6074014290",
+      "status_code": 403,
+      "error": {
+        "message": "Access to the requested resource is forbidden"
+      }
+    },
+    {
+      "id": "MLB7285352624",
+      "status_code": 403,
+      "error": {
+        "message": "Access to the requested resource is forbidden"
+      }
+    },
+    {
+      "id": "MLB4794260503",
+      "status_code": 403,
+      "error": {
+        "message": "Access to the requested resource is forbidden"
+      }
+    },
+    {
+      "id": "MLB5250181995",
+      "status_code": 403,
+      "error": {
+        "message": "Access to the requested resource is forbidden"
+      }
+    },
+    {
+      "id": "MLB5266598566",
+      "status_code": 403,
+      "error": {
+        "message": "Access to the requested resource is forbidden"
+      }
+    }
+  ]
+}

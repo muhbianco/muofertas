@@ -1,0 +1,1212 @@
+{
+  "path": "/products/MLB63274546/items",
+  "http_status": 200,
+  "elapsed_ms": 223,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Sat, 10 Oct 2026 15:40:38 GMT",
+    "X-Request-Id": "94dbf570-224b-4e72-b7a7-cf3b64ec4e77"
+  },
+  "body": {
+    "paging": {
+      "total": 17,
+      "offset": 0,
+      "limit": 100
+    },
+    "results": [
+      {
+        "item_id": "MLB5333152491",
+        "site_id": "MLB",
+        "seller_id": 53212238,
+        "accepts_mercadopago": true,
+        "price": 34.1,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTY5NzA",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQkNJRDM3bTN5",
+            "name": "Cidade Moncoes"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU5396826374",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6074014290",
+        "site_id": "MLB",
+        "seller_id": 146127281,
+        "accepts_mercadopago": true,
+        "price": 34.95,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "has_published_clips",
+          "catalog_boost",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 140844,
+        "original_price": 69.9,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "fulfillment",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTQzMzc",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQkpBUmxicWNv",
+            "name": "Jardim Rodolfo Pirani"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3269642877",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7285352624",
+        "site_id": "MLB",
+        "seller_id": 164601647,
+        "accepts_mercadopago": true,
+        "price": 49.59,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 30 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTkxMjE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlNPQzYxMDU",
+            "name": "Socorro"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          },
+          {
+            "value_struct": {
+              "number": 30,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "30 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU4505402526",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4411393363",
+        "site_id": "MLB",
+        "seller_id": 215530659,
+        "accepts_mercadopago": true,
+        "price": 49.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTHM0cW9w",
+            "name": "Vila Nova Mazzei"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3331566669",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4417857671",
+        "site_id": "MLB",
+        "seller_id": 571728480,
+        "accepts_mercadopago": true,
+        "price": 49.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTGM3OWZt",
+            "name": "Vila Nivi"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3337508472",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4411428245",
+        "site_id": "MLB",
+        "seller_id": 215530659,
+        "accepts_mercadopago": true,
+        "price": 54.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTHM0cW9w",
+            "name": "Vila Nova Mazzei"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3331566669",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6154151244",
+        "site_id": "MLB",
+        "seller_id": 571728480,
+        "accepts_mercadopago": true,
+        "price": 54.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTGM3OWZt",
+            "name": "Vila Nivi"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3337508472",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4411406613",
+        "site_id": "MLB",
+        "seller_id": 46814712,
+        "accepts_mercadopago": true,
+        "price": 57.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTHM0cW9w",
+            "name": "Vila Nova Mazzei"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3337489414",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7763755970",
+        "site_id": "MLB",
+        "seller_id": 72912285,
+        "accepts_mercadopago": true,
+        "price": 57.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTHM0cW9w",
+            "name": "Vila Nova Mazzei"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3753976228",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6154063872",
+        "site_id": "MLB",
+        "seller_id": 46814712,
+        "accepts_mercadopago": true,
+        "price": 61.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTHM0cW9w",
+            "name": "Vila Nova Mazzei"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3331553271",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7763756698",
+        "site_id": "MLB",
+        "seller_id": 72912285,
+        "accepts_mercadopago": true,
+        "price": 61.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTHM0cW9w",
+            "name": "Vila Nova Mazzei"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3753976228",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4411406391",
+        "site_id": "MLB",
+        "seller_id": 571728480,
+        "accepts_mercadopago": true,
+        "price": 79,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": true,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in",
+            "mandatory_free_shipping"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTGM3OWZt",
+            "name": "Vila Nivi"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3331590201",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4411441455",
+        "site_id": "MLB",
+        "seller_id": 46814712,
+        "accepts_mercadopago": true,
+        "price": 79,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": true,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in",
+            "mandatory_free_shipping"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTHM0cW9w",
+            "name": "Vila Nova Mazzei"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3337489414",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6184821692",
+        "site_id": "MLB",
+        "seller_id": 215530659,
+        "accepts_mercadopago": true,
+        "price": 79,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": true,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in",
+            "mandatory_free_shipping"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTHM0cW9w",
+            "name": "Vila Nova Mazzei"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3331566669",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4411418345",
+        "site_id": "MLB",
+        "seller_id": 571728480,
+        "accepts_mercadopago": true,
+        "price": 79.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": true,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in",
+            "mandatory_free_shipping"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTGM3OWZt",
+            "name": "Vila Nivi"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3337508472",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4411418801",
+        "site_id": "MLB",
+        "seller_id": 46814712,
+        "accepts_mercadopago": true,
+        "price": 79.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": true,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in",
+            "mandatory_free_shipping"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTHM0cW9w",
+            "name": "Vila Nova Mazzei"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3337489414",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6154025276",
+        "site_id": "MLB",
+        "seller_id": 215530659,
+        "accepts_mercadopago": true,
+        "price": 79.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": true,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in",
+            "mandatory_free_shipping"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTHM0cW9w",
+            "name": "Vila Nova Mazzei"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3331566669",
+        "min_purchase_unit": 1
+      }
+    ],
+    "experiments": null
+  }
+}

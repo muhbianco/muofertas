@@ -1,0 +1,15 @@
+{
+  "path": "/items/MLB3756906841/sale_price?context=channel_marketplace",
+  "http_status": 403,
+  "elapsed_ms": 154,
+  "headers": {
+    "Content-Type": "application/json;charset=UTF-8",
+    "Date": "Sat, 10 Oct 2026 15:40:43 GMT",
+    "X-Request-Id": "188aadd6-cf93-4f1d-8758-99140be4705d"
+  },
+  "body": {
+    "status": 403,
+    "error": "Access to the requested resource is forbidden",
+    "code": "access_denied"
+  }
+}

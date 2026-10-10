@@ -1,0 +1,16 @@
+{
+  "path": "/sites/MLB/categories",
+  "http_status": 403,
+  "elapsed_ms": 164,
+  "headers": {
+    "Content-Type": "application/json",
+    "Date": "Sat, 10 Oct 2026 15:39:09 GMT",
+    "X-Request-Id": "d21cc3ad-14df-4e49-9cda-d3bc88a7abd9"
+  },
+  "body": {
+    "blocked_by": "PolicyAgent",
+    "code": "PA_UNAUTHORIZED_RESULT_FROM_POLICIES",
+    "message": "At least one policy returned UNAUTHORIZED.",
+    "status": 403
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "path": "/users/me",
+  "http_status": 200,
+  "elapsed_ms": 410,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Sat, 10 Oct 2026 15:40:33 GMT",
+    "X-Request-Id": "dacc7612-0ff4-4480-8a0c-0517540139c8"
+  },
+  "body": "(omitido)"
+}

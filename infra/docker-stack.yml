@@ -1,0 +1,91 @@
+# =============================================================================
+# MegaPromoOz — Stack Portainer (Docker Swarm) — hel1
+# Stack: megapromooz         Rede: chatbot-net (a mesma da muconnect/WuzAPI, para a Fase 2)
+# Imagem: muhrilobianco/megapromooz:${MEGAPROMOOZ_TAG} (sha12 do commit; nunca `latest`).
+#
+# Segredos e a tag vêm do Env do Portainer (${VAR}). O StackUpdate SUBSTITUI o Env inteiro:
+# sempre via hel1-ops/scripts/portainer-stack-update.py (reenvia todas as chaves).
+# Migrations NÃO rodam no boot: infra/scripts/deploy.sh roda megapromooz-migrate.sh antes.
+#
+# Fase 1: só o coletor e a API de saúde, sem rota pública (o painel entra na Fase 2 com host
+# próprio e TOTP). MariaDB nativo no host, alcançado por host.docker.internal (172.17.0.1).
+# =============================================================================
+
+version: "3.8"
+
+x-env: &env
+  ENVIRONMENT: production
+  LOG_LEVEL: INFO
+  DB_HOST: host.docker.internal
+  DB_PORT: "3306"
+  DB_NAME: megapromooz
+  DB_USER: megapromooz_app
+  DB_PASSWORD: ${DB_PASSWORD}
+  ML_CLIENT_ID: ${ML_CLIENT_ID}
+  ML_CLIENT_SECRET: ${ML_CLIENT_SECRET}
+  ML_REQUESTS_PER_SECOND: "1.0"
+  ML_HOURLY_CALL_CAP: "2500"
+
+# Rotação de log por container: sem isto, um serviço falante enche o disco da VPS em semanas.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  megapromooz-web:
+    image: muhrilobianco/megapromooz:${MEGAPROMOOZ_TAG:?MEGAPROMOOZ_TAG obrigatorio}
+    logging: *logging
+    environment:
+      <<: *env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - chatbot-net
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        order: start-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+
+  megapromooz-worker:
+    image: muhrilobianco/megapromooz:${MEGAPROMOOZ_TAG:?MEGAPROMOOZ_TAG obrigatorio}
+    logging: *logging
+    command: ["python", "-m", "app.worker"]
+    environment:
+      <<: *env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - chatbot-net
+    healthcheck:
+      disable: true
+    # Um agendador só: o novo sobe depois que o antigo saiu (o lease no banco cobre o resto).
+    stop_grace_period: 60s
+    deploy:
+      mode: replicated
+      replicas: 1
+      update_config:
+        order: stop-first
+        failure_action: rollback
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 384M
+
+networks:
+  chatbot-net:
+    external: true
+    name: chatbot-net

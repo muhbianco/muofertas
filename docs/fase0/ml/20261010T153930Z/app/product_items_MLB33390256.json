@@ -1,0 +1,4609 @@
+{
+  "path": "/products/MLB33390256/items",
+  "http_status": 200,
+  "elapsed_ms": 336,
+  "headers": {
+    "Content-Type": "application/json; charset=utf-8",
+    "Date": "Sat, 10 Oct 2026 15:39:53 GMT",
+    "X-Request-Id": "264d3d60-dfe4-4d05-9999-096e3d46d7d3"
+  },
+  "body": {
+    "paging": {
+      "total": 68,
+      "offset": 0,
+      "limit": 100
+    },
+    "results": [
+      {
+        "item_id": "MLB4794260503",
+        "site_id": "MLB",
+        "seller_id": 144578541,
+        "accepts_mercadopago": true,
+        "price": 18.98,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "net_taxes_amount_prices",
+          "standard_price_by_quantity",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 50190,
+        "original_price": 24.93,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 23.2
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0JMVWM2MDMx",
+            "name": "Blumenau"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "TUxCQlBBUzg4MjBG",
+            "name": "Passo Manso"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU4132425956",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5250181995",
+        "site_id": "MLB",
+        "seller_id": 3387792899,
+        "accepts_mercadopago": true,
+        "price": 19.9,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 30 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "standard_price_by_quantity",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": 29.99,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 43.106688000000005
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0VVU2E5ZTVh",
+            "name": "Eusébio"
+          },
+          "state": {
+            "id": "TUxCUENFQUExNzkyZQ",
+            "name": "Ceará"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 30,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "30 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU5194182511",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5266598566",
+        "site_id": "MLB",
+        "seller_id": 825095905,
+        "accepts_mercadopago": true,
+        "price": 20.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "standard_price_by_quantity",
+          "user_product_unify",
+          "good_quality_thumbnail",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 43.106688000000005
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ01BUmVmMmFi",
+            "name": "Maringá"
+          },
+          "state": {
+            "id": "TUxCUFBBUkExODBlZA",
+            "name": "Paraná"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU2975412655",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5063105307",
+        "site_id": "MLB",
+        "seller_id": 1552313395,
+        "accepts_mercadopago": true,
+        "price": 21.25,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Sem garantia",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "has_published_clips",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 260162,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0JMVWM2MDMx",
+            "name": "Blumenau"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "TUxCQklUTzhBQjg",
+            "name": "Itoupavazinha"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Sem garantia",
+            "value_id": "6150835"
+          }
+        ],
+        "user_product_id": "MLBU3830215235",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6166114452",
+        "site_id": "MLB",
+        "seller_id": 7558075,
+        "accepts_mercadopago": true,
+        "price": 21.49,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": 29.9,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "fulfillment",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0lNQjE0NTNi",
+            "name": "Imbituba"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3731995450",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5400384850",
+        "site_id": "MLB",
+        "seller_id": 731760667,
+        "accepts_mercadopago": true,
+        "price": 22.51,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 30 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "dynamic_standard_price",
+          "standard_price_by_quantity",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 5388,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "fulfillment",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ09STDUzMDI2",
+            "name": "Orleans"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 30,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "30 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3193310396",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7748157928",
+        "site_id": "MLB",
+        "seller_id": 368423304,
+        "accepts_mercadopago": true,
+        "price": 22.84,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0JMVWM2MDMx",
+            "name": "Blumenau"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "TUxCQklUT0U5RTQx",
+            "name": "Itoupava Central"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU1428297392",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4456357867",
+        "site_id": "MLB",
+        "seller_id": 351440336,
+        "accepts_mercadopago": true,
+        "price": 22.9,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 7 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "standard_price_by_quantity",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 369308,
+        "original_price": 35,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "fulfillment",
+          "tags": [
+            "self_service_out",
+            "self_service_available"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NPTTdlYzc3",
+            "name": "Sombrio"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          },
+          {
+            "value_struct": {
+              "number": 7,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "7 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3772930994",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4907662033",
+        "site_id": "MLB",
+        "seller_id": 2164899551,
+        "accepts_mercadopago": true,
+        "price": 23.36,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": 24.86,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYQXJhcmFxdWFyYVRVeENVRk5CVDA4NU4yR",
+            "name": "Araraquara"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYVmlsYSBTdWNvbmFzYVRWaFlRWEpoY21Ge",
+            "name": "Vila Suconasa"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3225307624",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6293681150",
+        "site_id": "MLB",
+        "seller_id": 2368290102,
+        "accepts_mercadopago": true,
+        "price": 23.44,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 5 dias",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "standard_price_by_quantity",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": true,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_out",
+            "self_service_available"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0JSVTkxZjAz",
+            "name": "Brusque"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          },
+          {
+            "value_struct": {
+              "number": 5,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "5 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3523882869",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4794212763",
+        "site_id": "MLB",
+        "seller_id": 144578541,
+        "accepts_mercadopago": true,
+        "price": 23.68,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "has_published_clips",
+          "catalog_boost",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 54817,
+        "original_price": 26.71,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0JMVWM2MDMx",
+            "name": "Blumenau"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "TUxCQlBBUzg4MjBG",
+            "name": "Passo Manso"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU4132425956",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5333612313",
+        "site_id": "MLB",
+        "seller_id": 368423304,
+        "accepts_mercadopago": true,
+        "price": 23.82,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0JMVWM2MDMx",
+            "name": "Blumenau"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "TUxCQklUT0U5RTQx",
+            "name": "Itoupava Central"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU1422321584",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4033670285",
+        "site_id": "MLB",
+        "seller_id": 250682014,
+        "accepts_mercadopago": true,
+        "price": 23.88,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 76684,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "",
+            "name": "Imbituba"
+          },
+          "state": {
+            "id": "",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3124058099",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6802338896",
+        "site_id": "MLB",
+        "seller_id": 29833902,
+        "accepts_mercadopago": true,
+        "price": 23.9,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 359542,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1BPUjgwZTJl",
+            "name": "Porto Alegre"
+          },
+          "state": {
+            "id": "TUxCUFJJT0xkYzM0",
+            "name": "Rio Grande do Sul"
+          },
+          "neighborhood": {
+            "id": "TUxCQk5BVjc0MEE0",
+            "name": "Navegantes"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3986302086",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4907662031",
+        "site_id": "MLB",
+        "seller_id": 2164899551,
+        "accepts_mercadopago": true,
+        "price": 24.82,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": 26.41,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYQXJhcmFxdWFyYVRVeENVRk5CVDA4NU4yR",
+            "name": "Araraquara"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYVmlsYSBTdWNvbmFzYVRWaFlRWEpoY21Ge",
+            "name": "Vila Suconasa"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3225307624",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6506991542",
+        "site_id": "MLB",
+        "seller_id": 714221107,
+        "accepts_mercadopago": true,
+        "price": 24.9,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 54817,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_out",
+            "self_service_available"
+          ],
+          "cost": 43.106688000000005
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0pPSTc2NzM4",
+            "name": "Joinville"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "TUxCQkFNRTIwRkMy",
+            "name": "América"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3387021215",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7117998932",
+        "site_id": "MLB",
+        "seller_id": 786847442,
+        "accepts_mercadopago": true,
+        "price": 24.9,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Sem garantia",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0NSSTZiNDY3",
+            "name": "Criciúma"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "TUxCQlNBTzIwNDM3",
+            "name": "São Luiz"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Sem garantia",
+            "value_id": "6150835"
+          }
+        ],
+        "user_product_id": "MLBU1153506449",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5743247016",
+        "site_id": "MLB",
+        "seller_id": 33967672,
+        "accepts_mercadopago": true,
+        "price": 25.5,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "has_published_clips",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1RJSmU0ZjNi",
+            "name": "Tijucas"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3449483686",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5060701116",
+        "site_id": "MLB",
+        "seller_id": 697531351,
+        "accepts_mercadopago": true,
+        "price": 25.88,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "good_quality_thumbnail",
+          "kvs_primary",
+          "extended_warranty_eligible",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0JSQTU2M2Yy",
+            "name": "Brasília"
+          },
+          "state": {
+            "id": "TUxCUERJU0wxMWJhYg",
+            "name": "Distrito Federal"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [],
+        "user_product_id": "MLBU1155061058",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5063527885",
+        "site_id": "MLB",
+        "seller_id": 103401948,
+        "accepts_mercadopago": true,
+        "price": 26.61,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 7 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": 29.9,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTQ1MDE",
+            "name": "São Caetano do Sul"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQkJBUjU2NjE",
+            "name": "Barcelona"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          },
+          {
+            "value_struct": {
+              "number": 7,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "7 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU4741737472",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6652220560",
+        "site_id": "MLB",
+        "seller_id": 731760667,
+        "accepts_mercadopago": true,
+        "price": 26.77,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "mshops_3x_campaign",
+          "kvs_primary",
+          "extended_warranty_eligible",
+          "standard_price_by_quantity",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 5388,
+        "original_price": 28.79,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "fulfillment",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ09STDUzMDI2",
+            "name": "Orleans"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU1717606027",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4033584839",
+        "site_id": "MLB",
+        "seller_id": 645651994,
+        "accepts_mercadopago": true,
+        "price": 26.88,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0lNQjE0NTNi",
+            "name": "Imbituba"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3129498254",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4462873135",
+        "site_id": "MLB",
+        "seller_id": 1239072606,
+        "accepts_mercadopago": true,
+        "price": 26.9,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 30 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_out",
+            "self_service_available"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0pPSTc2NzM4",
+            "name": "Joinville"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "TUxCQk5PVjMyN0I",
+            "name": "Nova Brasília"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 30,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "30 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3780769878",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6439153676",
+        "site_id": "MLB",
+        "seller_id": 574462855,
+        "accepts_mercadopago": true,
+        "price": 27.5,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 190964,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYSXR1dmVyYXZhVFV4Q1VGTkJUMDg1TjJFN",
+            "name": "Ituverava"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYQ2VudHJvVFZoWVNYUjFkbVZ5WVhaaFZGV",
+            "name": "Centro"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU1422193032",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5577433094",
+        "site_id": "MLB",
+        "seller_id": 237023298,
+        "accepts_mercadopago": true,
+        "price": 27.6,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "standard_price_by_quantity",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTQzMzc",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlBBUnB6MjEx",
+            "name": "Parque São Lucas"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3356164173",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7607433104",
+        "site_id": "MLB",
+        "seller_id": 171382383,
+        "accepts_mercadopago": true,
+        "price": 27.6,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "brand_verified",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 90646,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ01BUmVmMmFi",
+            "name": "Maringá"
+          },
+          "state": {
+            "id": "TUxCUFBBUkExODBlZA",
+            "name": "Paraná"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU734064652",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6194463176",
+        "site_id": "MLB",
+        "seller_id": 747624896,
+        "accepts_mercadopago": true,
+        "price": 27.68,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1hBTjMxNzM1",
+            "name": "Jaraguá do Sul"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          }
+        ],
+        "user_product_id": "MLBU1425463294",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5665259994",
+        "site_id": "MLB",
+        "seller_id": 2194931235,
+        "accepts_mercadopago": true,
+        "price": 27.69,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 7 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "fulfillment",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYUG9tcMOpaWFUVXhDVUZOQlQwODVOMkU0",
+            "name": "Pompéia"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 7,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "7 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3398816291",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5292900041",
+        "site_id": "MLB",
+        "seller_id": 229553592,
+        "accepts_mercadopago": true,
+        "price": 27.74,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "standard_price_by_quantity",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": true,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1BSSWI1YTdm",
+            "name": "Primavera do Leste"
+          },
+          "state": {
+            "id": "TUxCUE1BVE9jZDY0",
+            "name": "Mato Grosso"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU5311713732",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4279111527",
+        "site_id": "MLB",
+        "seller_id": 1665572774,
+        "accepts_mercadopago": true,
+        "price": 27.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTDU5MjE",
+            "name": "Vila Guilherme"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3527722398",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4682253554",
+        "site_id": "MLB",
+        "seller_id": 616922393,
+        "accepts_mercadopago": true,
+        "price": 28,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "mshops_3x_campaign",
+          "kvs_primary",
+          "good_quality_thumbnail",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTk0MDc",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQkNFTjUwNzE",
+            "name": "Centro"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU1165518007",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7459650324",
+        "site_id": "MLB",
+        "seller_id": 2714669592,
+        "accepts_mercadopago": true,
+        "price": 28.2,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 7 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "standard_price_by_quantity",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0lORGIxY2My",
+            "name": "Indaial"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          },
+          {
+            "value_struct": {
+              "number": 7,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "7 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU4684356859",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4434411493",
+        "site_id": "MLB",
+        "seller_id": 209852667,
+        "accepts_mercadopago": true,
+        "price": 28.23,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "brand_verified",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 98942,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYUmliZWlyw6NvIFByZXRvVFV4Q1VGTkJUM",
+            "name": "Ribeirão Preto"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYUGFycXVlIEluZHVzdHJpYWwgTGFnb2lua",
+            "name": "Parque Industrial Lagoinha"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU1710428213",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6661246870",
+        "site_id": "MLB",
+        "seller_id": 284280739,
+        "accepts_mercadopago": true,
+        "price": 28.69,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "brand_verified",
+          "user_product_unify",
+          "catalog_boost",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 98942,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYUmliZWlyw6NvIFByZXRvVFV4Q1VGTkJUM",
+            "name": "Ribeirão Preto"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYUGFycXVlIEluZHVzdHJpYWwgTGFnb2lua",
+            "name": "Parque Industrial Lagoinha"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU1961226475",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4129419839",
+        "site_id": "MLB",
+        "seller_id": 137106003,
+        "accepts_mercadopago": true,
+        "price": 28.75,
+        "category_id": "MLB437783",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 5588,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0pBUjJkNjY4",
+            "name": "Jaraguá do Sul"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "TUxCQlZJTDY0Rjk1",
+            "name": "Vila Lalau"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3301447809",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7567287804",
+        "site_id": "MLB",
+        "seller_id": 149143752,
+        "accepts_mercadopago": true,
+        "price": 28.9,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 43.106688000000005
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYQnJhZ2Fuw6dhIFBhdWxpc3RhVFV4Q1VGT",
+            "name": "Bragança Paulista"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYSmFyZGltIFJlY3JlaW9UVmhZUW5KaFoyR",
+            "name": "Jardim Recreio"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU5074157984",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7183795408",
+        "site_id": "MLB",
+        "seller_id": 1432040645,
+        "accepts_mercadopago": true,
+        "price": 29.11,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0NVUjYyZmY1",
+            "name": "Curitiba"
+          },
+          "state": {
+            "id": "TUxCUFBBUkExODBlZA",
+            "name": "Paraná"
+          },
+          "neighborhood": {
+            "id": "TUxCQkNFTkMwRDE",
+            "name": "Centro"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU2304321055",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5399131030",
+        "site_id": "MLB",
+        "seller_id": 35298923,
+        "accepts_mercadopago": true,
+        "price": 29.5,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "standard_price_by_quantity",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1RJSmU0ZjNi",
+            "name": "Tijucas"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3191720756",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4100855539",
+        "site_id": "MLB",
+        "seller_id": 2467461869,
+        "accepts_mercadopago": true,
+        "price": 29.9,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_out",
+            "self_service_available"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYSXR1cGV2YVRVeENVRk5CVDA4NU4yRTQ",
+            "name": "Itupeva"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYSmFyZGltIFPDo28gVmljZW50ZVRWaFlTW",
+            "name": "Jardim São Vicente"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3252668980",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5743235820",
+        "site_id": "MLB",
+        "seller_id": 33967672,
+        "accepts_mercadopago": true,
+        "price": 29.9,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "catalog_boost",
+          "has_published_clips",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1RJSmU0ZjNi",
+            "name": "Tijucas"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3449483686",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5315786471",
+        "site_id": "MLB",
+        "seller_id": 2329783722,
+        "accepts_mercadopago": true,
+        "price": 29.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 8 dias",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "drop_off",
+          "tags": [],
+          "cost": 43.106688000000005
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYUmlvIENsYXJvVFV4Q1VGTkJUMDg1TjJFN",
+            "name": "Rio Claro"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYQ2VudHJvVFZoWVVtbHZJRU5zWVhKdlZGV0",
+            "name": "Centro"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          },
+          {
+            "value_struct": {
+              "number": 8,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "8 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU5316073757",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6674807686",
+        "site_id": "MLB",
+        "seller_id": 43972950,
+        "accepts_mercadopago": true,
+        "price": 29.99,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 90 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 373864,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYVm90dXBvcmFuZ2FUVXhDVUZOQlQwODVOM",
+            "name": "Votuporanga"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYUGF0cmltw7RuaW8gTm92b1RWaFlWbTkwZ",
+            "name": "Patrimônio Novo"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3126133641",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5771824242",
+        "site_id": "MLB",
+        "seller_id": 83799991,
+        "accepts_mercadopago": true,
+        "price": 30.18,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 104,
+        "original_price": 32.11,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_out",
+            "self_service_available"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlBBUjc5OTA4NA",
+            "name": "Parque Novo Mundo"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3275311818",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6447593972",
+        "site_id": "MLB",
+        "seller_id": 33498093,
+        "accepts_mercadopago": true,
+        "price": 30.35,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "brand_verified",
+          "standard_price_by_quantity",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_out",
+            "self_service_available"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYQW1lcmljYW5hVFV4Q1VGTkJUMDg1TjJFN",
+            "name": "Americana"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYQ29uc2VydmFUVmhZUVcxbGNtbGpZVzVoV",
+            "name": "Conserva"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU734576382",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5144704541",
+        "site_id": "MLB",
+        "seller_id": 166539741,
+        "accepts_mercadopago": true,
+        "price": 30.63,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "standard_price_by_channel",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 234864,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYU2VydMOjb3ppbmhvVFV4Q1VGTkJUMDg1T",
+            "name": "Sertãozinho"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYSmFyZGltIFN1bWFyZVRWaFlVMlZ5ZE1Pa",
+            "name": "Jardim Sumare"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU2893604617",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6432776290",
+        "site_id": "MLB",
+        "seller_id": 209852667,
+        "accepts_mercadopago": true,
+        "price": 30.7,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "brand_verified",
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 98942,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYUmliZWlyw6NvIFByZXRvVFV4Q1VGTkJUM",
+            "name": "Ribeirão Preto"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYUGFycXVlIEluZHVzdHJpYWwgTGFnb2lua",
+            "name": "Parque Industrial Lagoinha"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU1710450923",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4893358315",
+        "site_id": "MLB",
+        "seller_id": 3160694476,
+        "accepts_mercadopago": true,
+        "price": 30.83,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 17.7
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0ZBUmMxZDA3",
+            "name": "Farroupilha"
+          },
+          "state": {
+            "id": "TUxCUFJJT0xkYzM0",
+            "name": "Rio Grande do Sul"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3885007036",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6796470830",
+        "site_id": "MLB",
+        "seller_id": 284280739,
+        "accepts_mercadopago": true,
+        "price": 31.24,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "brand_verified",
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 98942,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYUmliZWlyw6NvIFByZXRvVFV4Q1VGTkJUM",
+            "name": "Ribeirão Preto"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYUGFycXVlIEluZHVzdHJpYWwgTGFnb2lua",
+            "name": "Parque Industrial Lagoinha"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU1961651079",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5506667624",
+        "site_id": "MLB",
+        "seller_id": 36218812,
+        "accepts_mercadopago": true,
+        "price": 32.82,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 30 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "has_published_clips",
+          "kvs_primary",
+          "standard_price_by_quantity",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 259844,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTIzNTE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQlBBUnk0aWR6",
+            "name": "Parque Edu Chaves"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          },
+          {
+            "value_struct": {
+              "number": 30,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "30 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3306456168",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6296455886",
+        "site_id": "MLB",
+        "seller_id": 1595267060,
+        "accepts_mercadopago": true,
+        "price": 33.68,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia do vendedor: 30 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "standard_price_by_quantity",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_out",
+            "self_service_available"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0NVUjYyZmY1",
+            "name": "Curitiba"
+          },
+          "state": {
+            "id": "TUxCUFBBUkExODBlZA",
+            "name": "Paraná"
+          },
+          "neighborhood": {
+            "id": "TUxCQkNJRDM4RTVG",
+            "name": "Cidade Industrial"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia do vendedor",
+            "value_id": "2230280"
+          },
+          {
+            "value_struct": {
+              "number": 30,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "30 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3805899811",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB3646767611",
+        "site_id": "MLB",
+        "seller_id": 198981360,
+        "accepts_mercadopago": true,
+        "price": 33.76,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 120 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "good_quality_thumbnail",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 83442,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_out",
+            "self_service_available"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTkxMjE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQklQSTI1Mzc",
+            "name": "Ipiranga"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 120,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "120 dias",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU1103329169",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7168158570",
+        "site_id": "MLB",
+        "seller_id": 3160694476,
+        "accepts_mercadopago": true,
+        "price": 34.31,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 17.7
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0ZBUmMxZDA3",
+            "name": "Farroupilha"
+          },
+          "state": {
+            "id": "TUxCUFJJT0xkYzM0",
+            "name": "Rio Grande do Sul"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3885007036",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7566647898",
+        "site_id": "MLB",
+        "seller_id": 761257630,
+        "accepts_mercadopago": true,
+        "price": 34.49,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "has_published_clips",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": true,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0pVUmY2Mzc",
+            "name": "Juru"
+          },
+          "state": {
+            "id": "TUxCUFBBUkE0M2I4",
+            "name": "Paraíba"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [],
+        "user_product_id": "MLBU5072719134",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4478621379",
+        "site_id": "MLB",
+        "seller_id": 1517624514,
+        "accepts_mercadopago": true,
+        "price": 34.87,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 444488,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": true,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_out",
+            "self_service_available"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1ZJTGU5YTdl",
+            "name": "Vila Velha"
+          },
+          "state": {
+            "id": "TUxCUEVTUE8xN2Y3NA",
+            "name": "Espírito Santo"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3803879596",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB6729834108",
+        "site_id": "MLB",
+        "seller_id": 199488802,
+        "accepts_mercadopago": true,
+        "price": 34.91,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Sem garantia",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 54817,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0NPTjMxMzZk",
+            "name": "Contagem"
+          },
+          "state": {
+            "id": "TUxCUE1JTlMxNTAyZA",
+            "name": "Minas Gerais"
+          },
+          "neighborhood": {
+            "id": "TUxCQkNJTkQ3MEJE",
+            "name": "Cinco"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Sem garantia",
+            "value_id": "6150835"
+          }
+        ],
+        "user_product_id": "MLBU3952093256",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4128430801",
+        "site_id": "MLB",
+        "seller_id": 265625136,
+        "accepts_mercadopago": true,
+        "price": 35,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0NVUjYyZmY1",
+            "name": "Curitiba"
+          },
+          "state": {
+            "id": "TUxCUFBBUkExODBlZA",
+            "name": "Paraná"
+          },
+          "neighborhood": {
+            "id": "TUxCQlVNQjdBOTUy",
+            "name": "Umbará"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3297960971",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4626929049",
+        "site_id": "MLB",
+        "seller_id": 1445699014,
+        "accepts_mercadopago": true,
+        "price": 35,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "standard_price_by_quantity",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 213682,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_out",
+            "self_service_available"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0xBR2MxN2Jh",
+            "name": "Laguna"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3922986218",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5800030168",
+        "site_id": "MLB",
+        "seller_id": 177595729,
+        "accepts_mercadopago": true,
+        "price": 35,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "user_product_unify",
+          "kvs_primary",
+          "brand_verified",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 43.106688000000005
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0ZBWjRlNzc0",
+            "name": "Curitiba"
+          },
+          "state": {
+            "id": "TUxCUFBBUkExODBlZA",
+            "name": "Paraná"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [],
+        "user_product_id": "MLBU1989466901",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5789680632",
+        "site_id": "MLB",
+        "seller_id": 2580070918,
+        "accepts_mercadopago": true,
+        "price": 35.11,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "standard_price_by_quantity",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": 36.96,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0NVUjYyZmY1",
+            "name": "Curitiba"
+          },
+          "state": {
+            "id": "TUxCUFBBUkExODBlZA",
+            "name": "Paraná"
+          },
+          "neighborhood": {
+            "id": "TUxCQkFHVTIyMzIy",
+            "name": "Água Verde"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3488927160",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5773407860",
+        "site_id": "MLB",
+        "seller_id": 834963610,
+        "accepts_mercadopago": true,
+        "price": 35.9,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 87358,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0FSQTcyNGFj",
+            "name": "Araranguá"
+          },
+          "state": {
+            "id": "TUxCUFNBTkE5Nzc4",
+            "name": "Santa Catarina"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3476503248",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB3653792903",
+        "site_id": "MLB",
+        "seller_id": 198981360,
+        "accepts_mercadopago": true,
+        "price": 36,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 120 dias",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "good_quality_thumbnail",
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 83442,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1NQLTkxMjE",
+            "name": "São Paulo"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TUxCQklQSTI1Mzc",
+            "name": "Ipiranga"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 120,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "120 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU1103331103",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4277358129",
+        "site_id": "MLB",
+        "seller_id": 2580070918,
+        "accepts_mercadopago": true,
+        "price": 39.37,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Sem garantia",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "standard_price_by_quantity",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": 41.45,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ0NVUjYyZmY1",
+            "name": "Curitiba"
+          },
+          "state": {
+            "id": "TUxCUFBBUkExODBlZA",
+            "name": "Paraná"
+          },
+          "neighborhood": {
+            "id": "TUxCQkFHVTIyMzIy",
+            "name": "Água Verde"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Sem garantia",
+            "value_id": "6150835"
+          }
+        ],
+        "user_product_id": "MLBU3488927160",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7275680416",
+        "site_id": "MLB",
+        "seller_id": 1650424952,
+        "accepts_mercadopago": true,
+        "price": 71.5,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Sem garantia",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": true,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYUmlvIENsYXJvVFV4Q1VGTkJUMDg1TjJFN",
+            "name": "Rio Claro"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYVmlsYSBEbyBSw6FkaW9UVmhZVW1sdklFT",
+            "name": "Vila Do Rádio"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Sem garantia",
+            "value_id": "6150835"
+          }
+        ],
+        "user_product_id": "MLBU4462548577",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4403261693",
+        "site_id": "MLB",
+        "seller_id": 290020346,
+        "accepts_mercadopago": true,
+        "price": 78.63,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_pro",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "standard_price_by_quantity",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 336746,
+        "original_price": 92.51,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 43.106688000000005
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYU2FudGEgR2VydHJ1ZGVzVFV4Q1VGTkJUM",
+            "name": "Santa Gertrudes"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYSmFyZGltIEx1Y2lhbmFUVmhZVTJGdWRHR",
+            "name": "Jardim Luciana"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU3704675703",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB5261675142",
+        "site_id": "MLB",
+        "seller_id": 316731300,
+        "accepts_mercadopago": true,
+        "price": 19.94,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 90 dias",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "good_quality_thumbnail",
+          "user_product_unify",
+          "has_published_clips",
+          "kvs_primary",
+          "standard_price_by_quantity",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": 87342,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [],
+          "cost": 43.106688000000005
+        },
+        "seller_address": {
+          "city": {
+            "id": "TUxCQ1JPTDg5OA",
+            "name": "Maringá"
+          },
+          "state": {
+            "id": "TUxCUFBBUkExODBlZA",
+            "name": "Paraná"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 90,
+              "unit": "dias"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "90 dias",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU2963762617",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB7585715618",
+        "site_id": "MLB",
+        "seller_id": 655765098,
+        "accepts_mercadopago": true,
+        "price": 29.9,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Sem garantia",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": true,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 43.106688000000005
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYU2FudG9zVFV4Q1VGTkJUMDg1TjJFNA",
+            "name": "Santos"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Sem garantia",
+            "value_id": "6150835"
+          }
+        ],
+        "user_product_id": "MLBU5106983936",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4598395883",
+        "site_id": "MLB",
+        "seller_id": 1584445246,
+        "accepts_mercadopago": true,
+        "price": 34,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "kvs_primary",
+          "user_product_unify",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": null,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "xd_drop_off",
+          "tags": [],
+          "cost": 43.106688000000005
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYRW1idSBkYXMgQXJ0ZXNUVXhDVUZOQlQwO",
+            "name": "Embu das Artes"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "TVhYQ2VudHJvVFZoWVJXMWlkU0JrWVhNZ1FYS",
+            "name": "Centro"
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          },
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          }
+        ],
+        "user_product_id": "MLBU3900459026",
+        "min_purchase_unit": 1
+      },
+      {
+        "item_id": "MLB4576442553",
+        "site_id": "MLB",
+        "seller_id": 319083305,
+        "accepts_mercadopago": true,
+        "price": 40.52,
+        "category_id": "MLB271379",
+        "currency_id": "BRL",
+        "warranty": "Garantia de fábrica: 3 meses",
+        "condition": "new",
+        "listing_type_id": "gold_special",
+        "international_delivery_mode": "none",
+        "tier": "",
+        "inventory_id": "",
+        "tags": [
+          "extended_warranty_eligible",
+          "user_product_unify",
+          "kvs_primary",
+          "immediate_payment",
+          "cart_eligible"
+        ],
+        "deal_ids": [],
+        "official_store_id": null,
+        "original_price": 42.66,
+        "shipping": {
+          "free_shipping": false,
+          "store_pick_up": false,
+          "local_pick_up": false,
+          "mode": "me2",
+          "logistic_type": "cross_docking",
+          "tags": [
+            "self_service_in"
+          ],
+          "cost": 0
+        },
+        "seller_address": {
+          "city": {
+            "id": "TVhYQmFycmluaGFUVXhDVUZOQlQwODVOMkU0",
+            "name": "Barrinha"
+          },
+          "state": {
+            "id": "TUxCUFNBT085N2E4",
+            "name": "São Paulo"
+          },
+          "neighborhood": {
+            "id": "",
+            "name": ""
+          }
+        },
+        "sale_terms": [
+          {
+            "value_struct": {
+              "number": 3,
+              "unit": "meses"
+            },
+            "id": "WARRANTY_TIME",
+            "name": "Tempo de garantia",
+            "value_name": "3 meses",
+            "value_id": null
+          },
+          {
+            "value_struct": null,
+            "id": "WARRANTY_TYPE",
+            "name": "Tipo de garantia",
+            "value_name": "Garantia de fábrica",
+            "value_id": "2230279"
+          }
+        ],
+        "user_product_id": "MLBU1426144243",
+        "min_purchase_unit": 1
+      }
+    ],
+    "experiments": null
+  }
+}

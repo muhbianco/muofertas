@@ -1,0 +1,11 @@
+fastapi==0.141.1
+uvicorn[standard]==0.52.0
+pydantic==2.13.4
+pydantic-settings==2.14.2
+httpx==0.28.1
+SQLAlchemy[asyncio]==2.0.51
+asyncmy==0.2.11
+alembic==1.18.5
+# IANA time zones for zoneinfo (horários de publicação em America/Sao_Paulo); the slim image and
+# Windows dev boxes have no system database.
+tzdata==2026.4

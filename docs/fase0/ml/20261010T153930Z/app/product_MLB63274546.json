@@ -1,0 +1,316 @@
+{
+  "path": "/products/MLB63274546",
+  "http_status": 200,
+  "elapsed_ms": 200,
+  "headers": {
+    "Content-Type": "application/json",
+    "Date": "Sat, 10 Oct 2026 15:39:53 GMT",
+    "x-request-id": "2d333636-e6b7-4ba1-95ad-36698b5a8379"
+  },
+  "body": {
+    "id": "MLB63274546",
+    "catalog_product_id": "MLB63274546",
+    "status": "active",
+    "pdp_types": [
+      "traditional"
+    ],
+    "domain_id": "MLB-DRILL_AND_SCREWDRIVER_ADAPTERS",
+    "permalink": "",
+    "name": "Cortador Chapa DUTOS CALHAS Para Furadeira E Parafusadeira",
+    "family_name": "ADAPTADOR PARAFUSADEIRA FURADEIRA CORTAR CHAPAS GOLFILD Cortador Chapa Adaptador 1/4",
+    "type": "catalog_product",
+    "buy_box_winner": null,
+    "pickers": [
+      {
+        "picker_id": "ADAPTER_SIZE",
+        "picker_name": "Tamanho do adaptador",
+        "products": [
+          {
+            "product_id": "MLB63274546",
+            "picker_label": "1/4 polegadas",
+            "picture_id": "",
+            "thumbnail": "",
+            "tags": [
+              "selected"
+            ],
+            "changes": [],
+            "permalink": "",
+            "product_name": "GOLFILD DUTOS CALHAS ADAPTADOR PARAFUSADEIRA FURADEIRA CORTAR CHAPAS - 1/4 polegadas - 6",
+            "auto_completed": false
+          }
+        ],
+        "tags": [],
+        "attributes": [
+          {
+            "attribute_id": "ADAPTER_SIZE",
+            "template": "",
+            "position": 1
+          }
+        ],
+        "value_name_delimiter": "",
+        "hide_extra_decoration": false,
+        "secondary_picker_name": ""
+      },
+      {
+        "picker_id": "UNITS_PER_PACK",
+        "picker_name": "Quantidade de adaptadores",
+        "products": [
+          {
+            "product_id": "MLB63274546",
+            "picker_label": "6",
+            "picture_id": "",
+            "thumbnail": "",
+            "tags": [
+              "selected"
+            ],
+            "changes": [],
+            "permalink": "",
+            "product_name": "GOLFILD DUTOS CALHAS ADAPTADOR PARAFUSADEIRA FURADEIRA CORTAR CHAPAS - 1/4 polegadas - 6",
+            "auto_completed": false
+          }
+        ],
+        "tags": [],
+        "attributes": [
+          {
+            "attribute_id": "UNITS_PER_PACK",
+            "template": "",
+            "position": 1
+          }
+        ],
+        "value_name_delimiter": " ",
+        "hide_extra_decoration": false,
+        "secondary_picker_name": ""
+      }
+    ],
+    "pictures": [
+      {
+        "id": "876929-MLA101777298433_122025",
+        "url": "https://http2.mlstatic.com/D_NQ_NP_876929-MLA101777298433_122025-F.jpg",
+        "suggested_for_picker": null,
+        "max_width": 1078,
+        "max_height": 1200,
+        "source_metadata": null,
+        "tags": [
+          "CAROUSEL"
+        ]
+      },
+      {
+        "id": "855824-MLA101276309400_122025",
+        "url": "https://http2.mlstatic.com/D_NQ_NP_855824-MLA101276309400_122025-F.jpg",
+        "suggested_for_picker": null,
+        "max_width": 1115,
+        "max_height": 1200,
+        "source_metadata": null,
+        "tags": [
+          "CAROUSEL"
+        ]
+      },
+      {
+        "id": "778543-MLA101777288425_122025",
+        "url": "https://http2.mlstatic.com/D_NQ_NP_778543-MLA101777288425_122025-F.jpg",
+        "suggested_for_picker": null,
+        "max_width": 1200,
+        "max_height": 1200,
+        "source_metadata": null,
+        "tags": [
+          "CAROUSEL"
+        ]
+      },
+      {
+        "id": "618336-MLA101276785026_122025",
+        "url": "https://http2.mlstatic.com/D_NQ_NP_618336-MLA101276785026_122025-F.jpg",
+        "suggested_for_picker": null,
+        "max_width": 1182,
+        "max_height": 1200,
+        "source_metadata": null,
+        "tags": [
+          "CAROUSEL"
+        ]
+      },
+      {
+        "id": "629573-MLA101276170984_122025",
+        "url": "https://http2.mlstatic.com/D_NQ_NP_629573-MLA101276170984_122025-F.jpg",
+        "suggested_for_picker": null,
+        "max_width": 1200,
+        "max_height": 995,
+        "source_metadata": null,
+        "tags": [
+          "CAROUSEL"
+        ]
+      },
+      {
+        "id": "900639-MLA109896913259_032026",
+        "url": "https://http2.mlstatic.com/D_NQ_NP_900639-MLA109896913259_032026-F.jpg",
+        "suggested_for_picker": null,
+        "max_width": 1200,
+        "max_height": 1151,
+        "source_metadata": null,
+        "tags": [
+          "CAROUSEL"
+        ]
+      }
+    ],
+    "description_pictures": [],
+    "main_features": [
+      {
+        "text": "Tipo de haste 1/4 polegadas para conexão precisa.",
+        "type": "key_value",
+        "metadata": {}
+      },
+      {
+        "text": "Compatível com furadeira e parafusadeira para versatilidade.",
+        "type": "key_value",
+        "metadata": {}
+      },
+      {
+        "text": "Velocidade de operação de 1400 RPM para cortes rápidos.",
+        "type": "key_value",
+        "metadata": {}
+      },
+      {
+        "text": "Ideal para corte de chapas com eficiência.",
+        "type": "key_value",
+        "metadata": {}
+      }
+    ],
+    "disclaimers": [],
+    "attributes": [
+      {
+        "id": "BRAND",
+        "name": "Marca",
+        "value_id": "55941944",
+        "value_name": "GOLFILD",
+        "values": [
+          {
+            "id": "55941944",
+            "name": "GOLFILD"
+          }
+        ]
+      },
+      {
+        "id": "MODEL",
+        "name": "Modelo",
+        "value_id": "89692809",
+        "value_name": "DUTOS CALHAS",
+        "values": [
+          {
+            "id": "89692809",
+            "name": "DUTOS CALHAS"
+          }
+        ]
+      },
+      {
+        "id": "ADAPTER_TYPE",
+        "name": "Tipo de adaptador",
+        "value_id": "68073653",
+        "value_name": "ADAPTADOR PARAFUSADEIRA FURADEIRA CORTAR CHAPAS",
+        "values": [
+          {
+            "id": "68073653",
+            "name": "ADAPTADOR PARAFUSADEIRA FURADEIRA CORTAR CHAPAS"
+          }
+        ]
+      },
+      {
+        "id": "ADAPTER_SIZE",
+        "name": "Tamanho do adaptador",
+        "value_id": "68073657",
+        "value_name": "1/4 polegadas",
+        "values": [
+          {
+            "id": "68073657",
+            "name": "1/4 polegadas"
+          }
+        ]
+      },
+      {
+        "id": "UNITS_PER_PACK",
+        "name": "Quantidade de embalagens",
+        "value_id": "140750",
+        "value_name": "6",
+        "values": [
+          {
+            "id": "140750",
+            "name": "6"
+          }
+        ]
+      },
+      {
+        "id": "PRODUCT_TYPES",
+        "name": "Tipos de produto",
+        "value_id": null,
+        "value_name": "Adaptador para furadeira e parafusadeira, Cortador de chapa",
+        "values": [
+          {
+            "id": "59748176",
+            "name": "Adaptador para furadeira e parafusadeira"
+          },
+          {
+            "id": "28347202",
+            "name": "Cortador de chapa"
+          }
+        ]
+      },
+      {
+        "id": "SHANK_TYPE",
+        "name": "Tipo de haste",
+        "value_id": "68073656",
+        "value_name": "1/4 polegadas",
+        "values": [
+          {
+            "id": "68073656",
+            "name": "1/4 polegadas"
+          }
+        ]
+      },
+      {
+        "id": "LENGTH",
+        "name": "Comprimento",
+        "value_id": "570708",
+        "value_name": "13 cm",
+        "values": [
+          {
+            "id": "570708",
+            "name": "13 cm"
+          }
+        ]
+      },
+      {
+        "id": "PACKAGE_DATA_SOURCE",
+        "name": "Origem do dado do pacote de fábrica",
+        "value_id": "52228227",
+        "value_name": "MEASUREMENT",
+        "values": [
+          {
+            "id": "52228227",
+            "name": "MEASUREMENT"
+          }
+        ]
+      }
+    ],
+    "short_description": {
+      "type": "plaintext",
+      "content": "Apresentamos o Cortador Chapa Adaptador 1/4\" da marca GOLFILD, uma solução versátil ideal para quem procura eficiência em trabalhos de corte com furadeiras e parafusadeiras. \n\nCom um comprimento de 13 cm e haste de 1/4 polegadas, este adaptador se destaca pela sua robustez e capacidade de facilitar o corte de chapas de forma precisa. \n\nO modelo DUTOS CALHAS está projetado para proporcionar um desempenho superior, permitindo que os usuários realizem cortes limpos e rápidos em diversos materiais. É uma ferramenta indispensável para profissionais da construção, hobbistas e amantes do faça você mesmo que buscam qualidade e praticidade em suas tarefas.\n\nEste adaptador se integra facilmente à sua furadeira ou parafusadeira, transformando seu equipamento em uma ferramenta multifuncional. Com o Cortador Chapa Adaptador 1/4\", seus projetos ganham agilidade e precisão, ajudando você a alcançar resultados profissionais com menos esforço.\n\nCAPACIDADE MÁXIMA DE CORTE:\n- Placa de ferro: 0,3-1mm\n- Ferro branco: 0,3-1,2 mm\n- Placa de aço: 0,8-1mm\n- Placa de cobre: 1,5 mm\n- Placa de alumínio: 1,5 mm"
+    },
+    "parent_id": "MLB63274545",
+    "children_ids": [],
+    "settings": {
+      "content": "fixed",
+      "listing_strategy": "catalog_required",
+      "exclusive": false,
+      "with_enhanced_pictures": false,
+      "base_site_product_id": null,
+      "ttr": "2026-10-11T15:12:54.468151387"
+    },
+    "quality_type": "COMPLETE",
+    "release_info": null,
+    "presale_info": null,
+    "enhanced_content": null,
+    "tags": [],
+    "date_created": "2025-12-18T14:20:14Z",
+    "authorized_stores": null,
+    "last_updated": "2026-10-02T20:36:53Z",
+    "grouper_id": null,
+    "experiments": {}
+  }
+}

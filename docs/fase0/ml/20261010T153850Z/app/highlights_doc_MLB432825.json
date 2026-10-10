@@ -1,0 +1,119 @@
+{
+  "path": "/highlights/MLB/category/MLB432825",
+  "http_status": 200,
+  "elapsed_ms": 150,
+  "headers": {
+    "Content-Type": "application/json",
+    "Date": "Sat, 10 Oct 2026 15:39:13 GMT",
+    "x-request-id": "1cdef266-4e83-4f69-abc1-f1817fefcf39"
+  },
+  "body": {
+    "query_data": {
+      "highlight_type": "BEST_SELLER",
+      "criteria": "CATEGORY",
+      "id": "MLB432825"
+    },
+    "content": [
+      {
+        "id": "MLBU4367700495",
+        "position": 1,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLBU4448900599",
+        "position": 2,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLBU4037150577",
+        "position": 3,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLB73974674",
+        "position": 4,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLB74960150",
+        "position": 5,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLBU4473329534",
+        "position": 6,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLBU3965283123",
+        "position": 7,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLB78205274",
+        "position": 8,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLBU4156353485",
+        "position": 9,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLBU5205161633",
+        "position": 10,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLB74420280",
+        "position": 11,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLBU5249941540",
+        "position": 12,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLBU5242338036",
+        "position": 13,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLBU5250391700",
+        "position": 14,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLBU5028216508",
+        "position": 15,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLB75078630",
+        "position": 16,
+        "type": "PRODUCT"
+      },
+      {
+        "id": "MLBU4849630916",
+        "position": 17,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLBU3981122876",
+        "position": 18,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLBU5308035287",
+        "position": 19,
+        "type": "USER_PRODUCT"
+      },
+      {
+        "id": "MLBU5276653846",
+        "position": 20,
+        "type": "USER_PRODUCT"
+      }
+    ]
+  }
+}
