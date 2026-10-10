@@ -8,6 +8,8 @@
 - Revalidação: o preço da oferta escolhida é relido antes de postar; subiu mais de 3%, não sai.
 - Mensagem: `#publi` na primeira linha (CONAR), preço com a hora da verificação e nada calculado
   por nós sobre o histórico do ML (P6).
+- Pix: a API não traz o desconto do Pix (sondagem de 10/10/2026). O operador pode digitar o que a
+  página mostra; entra se for menor que o preço e no máximo 30% abaixo (proteção contra digitação).
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
 from typing import Any
 from urllib.parse import quote, urlsplit
 from zoneinfo import ZoneInfo
@@ -33,6 +36,7 @@ INVITE_PREFIX = "https://chat.whatsapp.com/"
 AFFILIATE_HOSTS = frozenset({"meli.la", "mercadolivre.com", "www.mercadolivre.com"})
 NICHE_EMOJI = {"ferramentas": "🔧", "beleza": "💄", "tenis-esporte": "👟"}
 MAX_NAME = 120
+PIX_MAX_DISCOUNT = 0.30
 
 
 def format_brl(cents: int | None) -> str:
@@ -170,6 +174,7 @@ def render_message(
     checked_at: datetime,
     official: bool,
     url: str,
+    pix_cents: int | None = None,
 ) -> str:
     local = checked_at.astimezone(SP)
     name = product_name.strip()
@@ -181,11 +186,45 @@ def render_message(
             f"{NICHE_EMOJI.get(niche_slug, '🛍️')} {niche_name.upper()} · preço verificado em "
             f"{local:%d/%m} às {local:%H:%M}",
             f"{name}{' · loja oficial' if official else ''}",
-            f"💰 {format_brl(price_cents)} no Mercado Livre",
+            (
+                f"💰 {format_brl(pix_cents)} no Pix ({format_brl(price_cents)} nas outras formas)"
+                " no Mercado Livre"
+                if pix_cents
+                else f"💰 {format_brl(price_cents)} no Mercado Livre"
+            ),
             "Preço e estoque podem mudar a qualquer momento.",
             f"🛒 {url}",
         ]
     )
+
+
+class PixError(ValueError):
+    """Preço do Pix digitado que não confere."""
+
+
+def parse_brl(text: str) -> int | None:
+    """'49,50', 'R$ 1.299,00', '49.50' → centavos. Vazio → None."""
+    raw = text.strip().removeprefix("R$").strip().replace(" ", "")
+    if not raw:
+        return None
+    if "," in raw:
+        raw = raw.replace(".", "").replace(",", ".")
+    elif raw.count(".") == 1 and len(raw.split(".")[1]) == 3:
+        raw = raw.replace(".", "")  # 1.299 = mil duzentos e noventa e nove
+    try:
+        cents = Decimal(raw) * 100
+    except InvalidOperation as exc:
+        raise PixError("preço do Pix: use o formato 49,90") from exc
+    if not cents.is_finite() or cents <= 0 or cents != cents.to_integral_value():
+        raise PixError("preço do Pix: use o formato 49,90")
+    return int(cents)
+
+
+def check_pix(pix_cents: int, card_cents: int) -> None:
+    if pix_cents >= card_cents:
+        raise PixError("o preço do Pix precisa ser menor que o preço do anúncio")
+    if pix_cents < card_cents * (1 - PIX_MAX_DISCOUNT):
+        raise PixError("mais de 30% abaixo do anúncio: confira o valor digitado")
 
 
 def share_url(message: str) -> str:

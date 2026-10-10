@@ -11,6 +11,12 @@
   {% endif %}
   {% if message %}
     <pre class="mensagem">{{ message }}</pre>
+    <form class="formulario pix" method="post" action="/postar/{{ pub.id }}/pix">
+      <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+      <label>Preço no Pix <small>(opcional: o que a página do ML mostra agora; vazio tira)</small>
+        <input name="pix" inputmode="decimal" maxlength="20" placeholder="ex.: 49,90" value="{{ ('%.2f' % (pub.pix_price_cents / 100)) | replace('.', ',') if pub.pix_price_cents else '' }}"></label>
+      <button class="botao rejeitar" type="submit">Aplicar Pix</button>
+    </form>
     {% if block %}<p class="erro">Agora não: {{ block }}.</p>{% endif %}
     {% if share %}
     <a class="botao aprovar" href="{{ share }}">Abrir no WhatsApp</a>

@@ -363,6 +363,8 @@ class Publication(Base):
     approved_price_cents: Mapped[int] = mapped_column(BigInteger)
     checked_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     checked_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    # 0006: preço do Pix que o operador viu na página (a API não traz).
+    pix_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     note: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())

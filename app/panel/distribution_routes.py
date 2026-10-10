@@ -26,6 +26,8 @@ LIST_LIMIT = 100
 
 ERRORS = {
     "ml": "O Mercado Livre não respondeu. Tente revalidar de novo.",
+    "pix": "Preço do Pix recusado: precisa ser menor que o anúncio e até 30% abaixo (ex.: 49,90).",
+    "pix-velho": "A revalidação venceu: revalide o preço e informe o Pix de novo.",
     "sem-item": "Esta publicação não tem a oferta registrada; descarte e aprove de novo.",
 }
 
@@ -358,6 +360,26 @@ async def recheck(
         "revalidação",
         extra={"publication_id": pub_id, "status": result.status, "price": result.price_cents},
     )
+    return _see_other(f"/postar/{pub_id}")
+
+
+@router.post("/postar/{pub_id}/pix")
+async def set_pix(
+    db: Db,
+    ctx: Admin,
+    pub_id: int,
+    pix: Annotated[str, Form(max_length=20)] = "",
+    csrf: Annotated[str | None, Form()] = None,
+) -> Response:
+    check_csrf(ctx, csrf)
+    pub = await _publication(db, pub_id)
+    now = utcnow()
+    if not is_fresh(pub.checked_at, now):
+        return _see_other(f"/postar/{pub_id}?erro=pix-velho")
+    try:
+        await service.set_pix(db, pub, pix, now)
+    except DistributionError:
+        return _see_other(f"/postar/{pub_id}?erro=pix")
     return _see_other(f"/postar/{pub_id}")
 
 

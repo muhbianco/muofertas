@@ -116,3 +116,35 @@ def test_offer_page_url_selects_the_offer() -> None:
     assert offer_page_url("https://x/p/MLB1?a=1", "MLB1", "MLB9").endswith(
         "&pdp_filters=item_id:MLB9"
     )
+
+
+def test_parse_brl_accepts_brazilian_formats() -> None:
+    from app.domain.distribution import PixError, check_pix, parse_brl
+
+    assert parse_brl("49,50") == 4950
+    assert parse_brl(" R$ 1.299,00 ") == 129900
+    assert parse_brl("49.5") == 4950
+    assert parse_brl("1.299") == 129900
+    assert parse_brl("") is None
+    for bad in ("abc", "NaN", "Infinity", "-5", "0", "49,505"):
+        with pytest.raises(PixError):
+            parse_brl(bad)
+    check_pix(4950, 5500)
+    with pytest.raises(PixError, match="menor"):
+        check_pix(5500, 5500)
+    with pytest.raises(PixError, match="30%"):
+        check_pix(3000, 5500)
+
+
+def test_message_with_pix_shows_both_prices() -> None:
+    text = render_message(
+        niche_slug="observacao",
+        niche_name="Observação",
+        product_name="Microfone Lapela A'Gold MCF-38D",
+        price_cents=5500,
+        checked_at=NOW,
+        official=False,
+        url="https://meli.la/x",
+        pix_cents=4950,
+    )
+    assert "💰 R$ 49,50 no Pix (R$ 55,00 nas outras formas) no Mercado Livre" in text

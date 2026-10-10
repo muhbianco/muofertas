@@ -181,6 +181,14 @@ async def test_manual_flow_from_approval_to_posted_once(
     assert text.startswith("#publi · link de afiliado")
     assert "R$ 1.299,00 no Mercado Livre" in text and text.endswith("https://meli.la/2AbC9")
 
+    # Pix visto na página pelo operador: entra na mensagem; valor absurdo é recusado
+    bad_pix = await client.post(f"/postar/{pub.id}/pix", data={"csrf": csrf, "pix": "500,00"})
+    assert bad_pix.headers["location"].endswith("erro=pix")
+    await client.post(f"/postar/{pub.id}/pix", data={"csrf": csrf, "pix": "1.169,10"})
+    detail = (await client.get(f"/postar/{pub.id}")).text
+    assert "R$ 1.169,10 no Pix (R$ 1.299,00 nas outras formas)" in detail
+    assert 'value="1169,10"' in detail
+
     # postei: uma vez só
     for _ in range(2):
         assert (

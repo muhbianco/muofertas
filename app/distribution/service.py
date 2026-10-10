@@ -19,11 +19,15 @@ from app.domain.distribution import (
     DEDUP_WINDOW,
     ChannelPolicy,
     LinkError,
+    PixError,
     PriorPost,
     Recheck,
+    check_pix,
+    is_fresh,
     local_day_start,
     offer_page_url,
     parse_affiliate_links,
+    parse_brl,
     recheck_offer,
     render_message,
     repeat_block_reason,
@@ -210,6 +214,7 @@ async def fetch_recheck(
 def apply_recheck(pub: Publication, recheck: Recheck, now: datetime) -> None:
     pub.checked_at = now
     pub.checked_price_cents = recheck.price_cents
+    pub.pix_price_cents = None  # o Pix é conferido de novo junto com o preço
     pub.message = None  # remontada com o preço e a hora novos
     if recheck.status == "gone":
         pub.note = "a oferta saiu do ar"
@@ -255,7 +260,22 @@ async def message_for(db: AsyncSession, pub: Publication) -> str:
         checked_at=pub.checked_at,
         official=bool(evaluation and evaluation.used_official),
         url=pub.affiliate_url,
+        pix_cents=pub.pix_price_cents,
     )
+
+
+async def set_pix(db: AsyncSession, pub: Publication, text: str, now: datetime) -> None:
+    """Preço do Pix visto pelo operador. Só com a revalidação ainda valendo."""
+    if pub.state != "ready" or pub.checked_price_cents is None or not is_fresh(pub.checked_at, now):
+        raise DistributionError("revalide o preço antes de informar o Pix")
+    try:
+        pix = parse_brl(text)
+        if pix is not None:
+            check_pix(pix, pub.checked_price_cents)
+    except PixError as exc:
+        raise DistributionError(str(exc)) from exc
+    pub.pix_price_cents = pix
+    pub.message = await message_for(db, pub)
 
 
 def mark_sent(pub: Publication, *, actor: str, now: datetime) -> bool:
