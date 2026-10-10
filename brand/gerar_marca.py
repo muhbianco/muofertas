@@ -177,9 +177,10 @@ FILES = {
     "avatar-ferramentas.svg": (640, 640, avatar(wrench(), "FERRAMENTAS"), "MegaPromoOz Ferramentas, foto do grupo"),
     "avatar-maquiagem.svg": (640, 640, avatar(lipstick(), "MAQUIAGEM"), "MegaPromoOz Maquiagem, foto do grupo"),
     "avatar-tenis-esporte.svg": (640, 640, avatar_sport(), "MegaPromoOz Tênis e Esporte, foto do grupo"),
+    "avatar-beleza.svg": (640, 640, avatar(lipstick(), "BELEZA", text_length=180), "MegaPromoOz Beleza, foto do grupo"),
 }
 SMALL = ("1-etiqueta-icone.svg", "2-lupa-icone.svg", "3-selo-icone.svg", "avatar-ferramentas.svg",
-         "avatar-maquiagem.svg", "avatar-tenis-esporte.svg")
+         "avatar-maquiagem.svg", "avatar-tenis-esporte.svg", "avatar-beleza.svg")
 
 
 def data_uri(name: str) -> str:

@@ -21,7 +21,7 @@ marca ou logo de marketplace na identidade (termos da Shopee, §2.3a).
 | Arquivo | Uso |
 |---|---|
 | `icone-512.png` / `icone-1024.png` | Logo do app no DevCenter do ML; avatar genérico |
-| `grupo-ferramentas-640.png`, `grupo-maquiagem-640.png`, `grupo-tenis-esporte-640.png` | Foto dos grupos no WhatsApp (640×640, recorte redondo) |
+| `grupo-ferramentas-640.png`, `grupo-maquiagem-640.png`, `grupo-tenis-esporte-640.png`, `grupo-beleza-640.png` | Foto dos grupos no WhatsApp (640×640, recorte redondo) |
 | `logo-claro-1440x400.png` / `logo-escuro-1440x400.png` | Página de convite, documentos, banners |
 | `logo-transparente-texto-escuro-*` / `-texto-claro-*` | Sobre fundo próprio: o texto escuro vai sobre fundo claro, e vice-versa |
 | `favicon-32.png`, `favicon-48.png` | Aba do navegador do painel |
