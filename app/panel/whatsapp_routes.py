@@ -154,13 +154,22 @@ async def link_group(
     client: Wa,
     sm: Sessions,
     jid: Annotated[str, Form(max_length=64)],
-    channel_id: Annotated[int, Form()],
+    target: Annotated[str, Form(pattern=r"^[cn]:\d{1,9}$")],
     csrf: Annotated[str | None, Form()] = None,
+    name: Annotated[str, Form(max_length=120)] = "",
 ) -> Response:
+    """`target`: `c:<id>` liga a um grupo do painel; `n:<id>` cria um no nicho e liga."""
     check_csrf(ctx, csrf)
     await db.commit()
+    kind, raw_id = target.split(":", 1)
+    now = utcnow()
     try:
-        await wa.link_group(sm, client, channel_id=channel_id, jid=jid, now=utcnow())
+        channel_id = (
+            int(raw_id)
+            if kind == "c"
+            else await wa.create_channel_for_group(sm, niche_id=int(raw_id), name=name, now=now)
+        )
+        await wa.link_group(sm, client, channel_id=channel_id, jid=jid, now=now)
     except WuzapiError:
         return _see_other("/grupos?erro=grupo")
     logger.info("whatsapp: grupo ligado", extra={"channel_id": channel_id, "user": ctx.username})

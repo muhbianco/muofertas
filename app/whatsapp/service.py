@@ -9,6 +9,7 @@ abre outra transação para gravar.
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
@@ -19,7 +20,7 @@ from app.core.config import Settings
 from app.core.logging import get_logger
 from app.domain.distribution import SP
 from app.integrations.wuzapi import GroupSummary, WuzapiClient, WuzapiError
-from app.models import Channel, ChannelStat, WaSession
+from app.models import Channel, ChannelStat, Niche, WaSession
 
 logger = get_logger(__name__)
 SNAPSHOT_EVERY = timedelta(hours=1)
@@ -96,6 +97,41 @@ async def refresh_session(
 class GroupRow:
     group: GroupSummary
     channel: Channel | None
+    suggested_niche_id: int | None = None
+
+
+def _plain(text: str) -> str:
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode().lower()
+
+
+def guess_niche(group_name: str, niches: list[Niche]) -> int | None:
+    """Nicho cujo slug aparece inteiro no nome do grupo ("MegaPromoOz - Tênis e Esporte")."""
+    name = _plain(group_name)
+    for niche in niches:
+        words = [w for w in niche.slug.split("-") if w]
+        if words and all(w in name for w in words):
+            return niche.id
+    return None
+
+
+async def create_channel_for_group(
+    sessions: async_sessionmaker[AsyncSession], *, niche_id: int, name: str, now: datetime
+) -> int:
+    """Grupo do painel com a política padrão, nomeado como o grupo do WhatsApp."""
+    base = (name.strip() or "Grupo")[:72]
+    async with sessions() as db, db.begin():
+        if await db.get(Niche, niche_id) is None:
+            raise WuzapiError("nicho não encontrado")
+        taken = set(
+            (await db.execute(select(Channel.name).where(Channel.name.like(f"{base}%")))).scalars()
+        )
+        candidate, n = base, 2
+        while candidate in taken:
+            candidate, n = f"{base} ({n})", n + 1
+        channel = Channel(niche_id=niche_id, name=candidate, transport="manual", created_at=now)
+        db.add(channel)
+        await db.flush()
+        return channel.id
 
 
 async def group_rows(db: AsyncSession, groups: list[GroupSummary]) -> list[GroupRow]:

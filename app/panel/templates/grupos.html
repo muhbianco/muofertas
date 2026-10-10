@@ -40,8 +40,14 @@
     <form class="formulario duas" method="post" action="/grupos/whatsapp/vincular">
       <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
       <input type="hidden" name="jid" value="{{ r.group.jid }}">
-      <select name="channel_id" aria-label="Grupo do painel" required>
-        {% for c in channels %}<option value="{{ c.id }}" {% if r.channel and r.channel.id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      <input type="hidden" name="name" value="{{ r.group.name }}">
+      <select name="target" aria-label="Grupo do painel" required>
+        {% if channels %}<optgroup label="Grupos do painel">
+          {% for c in channels %}<option value="c:{{ c.id }}" {% if r.channel and r.channel.id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+        </optgroup>{% endif %}
+        <optgroup label="Criar no painel e ligar">
+          {% for n in niches %}<option value="n:{{ n.id }}" {% if not r.channel and r.suggested_niche_id == n.id %}selected{% endif %}>Novo · {{ n.name }}</option>{% endfor %}
+        </optgroup>
       </select>
       <button class="botao rejeitar" type="submit">{{ 'Religar' if r.channel else 'Ligar' }}</button>
     </form>

@@ -126,7 +126,7 @@ async def test_pair_link_groups_and_count_members(
     assert "55119000000" not in page  # telefones dos membros nunca aparecem
     r = await client.post(
         "/grupos/whatsapp/vincular",
-        data={"csrf": csrf, "jid": GROUP_FERR, "channel_id": channel.id},
+        data={"csrf": csrf, "jid": GROUP_FERR, "target": f"c:{channel.id}"},
     )
     assert r.status_code == 303 and r.headers["location"] == "/grupos"
     async with sessions() as session:
@@ -175,3 +175,48 @@ async def test_watcher_alerts_when_paired_number_drops(
     async with sessions() as session:
         alerts = {a.kind: a.state for a in (await session.execute(select(Alert))).scalars()}
     assert alerts.get("whatsapp_desconectado") == "open"
+
+
+async def test_create_panel_group_from_whatsapp_group(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession], fake: FakeWuzapi
+) -> None:
+    secret = await seed_admin(sessions)
+    now = utcnow()
+    async with sessions() as session, session.begin():
+        for slug, name in (("ferramentas", "Ferramentas"), ("beleza", "Beleza: maquiagem")):
+            session.add(Niche(slug=slug, name=name, active=True, created_at=now))
+        session.add(WaSession(name="megapromooz", external_id="abc123", created_at=now))
+    fake.sessions["abc123"] = {"name": "megapromooz"}
+    fake.logged_in, fake.jid = True, "5511999998888:12@s.whatsapp.net"
+    assert (await login(client, secret)).status_code == 303
+
+    page = (await client.get("/grupos")).text
+    csrf = csrf_of(page)
+    async with sessions() as session:
+        beleza = (await session.execute(select(Niche).where(Niche.slug == "beleza"))).scalar_one()
+    # sem grupo no painel: o nicho certo já vem escolhido pelo nome do grupo do WhatsApp
+    assert f'<option value="n:{beleza.id}" selected>Novo · Beleza: maquiagem</option>' in page
+
+    bad = await client.post(
+        "/grupos/whatsapp/vincular", data={"csrf": csrf, "jid": GROUP_BEL, "target": "x:1"}
+    )
+    assert bad.status_code == 422
+    r = await client.post(
+        "/grupos/whatsapp/vincular",
+        data={
+            "csrf": csrf,
+            "jid": GROUP_BEL,
+            "target": f"n:{beleza.id}",
+            "name": "MegaPromoOz - Beleza",
+        },
+    )
+    assert r.status_code == 303 and r.headers["location"] == "/grupos"
+    async with sessions() as session:
+        channel = (await session.execute(select(Channel))).scalar_one()
+        stat = (await session.execute(select(ChannelStat))).scalar_one()
+    assert (channel.name, channel.niche_id, channel.wa_jid) == (
+        "MegaPromoOz - Beleza",
+        beleza.id,
+        GROUP_BEL,
+    )
+    assert channel.max_per_day == 10 and channel.invite_url and stat.members == 5

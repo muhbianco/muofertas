@@ -103,11 +103,21 @@ async def _render_groups(
     await db.commit()  # a lista de grupos vem da WuzAPI: sem transação aberta
     wa_rows: list[wa.GroupRow] | None = None
     wa_error = None
-    if wa_client is not None and wa_client.configured and session is not None and session.logged_in:
+    if wa_client is not None and wa_client.configured and session is not None:
         try:
-            wa_rows = await wa.group_rows(db, await wa_client.groups())
+            # Estado ao vivo: o gravado só muda com o vigia (5 min) ou a tela Número.
+            live = await wa_client.status()
+            groups = await wa_client.groups() if live.logged_in else None
         except WuzapiError:
+            groups = None
             wa_error = "O WhatsApp não respondeu agora; os grupos de lá não aparecem."
+        if groups is not None:
+            wa_rows = await wa.group_rows(db, groups)
+            for row in wa_rows:
+                if row.channel is None:
+                    row.suggested_niche_id = wa.guess_niche(row.group.name, niches)
+        elif wa_error is None:
+            wa_error = "O chip não está pareado agora: conecte em Número para ver os grupos."
     return templates.TemplateResponse(
         request,
         "grupos.html",
