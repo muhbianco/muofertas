@@ -13,3 +13,5 @@ alembic==1.18.5
 # IANA time zones for zoneinfo (horários de publicação em America/Sao_Paulo); the slim image and
 # Windows dev boxes have no system database.
 tzdata==2026.4
+# QR do autenticador no convite de operador, gerado aqui (sem serviço externo). Python puro.
+segno==1.6.6

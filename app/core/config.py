@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     alert_email_webhook_token: SecretStr = SecretStr("")
     alert_email_to: str = ""
     panel_url: str = "https://ofertas.muhbianco.com.br"
+    # Convite de operador: fluxo próprio no n8n (texto fixo lá; só o link vem daqui). O token é
+    # o mesmo do fluxo de alertas (credencial HOOK).
+    invite_email_webhook_url: str = ""
 
     # --- WhatsApp (WuzAPI da muconnect, rede interna) ------------------------------------
     # O token admin só cria a sessão e lê o número dela. Os dois tokens vêm do Env da stack.

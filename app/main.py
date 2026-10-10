@@ -24,6 +24,7 @@ from app.core.logging import configure_logging
 from app.models import CatalogProduct, CollectionRun, PriceObservation
 from app.panel.auth import AuthContext, LoginRequiredError, require_admin
 from app.panel.distribution_routes import router as distribution_router
+from app.panel.operators_routes import router as operators_router
 from app.panel.routes import router as panel_router
 from app.panel.whatsapp_routes import router as whatsapp_router
 
@@ -64,6 +65,7 @@ app.mount(
 app.include_router(panel_router)
 app.include_router(distribution_router)
 app.include_router(whatsapp_router)
+app.include_router(operators_router)
 
 
 @app.middleware("http")

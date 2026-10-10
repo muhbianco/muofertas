@@ -427,3 +427,24 @@ class ChannelStat(Base):
     members: Mapped[int] = mapped_column(Integer)
     admins: Mapped[int] = mapped_column(Integer)
     captured_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
+class AdminInvite(Base):
+    """Convite de operador (0010): link de uso único, 48 h. Do token só fica o hash.
+
+    O convidado escolhe usuário e senha e cadastra o autenticador ele mesmo; o segredo TOTP nasce
+    na primeira visita ao link e só vira operador depois do primeiro código certo.
+    """
+
+    __tablename__ = "admin_invite"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email: Mapped[str] = mapped_column(String(254))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    totp_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    created_by: Mapped[str] = mapped_column(String(40))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    used_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    username: Mapped[str | None] = mapped_column(String(40), nullable=True)

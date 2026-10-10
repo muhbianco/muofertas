@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Operadores{% endblock %}
+{% block content %}
+<h1>Operadores</h1>
+{% if notice %}<p class="aviso">{{ notice }}</p>{% endif %}
+{% if error %}<p class="erro">{{ error }}</p>{% endif %}
+{% if manual_link %}<textarea readonly rows="3">{{ manual_link }}</textarea>{% endif %}
+
+<table>
+  <tr><th>Usuário</th><th>Desde</th><th>Último acesso</th><th></th></tr>
+  {% for u in users %}
+  <tr>
+    <td>{{ u.username }}{% if not u.active %} <span class="selo regular">desativado</span>{% endif %}</td>
+    <td>{{ u.created_at | local }}</td>
+    <td>{{ u.last_login_at | local }}</td>
+    <td>{% if u.active and u.id != ctx.user_id %}
+      <form method="post" action="/operadores/{{ u.id }}/desativar">
+        <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+        <button class="sair-claro" type="submit">Desativar</button>
+      </form>{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+{% if pending %}
+<h2>Convites esperando</h2>
+<table>
+  {% for i in pending %}<tr><td>{{ i.email }}</td><td>vence {{ i.expires_at | local }}</td><td>por {{ i.created_by }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+
+<h2>Convidar</h2>
+<p class="nota-pix">A pessoa recebe um link por e-mail (vale 48 h, uma vez) para escolher usuário e senha e cadastrar o autenticador. Todo operador tem acesso completo ao painel.</p>
+<form class="formulario" method="post" action="/operadores/convite">
+  <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+  <label>E-mail<input name="email" type="email" maxlength="254" required></label>
+  <button class="botao aprovar" type="submit">Enviar convite</button>
+</form>
+{% endblock %}

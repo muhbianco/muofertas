@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Convite{% endblock %}
+{% block content %}
+<div class="login">
+  <h1>MegaPromo<span class="ouro">Oz</span> · painel</h1>
+  {% if not valid %}
+    <p>Este convite não vale mais: já foi usado, venceu (48 h) ou o link está incompleto. Peça um novo a quem convidou.</p>
+  {% elif done %}
+    <p class="ok"><b>Pronto, {{ done }}.</b> Seu acesso está criado.</p>
+    <a class="botao aprovar" href="/login">Entrar no painel</a>
+  {% else %}
+    <p>Convite para <b>{{ email }}</b>.</p>
+    <ol class="passos">
+      <li>Instale um app autenticador (Google Authenticator, Microsoft Authenticator…).</li>
+      <li>No app, toque em <b>+</b> e leia o QR abaixo (ou digite a chave).</li>
+      <li>Escolha usuário e senha e digite o código de 6 dígitos que o app mostra.</li>
+    </ol>
+    <img class="qr" src="{{ qr }}" alt="QR do autenticador">
+    <p class="nota-pix">Chave: <code>{{ key }}</code> (baseada em tempo)</p>
+    {% if error %}<p class="erro">{{ error }}</p>{% endif %}
+    <form method="post">
+      <label for="u">Usuário</label>
+      <input id="u" name="username" autocomplete="username" maxlength="40" pattern="[a-z0-9._\-]{3,40}" required>
+      <label for="p">Senha (mínimo 12 caracteres)</label>
+      <input id="p" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+      <label for="p2">Repita a senha</label>
+      <input id="p2" name="password_again" type="password" autocomplete="new-password" minlength="12" maxlength="128" required>
+      <label for="c">Código do autenticador</label>
+      <input id="c" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" required>
+      <button class="botao" type="submit">Criar meu acesso</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
