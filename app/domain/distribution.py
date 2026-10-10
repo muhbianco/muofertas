@@ -241,6 +241,7 @@ def render_message(
     url: str,
     pix_cents: int | None = None,
     discount: ListingDiscount | None = None,
+    coupon_cents: int | None = None,
 ) -> str:
     """Formato do WhatsApp: *negrito*, _itálico_ e blocos separados por linha em branco.
 
@@ -265,6 +266,8 @@ def render_message(
         lines.append(f"💰 *{format_brl(price_cents)}* no Mercado Livre")
     if pix_cents:
         lines.append(f"⚡ *{format_brl(pix_cents)} no Pix*")
+    if coupon_cents:
+        lines.append(f"🎟️ *{format_brl(coupon_cents)} com cupom da loja* (ative na página)")
     lines += [
         "",
         f"👉 {url}",
@@ -305,11 +308,20 @@ def parse_brl(text: str) -> int | None:
     return int(cents)
 
 
+def check_special_price(cents: int, card_cents: int, what: str) -> None:
+    """Preço visto pelo operador na página (Pix, com cupom): menor e até 30% abaixo."""
+    if cents >= card_cents:
+        raise PixError(f"o preço {what} precisa ser menor que o preço do anúncio")
+    if cents < card_cents * (1 - PIX_MAX_DISCOUNT):
+        raise PixError(f"preço {what} mais de 30% abaixo do anúncio: confira o valor digitado")
+
+
 def check_pix(pix_cents: int, card_cents: int) -> None:
-    if pix_cents >= card_cents:
-        raise PixError("o preço do Pix precisa ser menor que o preço do anúncio")
-    if pix_cents < card_cents * (1 - PIX_MAX_DISCOUNT):
-        raise PixError("mais de 30% abaixo do anúncio: confira o valor digitado")
+    check_special_price(pix_cents, card_cents, "do Pix")
+
+
+def check_coupon(coupon_cents: int, card_cents: int) -> None:
+    check_special_price(coupon_cents, card_cents, "com cupom")
 
 
 def share_url(message: str) -> str:

@@ -256,6 +256,8 @@ async def resend_now(
             approved_price_cents=original.approved_price_cents,
             pix_price_cents=original.pix_price_cents,
             pix_at=original.pix_at,
+            coupon_price_cents=original.coupon_price_cents,
+            coupon_at=original.coupon_at,
             created_at=now,
         )
         db.add(copy)

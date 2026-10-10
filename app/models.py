@@ -374,6 +374,9 @@ class Publication(Base):
     external_message_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     # 0011: o "de" do próprio anúncio na última revalidação (preço riscado da página).
     original_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # 0012: preço com o cupom da loja, visto pelo operador na aprovação (a API não traz cupom).
+    coupon_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    coupon_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     note: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())

@@ -22,6 +22,7 @@ from app.domain.distribution import (
     PixError,
     PriorPost,
     Recheck,
+    check_coupon,
     check_pix,
     is_fresh,
     listing_discount,
@@ -53,7 +54,14 @@ class DistributionError(Exception):
 
 
 class PixRejectedError(DistributionError):
-    """Pix informado na aprovação fora da regra (menor que o preço, até 30% abaixo)."""
+    """Pix ou preço com cupom fora da regra (menor que o preço, até 30% abaixo).
+
+    `field`: "pix" ou "cupom", para o aviso certo na tela.
+    """
+
+    def __init__(self, message: str, *, field: str = "pix") -> None:
+        super().__init__(message)
+        self.field = field
 
 
 def policy_of(channel: Channel) -> ChannelPolicy:
@@ -87,6 +95,7 @@ async def publications_for_approval(
     now: datetime,
     pix_cents: int | None = None,
     affiliate_tool_id: str = "",
+    coupon_cents: int | None = None,
 ) -> ApprovalResult:
     """Uma publicação por grupo do nicho. Repetida em 7 dias ou grupo pausado: `skipped`.
 
@@ -99,7 +108,12 @@ async def publications_for_approval(
         try:
             check_pix(pix_cents, evaluation.price_cents)
         except PixError as exc:
-            raise PixRejectedError(str(exc)) from exc
+            raise PixRejectedError(str(exc), field="pix") from exc
+    if coupon_cents is not None:
+        try:
+            check_coupon(coupon_cents, evaluation.price_cents)
+        except PixError as exc:
+            raise PixRejectedError(str(exc), field="cupom") from exc
     channels = list(
         (
             await db.execute(
@@ -164,6 +178,8 @@ async def publications_for_approval(
                 approved_price_cents=evaluation.price_cents,
                 pix_price_cents=pix_cents,
                 pix_at=now if pix_cents is not None else None,
+                coupon_price_cents=coupon_cents,
+                coupon_at=now if coupon_cents is not None else None,
                 note=reason,
                 created_at=now,
             )
@@ -289,6 +305,9 @@ async def message_for(db: AsyncSession, pub: Publication) -> str:
         url=pub.affiliate_url,
         pix_cents=pix_to_show(
             pub.pix_price_cents, pub.pix_at, pub.checked_price_cents, pub.checked_at
+        ),
+        coupon_cents=pix_to_show(
+            pub.coupon_price_cents, pub.coupon_at, pub.checked_price_cents, pub.checked_at
         ),
         discount=listing_discount(
             pub.checked_price_cents,

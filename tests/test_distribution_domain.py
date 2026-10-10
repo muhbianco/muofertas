@@ -184,3 +184,22 @@ def test_message_with_listing_discount() -> None:
     assert text.startswith("#publi · 💄 *BELEZA*")
     assert "🔥 *37% OFF*" in text
     assert "💰 De ~R$ 79,90~ por *R$ 49,90* no Mercado Livre" in text
+
+
+def test_message_with_coupon_price() -> None:
+    from app.domain.distribution import PixError, check_coupon
+
+    text = render_message(
+        niche_slug="ferramentas",
+        niche_name="Ferramentas",
+        product_name="Maçarico Profissional Universal",
+        price_cents=5375,
+        checked_at=NOW,
+        official=True,
+        url="https://meli.la/x",
+        coupon_cents=5175,
+    )
+    assert "🎟️ *R$ 51,75 com cupom da loja* (ative na página)" in text
+    check_coupon(5175, 5375)
+    with pytest.raises(PixError, match="com cupom"):
+        check_coupon(5375, 5375)

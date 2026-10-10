@@ -47,6 +47,7 @@ NOTICES = {
     "automatica": "Aprovada. Vai sozinha para o grupo no próximo horário livre.",
     "pronta": "Aprovada. O link sai em instantes e ela aparece em Postar.",
     "pix": "Não aprovada: o Pix precisa ser menor que o preço e até 30% abaixo (ex.: 49,90).",
+    "cupom": "Não aprovada: o preço com cupom precisa ser menor que o preço e até 30% abaixo.",
     "sem-grupo": "Aprovada, mas o nicho não tem grupo cadastrado (Grupos).",
     "repetida": "Aprovada, mas não vai agora: já foi para o grupo nos últimos 7 dias.",
     "sem-preco": "Aprovada, mas esta avaliação não tem preço válido para publicar.",
@@ -191,16 +192,19 @@ async def decide(
     reason: Annotated[str | None, Form(max_length=200)] = None,
     next: Annotated[str | None, Form()] = None,
     pix: Annotated[str, Form(max_length=20)] = "",
+    cupom: Annotated[str, Form(max_length=20)] = "",
 ) -> Response:
     check_csrf(ctx, csrf)
     target = _safe_next(next)
+    sep = "&" if "?" in target else "?"
     try:
         pix_cents = parse_brl(pix) if decision == "approved" else None
     except PixError:
-        return RedirectResponse(
-            target + ("&" if "?" in target else "?") + "aviso=pix",
-            status_code=status.HTTP_303_SEE_OTHER,
-        )
+        return RedirectResponse(target + sep + "aviso=pix", status_code=status.HTTP_303_SEE_OTHER)
+    try:
+        coupon_cents = parse_brl(cupom) if decision == "approved" else None
+    except PixError:
+        return RedirectResponse(target + sep + "aviso=cupom", status_code=status.HTTP_303_SEE_OTHER)
     if decision not in DECISIONS:
         raise HTTPException(status_code=422, detail="decisão inválida")
     product = await db.get(CatalogProduct, product_id)
@@ -235,12 +239,12 @@ async def decide(
                 now=now,
                 pix_cents=pix_cents,
                 affiliate_tool_id=settings.ml_affiliate_tool_id,
+                coupon_cents=coupon_cents,
             )
-        except PixRejectedError:
-            await db.rollback()  # nem a decisão fica: o operador corrige o Pix e aprova de novo
+        except PixRejectedError as exc:
+            await db.rollback()  # nem a decisão fica: o operador corrige e aprova de novo
             return RedirectResponse(
-                target + ("&" if "?" in target else "?") + "aviso=pix",
-                status_code=status.HTTP_303_SEE_OTHER,
+                target + sep + f"aviso={exc.field}", status_code=status.HTTP_303_SEE_OTHER
             )
         except DistributionError:
             notice = "sem-preco"

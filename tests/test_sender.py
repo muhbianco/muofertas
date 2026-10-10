@@ -281,14 +281,17 @@ async def test_panel_approval_with_pix_and_group_checks(
     assert refused.status_code == 422 and "grupo ligado ao WhatsApp" in refused.text
 
     base = {"csrf": token, "product_id": product.id, "evaluation_id": ev_id, "decision": "approved"}
+    bad_coupon = await client.post("/decisao", data={**base, "cupom": "100,00"})
+    assert bad_coupon.headers["location"].endswith("aviso=cupom")
     bad = await client.post("/decisao", data={**base, "pix": "500,00"})
     assert bad.headers["location"].endswith("aviso=pix")
     async with sessions() as session:
         assert (await session.execute(select(Publication))).scalar_one_or_none() is None
-    ok = await client.post("/decisao", data={**base, "pix": "404,90"})
+    ok = await client.post("/decisao", data={**base, "pix": "404,90", "cupom": "419,90"})
     assert ok.headers["location"].endswith("aviso=pronta")  # grupo manual, link já montado
     pub = await state(sessions)
     assert pub.state == "awaiting_link" and pub.pix_price_cents == 40490 and pub.pix_at is not None
+    assert pub.coupon_price_cents == 41990 and pub.coupon_at is not None
 
     # envio incerto: o operador confere no grupo e marca
     async with sessions() as session, session.begin():
@@ -417,3 +420,16 @@ async def test_post_shows_listing_discount_from_the_linked_offer(
     body = wa.sent[0]["Body"]
     assert "🔥 *25% OFF*" in body and "De ~R$ 599,90~ por *R$ 449,90*" in body
     assert (await state(sessions)).original_price_cents == 59990
+
+
+async def test_post_shows_coupon_price_from_approval(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    pub_id = await approve(sessions)
+    async with sessions() as session, session.begin():
+        pub = await session.get(Publication, pub_id)
+        assert pub is not None
+        pub.coupon_price_cents, pub.coupon_at = 42990, NOW - timedelta(minutes=30)
+    wa = FakeWuzapi()
+    assert await run(sessions, wa) == 1
+    assert "🎟️ *R$ 429,90 com cupom da loja* (ative na página)" in wa.sent[0]["Body"]
