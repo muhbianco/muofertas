@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_nicho.html" import trocar_nicho %}
 {% block title %}Fila{% endblock %}
 {% block content %}
 <h1>Fila de aprovação</h1>
@@ -34,7 +35,7 @@
   <div>
     <div><span class="selo {{ c.tier }}">{{ c.tier }}</span>{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
     <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
-    <div class="linha">{{ c.niche }}</div>
+    <div class="linha nicho-linha">{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next) }}</div>
     <div class="preco">{% if c.listing_original_cents %}<s class="de">{{ c.listing_original_cents | brl }}</s> {% endif %}{{ c.price_cents | brl }}</div>
     {% if c.offer_kind %}<div class="oferta">
       {% if c.used_official %}loja oficial{% elif c.seller %}{{ c.seller.nickname or 'vendedor' }} · reputação {{ c.seller.reputation }}{% if c.seller.power %} · {{ c.seller.power }}{% endif %} · {{ c.seller.sales }} vendas{% else %}{{ c.offer_kind }}{% endif %}

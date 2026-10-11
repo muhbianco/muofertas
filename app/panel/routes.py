@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.collector.recategorize import RecategorizeError, recategorize
 from app.core.clock import utcnow
 from app.core.config import settings
 from app.core.database import get_session
@@ -51,6 +52,10 @@ NOTICES = {
     "sem-grupo": "Aprovada, mas o nicho não tem grupo cadastrado (Grupos).",
     "repetida": "Aprovada, mas não vai agora: já foi para o grupo nos últimos 7 dias.",
     "sem-preco": "Aprovada, mas esta avaliação não tem preço válido para publicar.",
+    "nicho": "Nicho trocado. O robô reavalia com as regras do nicho novo em instantes.",
+    "nicho-fila": "Nicho trocado. Ele saiu da fila de envio do grupo antigo: aprove de novo na "
+    "página do produto para ir ao grupo certo.",
+    "nicho-invalido": "Escolha um nicho ativo.",
 }
 
 Admin = Annotated[AuthContext, Depends(require_admin)]
@@ -282,8 +287,38 @@ async def decide(
 # --------------------------------------------------------------------------- páginas
 
 
+@router.post("/produto/{product_id}/nicho")
+async def change_niche(
+    db: Db,
+    ctx: Admin,
+    product_id: int,
+    niche_id: Annotated[int, Form()],
+    csrf: Annotated[str | None, Form()] = None,
+    next: Annotated[str | None, Form()] = None,
+) -> Response:
+    check_csrf(ctx, csrf)
+    target = _safe_next(next)
+    sep = "&" if "?" in target else "?"
+    try:
+        result = await recategorize(
+            db, product_id=product_id, niche_id=niche_id, actor=ctx.username
+        )
+    except LookupError:
+        raise HTTPException(status_code=404) from None
+    except RecategorizeError:
+        await db.rollback()
+        return RedirectResponse(
+            target + sep + "aviso=nicho-invalido", status_code=status.HTTP_303_SEE_OTHER
+        )
+    await db.commit()
+    notice = "nicho-fila" if result.discarded else "nicho"
+    return RedirectResponse(target + sep + f"aviso={notice}", status_code=status.HTTP_303_SEE_OTHER)
+
+
 @router.get("/produto/{product_id}", response_class=HTMLResponse)
-async def product_detail(request: Request, db: Db, ctx: Admin, product_id: int) -> Response:
+async def product_detail(
+    request: Request, db: Db, ctx: Admin, product_id: int, aviso: str | None = None
+) -> Response:
     page = await queries.product_page(db, product_id)
     if page is None:
         raise HTTPException(status_code=404)
@@ -298,6 +333,8 @@ async def product_detail(request: Request, db: Db, ctx: Admin, product_id: int) 
             "spark": queries.sparkline(page.observations),
             "decisions_label": DECISIONS,
             "next": f"/produto/{product_id}",
+            "niches": await queries.niches(db),
+            "notice": NOTICES.get(aviso or ""),
         },
     )
 

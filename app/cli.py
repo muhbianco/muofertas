@@ -93,7 +93,8 @@ async def _follow_moved_categories(session: AsyncSession) -> int:
     """Categoria que trocou de nicho leva os produtos dela, que voltam para a fila de avaliação.
 
     Só quando a categoria está ativa em exatamente um nicho (sem ambiguidade). O produto guarda a
-    categoria pela qual foi descoberto, então a troca nunca pega produto de outra categoria.
+    categoria pela qual foi descoberto, então a troca nunca pega produto de outra categoria. O
+    produto cujo nicho o operador escolheu (`niche_locked`) fica onde ele pôs.
     """
     owners: dict[str, set[int]] = defaultdict(set)
     rows = await session.execute(
@@ -114,6 +115,7 @@ async def _follow_moved_categories(session: AsyncSession) -> int:
                     select(CatalogProduct.id).where(
                         CatalogProduct.marketplace == MARKETPLACE,
                         CatalogProduct.category_id == category_id,
+                        CatalogProduct.niche_locked.is_(False),
                         or_(CatalogProduct.niche_id.is_(None), CatalogProduct.niche_id != target),
                     )
                 )

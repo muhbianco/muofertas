@@ -90,6 +90,7 @@ async def watch(
             )
             db.add(product)
         product.niche_id = niche_id
+        product.niche_locked = True  # o operador escolheu
         product.discovered_via = WATCHLIST
         product.name = str(info.get("name") or "")[:255] or product.name
         product.brand = _brand(info) or product.brand

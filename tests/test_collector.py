@@ -104,7 +104,12 @@ async def test_refresh_writes_change_then_skips_until_heartbeat(
     try:
         await collector.discover_due()
         stats = await collector.refresh_due()
-        assert (stats.seen, stats.changed) == (1, 1)
+        # Primeira leitura: linha de partida e avaliação, mas não é mudança de preço (sem a
+        # urgência de "acabou de mudar" no U da nota).
+        assert (stats.seen, stats.changed) == (1, 0)
+        async with sessions() as session:
+            product = (await session.execute(select(CatalogProduct))).scalar_one()
+        assert product.last_changed_at is None and product.needs_evaluation
 
         # mesmo preço, ainda dentro do batimento: produto vencido de novo, mas nenhuma linha nova
         async with sessions() as session, session.begin():
@@ -131,10 +136,10 @@ async def test_refresh_writes_change_then_skips_until_heartbeat(
         )
         product = (await session.execute(select(CatalogProduct))).scalar_one()
     assert [(r.kind, r.min_price_cents, r.min_official_price_cents) for r in rows] == [
-        ("change", 37990, 37990),
+        ("first", 37990, 37990),
         ("change", 33990, None),
     ]
-    assert product.tier == "hot"
+    assert product.tier == "hot" and product.last_changed_at is not None
 
 
 async def test_refresh_fills_the_strikethrough_price_without_faking_a_price_change(
@@ -184,7 +189,7 @@ async def test_refresh_fills_the_strikethrough_price_without_faking_a_price_chan
         )
         product = (await session.execute(select(CatalogProduct))).scalar_one()
     assert [(r.kind, r.official_original_cents, r.originals_known) for r in rows] == [
-        ("change", None, False),
+        ("first", None, False),
         ("heartbeat", 49990, True),
     ]
     assert not product.needs_evaluation

@@ -1,0 +1,10 @@
+{% macro trocar_nicho(product_id, current_id, niches, ctx, next) -%}
+<form class="trocar-nicho" method="post" action="/produto/{{ product_id }}/nicho">
+  <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+  <input type="hidden" name="next" value="{{ next }}">
+  <select name="niche_id" aria-label="Nicho do produto">
+    {% for n in niches if n.active or n.id == current_id %}<option value="{{ n.id }}" {% if n.id == current_id %}selected{% endif %}>{{ n.name }}</option>{% endfor %}
+  </select>
+  <button type="submit">Trocar nicho</button>
+</form>
+{%- endmacro %}

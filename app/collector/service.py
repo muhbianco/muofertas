@@ -430,31 +430,32 @@ class Collector:
                     current.tier = Tier.COLD.value
                     current.next_check_at = now + _jitter(self._policy.cold)
                     continue
-                changed = outcome.differs_from(prev)
+                # A primeira leitura é só o ponto de partida: nada mudou de preço ainda (contar
+                # como mudança dava urgência de "acabou de mudar" a todo produto descoberto).
+                first = prev is None
+                changed = not first and outcome.differs_from(prev)
                 # Só o "de" mudou: linha nova e reavaliação para o selo, sem contar como mudança
                 # de preço (que devolveria à fila o que o operador já resolveu).
-                new_original = not changed and outcome.originals_differ_from(prev)
+                new_original = not first and not changed and outcome.originals_differ_from(prev)
                 heartbeat = new_original or needs_heartbeat(
                     current.last_observation_at,
                     now,
                     timedelta(hours=self._settings.heartbeat_hours),
                 )
-                if changed or heartbeat:
-                    session.add(
-                        _observation(product.id, now, outcome, "change" if changed else "heartbeat")
-                    )
+                if first or changed or heartbeat:
+                    kind = "first" if first else "change" if changed else "heartbeat"
+                    session.add(_observation(product.id, now, outcome, kind))
                     current.last_observation_at = now
                 if changed:
                     current.last_changed_at = now
-                    current.needs_evaluation = True
                     stats.changed += 1
-                elif new_original:
+                if first or changed or new_original:
                     current.needs_evaluation = True
                 tier = next_tier(
                     Tier(current.tier),
                     previous=prev,
                     new=outcome,
-                    last_changed_at=current.last_changed_at,
+                    last_changed_at=current.last_changed_at or current.first_seen_at,
                     now=now,
                     policy=self._policy,
                 )

@@ -125,6 +125,8 @@ class CatalogProduct(Base):
     operator_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
     # 0013: % OFF do próprio anúncio na última avaliação (travas do post); ordena a fila.
     listing_discount_pct: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # 0019: nicho escolhido pelo operador; o seed das categorias não move mais o produto.
+    niche_locked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
 
 class PriceObservation(Base):
@@ -138,7 +140,7 @@ class PriceObservation(Base):
     )
     product_id: Mapped[int] = mapped_column(ForeignKey("catalog_product.id", ondelete="CASCADE"))
     observed_at: Mapped[datetime] = mapped_column(UTCDateTime())
-    kind: Mapped[str] = mapped_column(String(10))  # change | heartbeat
+    kind: Mapped[str] = mapped_column(String(10))  # first | change | heartbeat (0018)
     currency: Mapped[str] = mapped_column(String(3), default="BRL")
     min_price_cents: Mapped[int] = mapped_column(BigInteger)
     min_official_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)

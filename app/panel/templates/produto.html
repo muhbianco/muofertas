@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_nicho.html" import trocar_nicho %}
 {% block title %}Produto{% endblock %}
 {% block content %}
 {% set prod = p.product %}
@@ -6,11 +7,13 @@
 <h1>{{ prod.name or prod.external_id }}</h1>
 <p class="linha">{{ p.niche or '—' }} · {{ prod.brand or 'sem marca' }} · camada {{ prod.tier }} ·
   <a href="{{ url }}" target="_blank" rel="noopener noreferrer">ver no Mercado Livre</a></p>
+{% if notice %}<p class="aviso">{{ notice }}</p>{% endif %}
+{{ trocar_nicho(prod.id, prod.niche_id, niches, ctx, next) }}
 
 <div>
   {% if prod.last_tier %}<span class="selo {{ prod.last_tier }}">{{ prod.last_tier }}</span>{% endif %}
   {% if s.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}
-  <span class="preco">{{ s.price_cents | brl }}</span>
+  <span class="preco">{{ s.get("price_cents") | brl }}</span>
 </div>
 {% if p.offer_kind %}<p class="oferta">
   {% if s.used_official %}loja oficial{% elif p.seller %}{{ p.seller.nickname or 'vendedor' }} · reputação {{ p.seller.reputation }}{% if p.seller.power %} · {{ p.seller.power }}{% endif %} · {{ p.seller.sales }} vendas{% else %}{{ p.offer_kind }}{% endif %}

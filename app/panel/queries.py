@@ -112,6 +112,7 @@ class Card:
     # % OFF do próprio anúncio (preço riscado da página), com as travas do post.
     listing_pct: int | None = None
     listing_original_cents: int | None = None
+    niche_id: int | None = None
 
 
 def reasons(snapshot: dict[str, Any]) -> list[str]:
@@ -232,6 +233,7 @@ async def queue(
                 listing_original_cents=snap.get("offer_original_cents")
                 if product.listing_discount_pct is not None
                 else None,
+                niche_id=product.niche_id,
             )
         )
     return cards
