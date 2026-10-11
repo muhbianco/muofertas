@@ -59,6 +59,42 @@
         {
           "id": "MLB411908",
           "nome": "Jardim: Utensílios para Jardinagem"
+        },
+        {
+          "id": "MLB455276",
+          "nome": "Elétricas: Perfuração (furadeiras, marteletes)"
+        },
+        {
+          "id": "MLB189008",
+          "nome": "Elétricas: Parafusadeiras"
+        },
+        {
+          "id": "MLB455277",
+          "nome": "Elétricas: Corte (serras)"
+        },
+        {
+          "id": "MLB455275",
+          "nome": "Elétricas: Lixado, Desbaste e Polimento"
+        },
+        {
+          "id": "MLB455278",
+          "nome": "Elétricas: Soldagem"
+        },
+        {
+          "id": "MLB269518",
+          "nome": "Elétricas: Compressores de Ar"
+        },
+        {
+          "id": "MLB455279",
+          "nome": "Elétricas: Limpeza (lavadoras de alta pressão)"
+        },
+        {
+          "id": "MLB455536",
+          "nome": "Elétricas: Kits de Ferramentas"
+        },
+        {
+          "id": "MLB188783",
+          "nome": "Elétricas: Sopradores Térmicos"
         }
       ]
     },
@@ -216,6 +252,70 @@
         {
           "id": "MLB264051",
           "nome": "Cuidado da Casa e Lavanderia"
+        },
+        {
+          "id": "MLB120235",
+          "nome": "Eletroportáteis: Preparação de Alimentos (air fryer, liquidificador)"
+        },
+        {
+          "id": "MLB438297",
+          "nome": "Eletroportáteis: Preparação de Bebidas"
+        },
+        {
+          "id": "MLB9188",
+          "nome": "Eletroportáteis: Cafeteiras"
+        },
+        {
+          "id": "MLB31678",
+          "nome": "Eletroportáteis: Chaleiras Elétricas"
+        },
+        {
+          "id": "MLB30220",
+          "nome": "Eletroportáteis: Balanças de Cozinha"
+        },
+        {
+          "id": "MLB438291",
+          "nome": "Eletroportáteis: Máquinas para Sobremesas"
+        },
+        {
+          "id": "MLB4337",
+          "nome": "Eletroportáteis: Aspiradores"
+        },
+        {
+          "id": "MLB120262",
+          "nome": "Eletroportáteis: Robôs Aspiradores"
+        },
+        {
+          "id": "MLB31689",
+          "nome": "Eletroportáteis: Ferro de Passar"
+        },
+        {
+          "id": "MLB73062",
+          "nome": "Eletroportáteis: Vaporizadores"
+        },
+        {
+          "id": "MLB120307",
+          "nome": "Eletroportáteis: Máquinas de Costura"
+        },
+        {
+          "id": "MLB186654",
+          "nome": "Limpeza: Produtos de Limpeza"
+        },
+        {
+          "id": "MLB194050",
+          "nome": "Limpeza: Produtos de Lavanderia"
+        },
+        {
+          "id": "MLB264050",
+          "nome": "Limpeza: Acessórios de Limpeza"
+        },
+        {
+          "id": "MLB439129",
+          "nome": "Limpeza: Controle de Pragas"
+        },
+        {
+          "id": "MLB436104",
+          "nome": "Limpeza: Descartáveis"
         }
       ]
     },

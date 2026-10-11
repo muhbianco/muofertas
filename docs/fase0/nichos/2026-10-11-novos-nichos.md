@@ -77,7 +77,33 @@ vendidos são produto de catálogo. Entrou quem tem 12 ou mais.
   - Agora só o que chama o ML pausa, a partir de 2 min e dobrando a cada 429 seguido, até 15 min.
 - **Faixa morna:** de 180 para 90 min. Estimativa: ~450 chamadas/h com ~650 produtos.
 
-**O maior limite agora é a cobertura, não a frequência.** O coletor só vê os 20 mais vendidos de
-cada categoria. Próximo passo sugerido: descer um nível nas categorias com mais disputa de preço
-(Ferramentas Elétricas, Pneumáticas, Cuidado da Casa, Eletroportáteis), medindo os 429 depois de
-cada aumento.
+**O maior limite é a cobertura, não a frequência.** O coletor só vê os 20 mais vendidos de cada
+categoria.
+
+## Um nível abaixo (aprovado pelo dono no mesmo dia)
+As categorias com mais disputa de preço ganharam as subcategorias com 13 ou mais produtos de
+catálogo no top 20 (sondagem de 11/10/2026). A categoria-mãe continua.
+
+- **Ferramentas Elétricas** (9 subcategorias, catálogo/top 20):
+  - perfuração 17, parafusadeiras 13, corte 13;
+  - lixado e polimento 18, soldagem 14, compressores 15;
+  - limpeza (lavadoras de alta pressão) 17, kits 13, sopradores térmicos 17.
+- **Eletroportáteis de cozinha** (6 subcategorias):
+  - preparação de alimentos (air fryer, liquidificador) 18, preparação de bebidas 19;
+  - cafeteiras 20, chaleiras 19, balanças 18, máquinas para sobremesas 15.
+- **Eletroportáteis para a casa** (5 subcategorias):
+  - aspiradores 20, robôs aspiradores 19;
+  - ferro de passar 16, vaporizadores 14, máquinas de costura 14.
+- **Cuidado da casa** (5 subcategorias):
+  - produtos de limpeza 20, produtos de lavanderia 20;
+  - acessórios de limpeza 14, controle de pragas 19, descartáveis 15.
+
+**Ficaram de fora** por terem pouco catálogo no top 20:
+- chaves de impacto (5), detectores de metal (6), pintura (10–11), multiferramentas (9);
+- moedores de café (13, nicho estreito);
+- acessórios de lavanderia (8), cuidados com calçado (9).
+
+**Conta de chamadas:**
+- Em produção eram 22 categorias; agora são 67, com ~1.000–1.100 produtos. Com a faixa morna de 90 min,
+  são ~700 chamadas/h, abaixo do teto de 2.500.
+- Conferir os 429 nas primeiras 48 h. Se aparecerem em sequência, a faixa morna volta para 120 min.
