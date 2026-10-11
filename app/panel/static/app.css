@@ -129,3 +129,4 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .fila-envio li.arrastando { position: relative; z-index: 2; opacity: .9; box-shadow: 0 4px 14px rgba(0, 0, 0, .15); }
 .fila-envio li.alvo { box-shadow: 0 -3px 0 var(--esm); }
 form.mover { display: none; }
+.fila-envio button.agora { min-height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: var(--esm); color: #fff; font-weight: 700; }

@@ -125,6 +125,7 @@ async def send_one(
     publication_id: int,
     now: datetime,
     images: httpx.AsyncClient | None = None,
+    actor: str = ROBOT,
 ) -> bool:
     async with sessions() as db:
         pub = await db.get(Publication, publication_id)
@@ -150,7 +151,9 @@ async def send_one(
     photo = await fetch_product_image(images, image_url) if images is not None else None
 
     async with sessions() as db, db.begin():
-        pub = await db.get(Publication, publication_id)
+        # Trava a linha até gravar "sending": o robô e o botão "Enviar agora" no mesmo segundo
+        # não mandam duas vezes (o segundo espera e encontra "sending").
+        pub = await db.get(Publication, publication_id, with_for_update=True)
         if pub is None or pub.state != "ready":
             return False  # o operador mexeu enquanto o ML respondia
         apply_recheck(pub, result, now)
@@ -195,7 +198,7 @@ async def send_one(
         publication_id,
         state="sent",
         sent_at=now,
-        actor=ROBOT,
+        actor=actor,
         external_message_id=message_id[:64] or None,
     )
     logger.info("publicação enviada", extra={"publication_id": publication_id, "auto": True})
@@ -281,6 +284,42 @@ async def resend_now(
                 images=images,
             )
     return copy_id
+
+
+async def send_now(
+    sessions: async_sessionmaker[AsyncSession],
+    ml: MercadoLivreClient,
+    wa: WuzapiClient,
+    *,
+    publication_id: int,
+    actor: str,
+    now: datetime,
+) -> bool:
+    """Botão "Enviar agora" da fila: manda já, sem esperar o intervalo (pedido explícito).
+
+    Mesma revalidação de preço e mesma regra de no máximo uma vez do envio automático. Conta no
+    limite do dia e reinicia o intervalo do grupo.
+    """
+    async with sessions() as db:
+        pub = await db.get(Publication, publication_id)
+        if pub is None or pub.state != "ready":
+            raise DistributionError("só publicação pronta pode sair agora")
+        channel = await db.get(Channel, pub.channel_id)
+        if channel is None or channel.transport != "wuzapi" or not channel.wa_jid:
+            raise DistributionError("grupo de envio manual: poste pelo celular")
+        channel_id = channel.id
+    logger.info("envio agora pedido", extra={"publication_id": publication_id, "user": actor})
+    async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as images:
+        return await send_one(
+            sessions,
+            ml,
+            wa,
+            channel_id=channel_id,
+            publication_id=publication_id,
+            now=now,
+            images=images,
+            actor=actor[:40],
+        )
 
 
 async def send_due(

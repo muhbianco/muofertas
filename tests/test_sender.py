@@ -433,3 +433,99 @@ async def test_post_shows_coupon_price_from_approval(
     wa = FakeWuzapi()
     assert await run(sessions, wa) == 1
     assert "🎟️ *R$ 429,90 com cupom da loja* (ative na página)" in wa.sent[0]["Body"]
+
+
+async def test_send_now_skips_the_interval_and_never_sends_twice(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    from app.distribution.sender import send_now
+    from app.distribution.service import DistributionError
+
+    pub_id = await approve(sessions)
+    async with sessions() as session, session.begin():
+        pub = await session.get(Publication, pub_id)
+        assert pub is not None
+        # Outro post saiu há 1 minuto: o robô esperaria o intervalo do grupo.
+        session.add(
+            Publication(
+                channel_id=pub.channel_id,
+                product_id=pub.product_id,
+                idempotency_key="anterior",
+                dedup_key="anterior",
+                state="sent",
+                tier="boa",
+                target_url=pub.target_url,
+                approved_price_cents=pub.approved_price_cents,
+                created_at=NOW - timedelta(hours=1),
+                sent_at=NOW - timedelta(minutes=1),
+            )
+        )
+    wa = FakeWuzapi()
+    assert await run(sessions, wa) == 0  # o automático respeita o intervalo
+    fake_ml = FakeML(offers={"MLBP1": [{"item_id": ITEM, "price": 449.90, "currency_id": "BRL"}]})
+    ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
+    wa_client = WuzapiClient(cfg(), transport=wa.transport())
+    try:
+        assert await send_now(
+            sessions, ml_client, wa_client, publication_id=pub_id, actor="dono", now=NOW
+        )
+        with pytest.raises(DistributionError, match="pronta"):
+            await send_now(
+                sessions, ml_client, wa_client, publication_id=pub_id, actor="dono", now=NOW
+            )
+    finally:
+        await ml_client.aclose()
+        await wa_client.aclose()
+    assert len(wa.sent) == 1
+    async with sessions() as session:
+        sent = await session.get(Publication, pub_id)
+    assert sent is not None and (sent.state, sent.actor) == ("sent", "dono")
+
+
+async def test_send_now_refuses_a_manual_group(sessions: async_sessionmaker[AsyncSession]) -> None:
+    from app.distribution.sender import send_now
+    from app.distribution.service import DistributionError
+
+    async with sessions() as session, session.begin():
+        niche = Niche(slug="beleza", name="Beleza", active=True, created_at=NOW)
+        session.add(niche)
+        await session.flush()
+        channel = Channel(niche_id=niche.id, name="Manual", transport="manual", created_at=NOW)
+        product = CatalogProduct(
+            marketplace="mercadolivre",
+            external_id="MLBM",
+            niche_id=niche.id,
+            name="Batom",
+            discovered_via="highlights",
+            active=True,
+            tier="warm",
+            next_check_at=NOW,
+            consecutive_failures=0,
+            first_seen_at=NOW,
+        )
+        session.add_all([channel, product])
+        await session.flush()
+        pub = Publication(
+            channel_id=channel.id,
+            product_id=product.id,
+            idempotency_key="m1",
+            dedup_key="m1",
+            state="ready",
+            tier="boa",
+            target_url="https://www.mercadolivre.com.br/p/x",
+            approved_price_cents=1000,
+            created_at=NOW,
+        )
+        session.add(pub)
+        await session.flush()
+        pub_id = pub.id
+    wa_client = WuzapiClient(cfg(), transport=FakeWuzapi().transport())
+    ml_client = MercadoLivreClient(cfg(), transport=FakeML().transport())
+    try:
+        with pytest.raises(DistributionError, match="manual"):
+            await send_now(
+                sessions, ml_client, wa_client, publication_id=pub_id, actor="dono", now=NOW
+            )
+    finally:
+        await ml_client.aclose()
+        await wa_client.aclose()

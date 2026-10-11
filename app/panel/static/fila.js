@@ -74,3 +74,17 @@
     list.addEventListener("pointercancel", finish);
   });
 })();
+
+// "Enviar agora" manda o post para o grupo na hora: pede confirmação (um toque sem querer não
+// publica nada). Sem este arquivo, o botão envia direto.
+(function () {
+  "use strict";
+
+  document.querySelectorAll("form[data-confirmar]").forEach(function (form) {
+    form.addEventListener("submit", function (ev) {
+      if (!window.confirm(form.getAttribute("data-confirmar"))) {
+        ev.preventDefault();
+      }
+    });
+  });
+})();

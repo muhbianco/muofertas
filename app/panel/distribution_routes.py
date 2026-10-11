@@ -17,7 +17,7 @@ from app.core.config import settings
 from app.core.database import get_sessionmaker
 from app.core.logging import get_logger
 from app.distribution import invites, service
-from app.distribution.sender import resend_now
+from app.distribution.sender import resend_now, send_now
 from app.distribution.service import DistributionError
 from app.domain.distribution import (
     INVITE_PREFIX,
@@ -573,6 +573,29 @@ async def resend(
     except DistributionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     logger.info("reenvio", extra={"publication_id": pub_id, "copy": copy_id, "user": ctx.username})
+    return _see_other("/postar")
+
+
+@router.post("/postar/{pub_id}/enviar-agora")
+async def post_send_now(
+    db: Db,
+    ctx: Admin,
+    client: Ml,
+    wa_client: WaClient,
+    sm: Sessions,
+    pub_id: int,
+    csrf: Annotated[str | None, Form()] = None,
+) -> Response:
+    """Manda já o post da fila, sem esperar o intervalo do grupo (pedido explícito do dono)."""
+    check_csrf(ctx, csrf)
+    await db.commit()  # o envio abre as próprias transações, fora da chamada de rede
+    try:
+        sent = await send_now(
+            sm, client, wa_client, publication_id=pub_id, actor=ctx.username, now=utcnow()
+        )
+    except DistributionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    logger.info("envio agora", extra={"publication_id": pub_id, "sent": sent, "user": ctx.username})
     return _see_other("/postar")
 
 

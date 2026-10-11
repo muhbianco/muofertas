@@ -37,6 +37,12 @@
       {% if r.image_url %}<img src="{{ r.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="sem-foto"></span>{% endif %}
       <span><b>{{ r.name }}</b><br><small>aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}</small></span>
     </a>
+    {% if g.channel.transport == 'wuzapi' and g.channel.wa_jid %}
+    <form method="post" action="/postar/{{ r.pub.id }}/enviar-agora" data-confirmar="Enviar agora para o grupo, sem esperar o intervalo?">
+      <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+      <button class="agora" type="submit" title="Enviar agora, sem esperar o intervalo">Enviar</button>
+    </form>
+    {% endif %}
     {% if loop.first %}{% if g.rows | length > 1 %}<span class="selo oficial">próximo</span>{% endif %}{% else %}
     <span class="subir">
       <form method="post" action="/postar/{{ r.pub.id }}/subir">
@@ -73,4 +79,4 @@
 </table>
 {% endif %}
 {% endblock %}
-{% block scripts %}<script src="/static/fila.js?v=1" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=2" defer></script>{% endblock %}
