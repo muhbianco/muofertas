@@ -15,12 +15,17 @@
     <option value="off" {% if nivel == 'off' %}selected{% endif %}>com % OFF no anúncio</option>
     {% for t in tier_order %}<option value="{{ t }}" {% if t == nivel %}selected{% endif %}>{{ t }}</option>{% endfor %}
   </select>
+  <select name="enviados" aria-label="Enviados aos grupos">
+    <option value="">Com e sem envio recente</option>
+    <option value="ocultar" {% if enviados == 'ocultar' %}selected{% endif %}>Sem os enviados nos últimos 7 dias</option>
+    <option value="so" {% if enviados == 'so' %}selected{% endif %}>Só os enviados nos últimos 7 dias</option>
+  </select>
   <button type="submit">Filtrar</button>
 </form>
 <div class="contagem">
   {% for t in tier_order %}{% if counts.get(t) %}<span>{{ t }}: {{ counts[t] }}</span>{% endif %}{% endfor %}
   {% if counts.get('sem nota') %}<span>sem nota: {{ counts['sem nota'] }}</span>{% endif %}
-  {% if discount_count %}<a class="chip-off" href="/?nivel=off{% if nicho %}&amp;nicho={{ nicho }}{% endif %}">com % OFF: {{ discount_count }}</a>{% endif %}
+  {% if discount_count %}<a class="chip-off" href="/?nivel=off{% if nicho %}&amp;nicho={{ nicho }}{% endif %}{% if enviados %}&amp;enviados={{ enviados }}{% endif %}">com % OFF: {{ discount_count }}</a>{% endif %}
 </div>
 
 <p class="nota-pix">Preço do anúncio. O desconto no Pix que a página do ML às vezes mostra não vem pela API.</p>
@@ -33,7 +38,7 @@
 <article class="card">
   {% if c.image_url %}<img src="{{ c.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<div class="sem-foto"></div>{% endif %}
   <div>
-    <div><span class="selo {{ c.tier }}">{{ c.tier }}</span>{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
+    <div><span class="selo {{ c.tier }}">{{ c.tier }}</span>{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}{% if c.sent_at %}<span class="selo enviado" title="Aprovar de novo antes de 7 dias sai como repetida">já foi pro grupo · {{ c.sent_at | local }}</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
     <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
     <div class="linha nicho-linha">{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next) }}</div>
     <div class="preco">{% if c.listing_original_cents %}<s class="de">{{ c.listing_original_cents | brl }}</s> {% endif %}{{ c.price_cents | brl }}</div>

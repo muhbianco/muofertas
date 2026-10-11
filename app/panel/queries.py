@@ -33,6 +33,11 @@ QUEUE_LIMIT = 50
 # Filtro "com % OFF no anúncio": todos os níveis menos bloqueada.
 DISCOUNT_FILTER = "off"
 DISCOUNT_TIERS = [t for t in TIER_ORDER if t != "bloqueada"]
+# Selo e filtro "já foi para o grupo": envio nos últimos 7 dias (a mesma janela da repetição).
+SENT_WINDOW = timedelta(days=7)
+SENT_HIDE = "ocultar"
+SENT_ONLY = "so"
+SENT_FILTERS = (SENT_HIDE, SENT_ONLY)
 
 
 def product_url(product: CatalogProduct) -> str:
@@ -113,6 +118,8 @@ class Card:
     listing_pct: int | None = None
     listing_original_cents: int | None = None
     niche_id: int | None = None
+    # Último envio a um grupo nos últimos 7 dias (aprovar de novo sai como repetida).
+    sent_at: datetime | None = None
 
 
 def reasons(snapshot: dict[str, Any]) -> list[str]:
@@ -163,8 +170,15 @@ async def discount_count(db: AsyncSession, niche_id: int | None) -> int:
 
 
 async def queue(
-    db: AsyncSession, tiers: list[str], niche_id: int | None, *, only_discount: bool = False
+    db: AsyncSession,
+    tiers: list[str],
+    niche_id: int | None,
+    *,
+    only_discount: bool = False,
+    sent: str | None = None,
+    now: datetime | None = None,
 ) -> list[Card]:
+    sent_since = (now or utcnow()) - SENT_WINDOW
     since_change = func.coalesce(CatalogProduct.last_changed_at, CatalogProduct.first_seen_at)
     rank = case({t: i for i, t in enumerate(TIER_ORDER)}, value=CatalogProduct.last_tier, else_=99)
     q = (
@@ -192,6 +206,15 @@ async def queue(
         q = q.where(CatalogProduct.niche_id == niche_id)
     if only_discount:
         q = q.where(CatalogProduct.listing_discount_pct.is_not(None))
+    recently_sent = exists().where(
+        Publication.product_id == CatalogProduct.id,
+        Publication.state == "sent",
+        Publication.sent_at >= sent_since,
+    )
+    if sent == SENT_HIDE:
+        q = q.where(~recently_sent)
+    elif sent == SENT_ONLY:
+        q = q.where(recently_sent)
     # % OFF no anúncio primeiro (maior antes): enquanto não há histórico para comprovar desconto,
     # é o melhor sinal de promoção que a fila tem. Depois o nível e a nota.
     order = (
@@ -205,6 +228,7 @@ async def queue(
     latest = await _latest_evaluations(db, ids)
     snaps = {pid: json.loads(ev.snapshot) for pid, ev in latest.items()}
     sellers = await _sellers(db, {s for s in map(_seller_id, snaps.values()) if s is not None})
+    sent_at = await _recently_sent(db, ids, sent_since)
     cards = []
     for product, niche_name in rows:
         ev = latest.get(product.id)
@@ -234,9 +258,25 @@ async def queue(
                 if product.listing_discount_pct is not None
                 else None,
                 niche_id=product.niche_id,
+                sent_at=sent_at.get(product.id),
             )
         )
     return cards
+
+
+async def _recently_sent(db: AsyncSession, ids: list[int], since: datetime) -> dict[int, datetime]:
+    if not ids:
+        return {}
+    rows = await db.execute(
+        select(Publication.product_id, func.max(Publication.sent_at))
+        .where(
+            Publication.product_id.in_(ids),
+            Publication.state == "sent",
+            Publication.sent_at >= since,
+        )
+        .group_by(Publication.product_id)
+    )
+    return {pid: at for pid, at in rows.tuples() if at is not None}
 
 
 async def _latest_evaluations(
