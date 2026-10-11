@@ -11,11 +11,13 @@ vem do evento comercial que vale para o nicho naquele dia, pela fase:
 Sem evento, um convite geral do nicho, alternando as variações pelo dia (o mesmo grupo não recebe o
 mesmo texto dois dias seguidos).
 
-Junto vai a indicação de outro grupo da MegaPromoOz, sorteado por grupo e por dia (sorteio fixo:
-a agenda do painel mostra o mesmo texto que sai). Grupo cujo nicho está em evento naquele dia tem
-preferência no sorteio. O calendário também diz quando o preço de referência da nota deve
-parar de andar (`congela_referencia`): o esquenta da Black Friday sobe preço, e o desconto do dia
-tem de ser medido contra o preço de antes.
+Junto vai a indicação de outro grupo da MegaPromoOz, em rodízio fixo por dia e horário (a agenda do
+painel mostra o mesmo texto que sai): cada grupo é indicado uma vez por horário. Quando o grupo
+indicado está em data comemorativa, a indicação usa o texto do evento.
+
+O calendário também diz quando o preço de referência da nota deve parar de andar
+(`congela_referencia`): o esquenta da Black Friday sobe preço, e o desconto do dia tem de ser
+medido contra o preço de antes.
 """
 
 from __future__ import annotations
@@ -202,17 +204,28 @@ def choose_partner(
     *,
     slot: str = SLOT_EVENING,
 ) -> PartnerGroup | None:
-    """Outro grupo para indicar no convite: sorteio fixo por grupo, dia e horário.
+    """Outro grupo para indicar no convite: rodízio fixo por dia e horário (a agenda mostra o
+    mesmo texto que sai).
 
-    Quem está em evento naquele dia (Dia das Crianças, Black Friday...) tem preferência.
+    Os grupos formam uma roda; num horário, cada um indica o que está `salto` posições à frente
+    (salto sorteado por dia e horário, nunca zero). Assim ninguém indica a si mesmo, cada grupo
+    é indicado exatamente uma vez por horário e, ao longo dos dias, todos se cruzam. Preferir
+    grupo em evento concentrava as indicações em dois ou três grupos por semanas.
     """
-    others = sorted((p for p in partners if p.channel_id != channel_id), key=lambda p: p.channel_id)
-    if not others or not config.cross:
+    if not config.cross:
         return None
-    in_event = [p for p in others if event_for(day, p.niche_slug, config) is not None]
-    pool = in_event or others
-    seed = f"{channel_id}:{day.isoformat()}:{slot}"
-    return random.Random(seed).choice(pool)  # noqa: S311 - sorteio de texto, não é segurança
+    ring = sorted(partners, key=lambda p: p.channel_id)
+    ids = [p.channel_id for p in ring]
+    if channel_id not in ids:
+        others = [p for p in ring if p.channel_id != channel_id]
+        if not others:
+            return None
+        seed = f"{day.isoformat()}:{slot}:{channel_id}"
+        return others[random.Random(seed).randrange(len(others))]  # noqa: S311 - texto
+    if len(ring) < 2:
+        return None
+    jump = 1 + random.Random(f"{day.isoformat()}:{slot}").randrange(len(ring) - 1)  # noqa: S311
+    return ring[(ids.index(channel_id) + jump) % len(ring)]
 
 
 def _cross_text(day: date, slot: str, partner: PartnerGroup, config: InviteConfig) -> str:

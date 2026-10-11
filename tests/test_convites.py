@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import httpx
@@ -237,7 +237,7 @@ async def test_agenda_shows_the_week_and_skips_a_day(
 # --------------------------------------------------------------------------- indicação e manhã
 
 
-def test_partner_is_another_group_and_events_come_first() -> None:
+def test_partner_is_never_the_group_itself_and_is_stable() -> None:
     from app.domain.invites import PartnerGroup, choose_partner
 
     config = real_config()
@@ -246,11 +246,10 @@ def test_partner_is_another_group_and_events_come_first() -> None:
         PartnerGroup(2, "beleza", "https://chat.whatsapp.com/B"),
         PartnerGroup(3, "pais-maes-filhos", "https://chat.whatsapp.com/P"),
     ]
-    day = date(2026, 10, 11)  # véspera do Dia das Crianças: só Pais, mães e filhos está em evento
+    day = date(2026, 10, 11)
     chosen = choose_partner(day, 1, partners, config, slot="manha")
-    assert chosen is not None and chosen.channel_id == 3
-    assert choose_partner(day, 1, partners, config, slot="manha") == chosen  # sorteio fixo
-    # Fora de evento, nunca indica o próprio grupo.
+    assert chosen is not None and chosen.channel_id != 1
+    assert choose_partner(day, 1, partners, config, slot="manha") == chosen  # fixo
     for d in range(1, 28):
         pick = choose_partner(date(2027, 2, d), 2, partners, config, slot="noite")
         assert pick is not None and pick.channel_id != 2
@@ -310,3 +309,33 @@ async def test_morning_invite_goes_at_the_window_start_and_expires(
     async with sessions() as session, session.begin():
         await session.execute(ChannelInvite.__table__.delete())
     assert await run(sessions, wa2, datetime(2026, 10, 12, 15, 0, tzinfo=UTC)) == 0
+
+
+def test_every_group_is_recommended_once_per_slot() -> None:
+    from app.domain.invites import PartnerGroup, choose_partner
+
+    config = real_config()
+    slugs = [
+        "ferramentas",
+        "beleza",
+        "tenis-esporte",
+        "casa-mimos",
+        "tecnologia",
+        "pais-maes-filhos",
+    ]
+    partners = [
+        PartnerGroup(i, s, f"https://chat.whatsapp.com/{i}") for i, s in enumerate(slugs, 1)
+    ]
+    seen_pairs: set[tuple[int, int]] = set()
+    for offset in range(40):
+        day = date(2026, 10, 11) + timedelta(days=offset)
+        for slot in ("manha", "noite"):
+            picks = [
+                choose_partner(day, p.channel_id, partners, config, slot=slot) for p in partners
+            ]
+            targets = sorted(p.channel_id for p in picks if p is not None)
+            assert targets == [1, 2, 3, 4, 5, 6]  # cada grupo indicado uma vez, ninguém a si mesmo
+            seen_pairs |= {
+                (g.channel_id, p.channel_id) for g, p in zip(partners, picks, strict=True) if p
+            }
+    assert len(seen_pairs) == 30  # em 40 dias, todo grupo indicou todos os outros

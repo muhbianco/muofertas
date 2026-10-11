@@ -2,7 +2,7 @@
 {% block title %}Convites{% endblock %}
 {% block content %}
 <h1>Convites</h1>
-<p class="nota-pix">Dois convites por grupo por dia (hora de Brasília): de manhã, no primeiro horário de envio do grupo (antes da primeira oferta), e às {{ '%02d' % hour }}h. Cada um leva o link do grupo e a indicação de outro grupo da MegaPromoOz, sorteado (quem está em data comemorativa tem preferência). O texto segue o calendário de eventos do nicho; sem evento, sai um convite geral, alternando os textos. Não conta nos envios de oferta do dia.</p>
+<p class="nota-pix">Dois convites por grupo por dia (hora de Brasília): de manhã, no primeiro horário de envio do grupo (antes da primeira oferta), e às {{ '%02d' % hour }}h. Cada um leva o link do grupo e a indicação de outro grupo da MegaPromoOz, em rodízio: no mesmo horário, cada grupo indica um diferente e todos são indicados. O texto segue o calendário de eventos do nicho; sem evento, sai um convite geral, alternando os textos. Não conta nos envios de oferta do dia.</p>
 {% if not enabled %}<p class="erro">Convites desligados no servidor (INVITES_ENABLED).</p>{% endif %}
 {% if error %}<p class="erro">{{ error }}</p>{% endif %}
 {% set kinds = {'periodo': 'período', 'vespera': 'véspera', 'auge': 'dia', 'reta_final': 'últimos dias', 'geral': 'geral'} %}
