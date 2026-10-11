@@ -92,6 +92,8 @@ class Settings(BaseSettings):
     # Convite diário de compartilhamento (11/10/2026): 1 por grupo por dia, no horário de pico
     # (hora de Brasília). Textos e calendário de eventos em `config/convites.json`.
     invites_enabled: bool = True
+    # Confere a lista de vendas do painel de afiliado a cada 3 h e manda e-mail quando entra venda.
+    sales_watch_enabled: bool = True
     # Aprovação automática (plano, semana 3): níveis separados por vírgula; vazio desliga.
     auto_approve_tiers: str = "excepcional,excelente"
     invite_hour: int = 19

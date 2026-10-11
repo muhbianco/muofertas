@@ -39,6 +39,7 @@ from app.integrations.mercadolivre import (
 )
 from app.integrations.ml_affiliate import AffiliatePortal
 from app.integrations.wuzapi import WuzapiClient
+from app.measurement.sales import SalesWatch
 
 logger = get_logger(__name__)
 RATE_LIMIT_FIRST_PAUSE_SECONDS = 120
@@ -114,6 +115,8 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
     wa_client = WuzapiClient(cfg)
     images = httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0))
     portal = AffiliatePortal(cfg)
+    mail_http = httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0))
+    sales_watch = SalesWatch(SessionFactory, portal, cfg, mail_http)
     collector = Collector(SessionFactory, client, cfg)
     logger.info(
         "worker iniciado", extra={"holder": holder, "collector_enabled": cfg.collector_enabled}
@@ -148,6 +151,9 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                         await evaluator.evaluate_due()  # só banco: roda mesmo com o ML em pausa
                         await approver.run(utcnow())
                     linked = await resolve_links(SessionFactory, portal, cfg, utcnow())
+                    if cfg.sales_watch_enabled:
+                        # Portal de afiliado (não a API do ML): roda mesmo com a coleta em pausa.
+                        await sales_watch.run(utcnow())
                     if linked:
                         logger.info("links de afiliado", extra={"linked": linked})
                     if cfg.invites_enabled and calendar is not None:
@@ -179,6 +185,7 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
         await client.aclose()
         await wa_client.aclose()
         await images.aclose()
+        await mail_http.aclose()
         await portal.aclose()
         logger.info("worker encerrado", extra={"holder": holder})
 

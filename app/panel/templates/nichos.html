@@ -2,6 +2,32 @@
 {% block title %}Nichos{% endblock %}
 {% block content %}
 <h1>Nichos</h1>
+<h2>Relatório (últimos {{ report_days }} dias)</h2>
+<p class="nota-pix">Para comparar os nichos e decidir onde investir em audiência. "Boa+" é nota boa ou melhor; o desconto real só aparece com ~10 dias de histórico de preço. Comissão por pedido = ticket mediano × comissão do nicho (estimativa).</p>
+<p class="linha">Vendas pelo afiliado (30 dias):
+  {% if sales.total is not none %}<b>{{ sales.total }}</b> · conferido {{ sales.checked_at | local }}{% else %}ainda não conferido{% endif %}
+  {% if sales.problem %} · <span class="erro">{{ sales.problem }}</span>{% endif %}</p>
+<div class="relatorio">
+{% for r in report %}
+<article class="bloco">
+  <h3>{{ r.niche.name.split(':')[0] }}</h3>
+  <dl class="kpis">
+    <div><dt>Produtos vigiados</dt><dd>{{ r.products }}</dd></div>
+    <div><dt>Boa+ agora</dt><dd>{{ r.good }}</dd></div>
+    <div><dt>Com % OFF no anúncio</dt><dd>{{ r.with_off }}</dd></div>
+    <div><dt>Bloqueados</dt><dd>{{ r.blocked }}{% if r.blocked_pct is not none %} ({{ r.blocked_pct }}%){% endif %}</dd></div>
+    <div><dt>Mudanças de preço/dia</dt><dd>{{ '%.1f' % r.price_changes_per_day }}</dd></div>
+    <div><dt>Desconto real mediano</dt><dd>{% if r.median_real_discount_pct is not none %}{{ '%.1f' % r.median_real_discount_pct }}%{% else %}—{% endif %}</dd></div>
+    <div><dt>Ticket mediano</dt><dd>{{ r.median_ticket_cents | brl if r.median_ticket_cents else '—' }}</dd></div>
+    <div><dt>Comissão por pedido</dt><dd>{{ r.commission_per_order_cents | brl if r.commission_per_order_cents else '—' }}</dd></div>
+    <div><dt>Aprovadas / rejeitadas</dt><dd>{{ r.approved }} / {{ r.rejected }}</dd></div>
+    <div><dt>Posts enviados</dt><dd>{{ r.posts_sent }}</dd></div>
+    <div><dt>Membros</dt><dd>{% if r.members is not none %}{{ r.members }}{% if r.members_delta is not none %} ({{ '%+d' % r.members_delta }}){% endif %}{% else %}—{% endif %}</dd></div>
+  </dl>
+</article>
+{% endfor %}
+</div>
+<h2>Regras e categorias</h2>
 <p class="linha">As regras e categorias vêm de <code>config/nichos.json</code> e são aplicadas a cada deploy.</p>
 {% for r in rows %}
 <h2>{{ r.niche.name }}</h2>

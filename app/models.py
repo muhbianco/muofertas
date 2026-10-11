@@ -498,3 +498,23 @@ class ChannelInvite(Base):
     external_message_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     note: Mapped[str | None] = mapped_column(String(255), nullable=True)
     actor: Mapped[str | None] = mapped_column(String(80), nullable=True)
+
+
+class SalesCheck(Base):
+    """Checagem da lista de vendas do painel de afiliado (0017), a cada 3 h.
+
+    `status`: ok | session | blocked | transient | rejected | sem_sessao. `item_keys`: só os nomes
+    dos campos de uma venda (JSON), nunca os valores.
+    """
+
+    __tablename__ = "sales_check"
+    __table_args__ = (Index("ix_sales_check_checked_at", "checked_at"),)
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    checked_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    status: Mapped[str] = mapped_column(String(12))
+    total_results: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    item_keys: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notified_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)

@@ -24,7 +24,7 @@ from app.distribution.service import (
 )
 from app.domain.distribution import PixError, format_brl, parse_brl
 from app.models import AdminUser, CatalogProduct, OfferEvaluation, OperatorDecision
-from app.panel import queries
+from app.panel import queries, report
 from app.panel.auth import (
     SESSION_COOKIE,
     SESSION_TTL,
@@ -307,7 +307,14 @@ async def niches_page(request: Request, db: Db, ctx: Admin) -> Response:
     return templates.TemplateResponse(
         request,
         "nichos.html",
-        {"ctx": ctx, "rows": await queries.niche_overview(db), "tier_order": queries.TIER_ORDER},
+        {
+            "ctx": ctx,
+            "rows": await queries.niche_overview(db),
+            "tier_order": queries.TIER_ORDER,
+            "report": await report.niche_report(db, utcnow()),
+            "report_days": report.REPORT_DAYS,
+            "sales": await report.sales_status(db),
+        },
     )
 
 

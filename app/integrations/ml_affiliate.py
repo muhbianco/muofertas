@@ -12,6 +12,7 @@ endpoint interno do gerador, com a sessão logada dele. Não existe API pública
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -88,17 +89,68 @@ class AffiliatePortal:
             )
         except httpx.HTTPError as exc:
             raise PortalError("transient") from exc
-        is_json = "application/json" in response.headers.get("content-type", "")
-        if response.status_code in (401, 403):
-            raise PortalError("session" if is_json else "blocked", status=response.status_code)
-        if 300 <= response.status_code < 400 or not is_json:
-            # redirecionou para login/verificação ou devolveu página: sessão inútil agora
-            raise PortalError("blocked", status=response.status_code)
-        if response.status_code == 429 or response.status_code >= 500:
-            raise PortalError("transient", status=response.status_code)
-        if response.status_code >= 400:
-            raise PortalError("rejected", status=response.status_code)
+        _classify(response)
         return _short_url(response.json())
+
+    async def sales(self, session: PortalSession, start: datetime, end: datetime) -> SalesPage:
+        """Lista de vendas do período (a mesma da tela Métricas), lida com a sessão do dono."""
+        headers = {
+            "Cookie": session.cookie,
+            "Referer": DASHBOARD,
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "pt-BR,pt;q=0.9",
+            "User-Agent": USER_AGENT,
+        }
+        params = {
+            "filter_time_range": f"{_fmt(start)}--{_fmt(end)}",
+            "items_per_page": "10",
+            "order_by": "ord_date_created",
+            "page": "1",
+            "sort": "desc",
+            "type": "GENERAL",
+        }
+        try:
+            response = await self._http.get(SALES_URL, params=params, headers=headers)
+        except httpx.HTTPError as exc:
+            raise PortalError("transient") from exc
+        _classify(response)
+        body = response.json()
+        if not isinstance(body, dict) or not isinstance(body.get("total_results"), int):
+            raise PortalError("rejected")
+        items = body.get("item_list")
+        first = items[0] if isinstance(items, list) and items and isinstance(items[0], dict) else {}
+        return SalesPage(int(body["total_results"]), tuple(sorted(str(k) for k in first)))
+
+
+SALES_URL = "https://www.mercadolivre.com.br/affiliate-program/api/dashboard/sales/general"
+DASHBOARD = "https://www.mercadolivre.com.br/afiliados/dashboard"
+
+
+@dataclass(frozen=True, slots=True)
+class SalesPage:
+    """Resumo da lista de vendas do painel de afiliado: o total e só os NOMES dos campos de uma
+    venda (nenhum valor), para montar a atribuição por etiqueta sem guardar dado de comprador."""
+
+    total: int
+    item_keys: tuple[str, ...]
+
+
+def _fmt(moment: datetime) -> str:
+    return moment.strftime("%Y-%m-%dT%H:%M:%S.000-03:00")
+
+
+def _classify(response: httpx.Response) -> None:
+    """401/403, redirecionamento ou página no lugar de JSON (login, verificação): sessão inútil
+    agora. 429/5xx: passageiro. Outro 4xx: pedido recusado."""
+    is_json = "application/json" in response.headers.get("content-type", "")
+    if response.status_code in (401, 403):
+        raise PortalError("session" if is_json else "blocked", status=response.status_code)
+    if 300 <= response.status_code < 400 or not is_json:
+        raise PortalError("blocked", status=response.status_code)
+    if response.status_code == 429 or response.status_code >= 500:
+        raise PortalError("transient", status=response.status_code)
+    if response.status_code >= 400:
+        raise PortalError("rejected", status=response.status_code)
 
 
 def _short_url(body: Any) -> str:

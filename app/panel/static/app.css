@@ -130,3 +130,10 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .fila-envio li.alvo { box-shadow: 0 -3px 0 var(--esm); }
 form.mover { display: none; }
 .fila-envio button.agora { min-height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: var(--esm); color: #fff; font-weight: 700; }
+.relatorio { display: grid; gap: 12px; }
+.relatorio h3 { margin: 0 0 8px; }
+.kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0; }
+.kpis div { min-width: 0; }
+.kpis dt { font-size: 12px; color: var(--cinza); }
+.kpis dd { margin: 0; font-weight: 700; font-size: 16px; }
+@media (min-width: 720px) { .relatorio { grid-template-columns: 1fr 1fr; } }
