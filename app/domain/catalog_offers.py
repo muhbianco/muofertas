@@ -149,6 +149,12 @@ class CatalogSnapshot:
     trusted_official: bool = False
     official_item_id: str | None = None
     official_seller_id: int | None = None
+    # O "de" (preço riscado) da oferta de cada régua. `originals_known` é falso nas linhas
+    # gravadas antes da 0013, que não tinham esse dado.
+    eligible_original_cents: int | None = None
+    trusted_original_cents: int | None = None
+    official_original_cents: int | None = None
+    originals_known: bool = True
 
     @property
     def tracking_price_cents(self) -> int:
@@ -168,6 +174,25 @@ class CatalogSnapshot:
             or self.min_official_price_cents != previous.min_official_price_cents
             or self.eligible_item_id != previous.eligible_item_id
             or (self.deal_offers_count > 0) != (previous.deal_offers_count > 0)
+        )
+
+    def originals_differ_from(self, previous: CatalogSnapshot | None) -> bool:
+        """O "de" mudou sem o preço mudar (ou a linha anterior nem tinha o dado).
+
+        Vira batimento, não mudança: não mexe na fila nem nas camadas, só atualiza o selo.
+        """
+        if previous is None:
+            return False
+        if not previous.originals_known:
+            return True
+        return (
+            self.eligible_original_cents,
+            self.trusted_original_cents,
+            self.official_original_cents,
+        ) != (
+            previous.eligible_original_cents,
+            previous.trusted_original_cents,
+            previous.official_original_cents,
         )
 
 
@@ -224,6 +249,9 @@ def summarize(
         trusted_official=bool(best_trusted and best_trusted.official_store_id is not None),
         official_item_id=best_official.item_id if best_official else None,
         official_seller_id=best_official.seller_id if best_official else None,
+        eligible_original_cents=best_eligible.original_price_cents if best_eligible else None,
+        trusted_original_cents=best_trusted.original_price_cents if best_trusted else None,
+        official_original_cents=best_official.original_price_cents if best_official else None,
     )
 
 

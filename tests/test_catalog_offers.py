@@ -236,3 +236,29 @@ def test_needs_heartbeat() -> None:
     assert needs_heartbeat(None, NOW, timedelta(hours=24))
     assert not needs_heartbeat(NOW - timedelta(hours=23), NOW, timedelta(hours=24))
     assert needs_heartbeat(NOW - timedelta(hours=24), NOW, timedelta(hours=24))
+
+
+def test_summarize_keeps_the_strikethrough_price_of_each_ruler() -> None:
+    raw = [
+        offer("MLB1", 30.0, original_price=50.0, seller_id=7, shipping={"mode": "me2"}),
+        offer("MLB2", 35.0, original_price=60.0, official_store_id=5, seller_id=8),
+    ]
+    sellers = {7: SellerInfo("5_green", None, 500), 8: SellerInfo("5_green", "platinum", 9000)}
+    s = summarize(raw, sellers)
+    assert s is not None
+    assert (s.eligible_item_id, s.eligible_original_cents) == ("MLB1", 5000)
+    assert (s.trusted_item_id, s.trusted_original_cents) == ("MLB2", 6000)
+    assert (s.official_item_id, s.official_original_cents) == ("MLB2", 6000)
+    assert s.originals_known
+
+
+def test_originals_differ_only_when_the_strikethrough_changes_or_was_unknown() -> None:
+    from dataclasses import replace
+
+    old = snap(10000, eligible_original_cents=None, originals_known=False)
+    new = snap(10000, eligible_original_cents=15000)
+    assert not new.differs_from(old)  # preço igual: não é mudança de preço
+    assert new.originals_differ_from(old)  # linha antiga sem o dado: completa
+    assert not new.originals_differ_from(new)
+    assert new.originals_differ_from(replace(new, eligible_original_cents=16000))
+    assert not new.originals_differ_from(None)

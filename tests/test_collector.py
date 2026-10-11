@@ -137,6 +137,59 @@ async def test_refresh_writes_change_then_skips_until_heartbeat(
     assert product.tier == "hot"
 
 
+async def test_refresh_fills_the_strikethrough_price_without_faking_a_price_change(
+    sessions: async_sessionmaker[AsyncSession], settings: Settings
+) -> None:
+    await seed(sessions)
+    fake = fake_ml()
+    client = MercadoLivreClient(settings, transport=fake.transport())
+    collector = Collector(sessions, client, settings)
+
+    async def due_again() -> None:
+        async with sessions() as session, session.begin():
+            product = (await session.execute(select(CatalogProduct))).scalar_one()
+            product.next_check_at = utcnow() - timedelta(seconds=1)
+            product.needs_evaluation = False
+
+    try:
+        await collector.discover_due()
+        await collector.refresh_due()
+        # Linha gravada antes da 0013: sem o "de" por régua.
+        async with sessions() as session, session.begin():
+            first = (await session.execute(select(PriceObservation))).scalar_one()
+            first.originals_known = False
+            changed_at = (
+                (await session.execute(select(CatalogProduct))).scalar_one().last_changed_at
+            )
+        await due_again()
+        fake.offers["MLBP1"] = [
+            offer("MLB100", 399.9),
+            offer("MLB101", 379.9, official_store_id=5, original_price=499.9),
+        ]
+        assert (await collector.refresh_due()).changed == 0
+        async with sessions() as session:
+            product = (await session.execute(select(CatalogProduct))).scalar_one()
+        assert product.needs_evaluation and product.last_changed_at == changed_at
+
+        await due_again()
+        await collector.refresh_due()  # mesmo "de", já conhecido: nada novo
+    finally:
+        await client.aclose()
+
+    async with sessions() as session:
+        rows = (
+            (await session.execute(select(PriceObservation).order_by(PriceObservation.id)))
+            .scalars()
+            .all()
+        )
+        product = (await session.execute(select(CatalogProduct))).scalar_one()
+    assert [(r.kind, r.official_original_cents, r.originals_known) for r in rows] == [
+        ("change", None, False),
+        ("heartbeat", 49990, True),
+    ]
+    assert not product.needs_evaluation
+
+
 async def test_refresh_not_found_deactivates(
     sessions: async_sessionmaker[AsyncSession], settings: Settings
 ) -> None:

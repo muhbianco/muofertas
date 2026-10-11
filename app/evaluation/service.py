@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.clock import utcnow
 from app.core.logging import get_logger
 from app.domain.catalog_offers import CatalogSnapshot
+from app.domain.distribution import listing_discount
 from app.domain.price_history import PricePoint, compute_stats
 from app.domain.scoring import Evaluation, ScoringInput, evaluate, kind_price, required_kind
 from app.models import CatalogProduct, Niche, OfferEvaluation, PriceObservation
@@ -46,6 +47,14 @@ class NicheRules:
         )
 
 
+def listing_pct(ev: Evaluation) -> int | None:
+    """% OFF do próprio anúncio da oferta avaliada, com as travas do post (selo da fila)."""
+    if ev.price_cents is None:
+        return None
+    found = listing_discount(ev.price_cents, ev.offer_original_cents, ev.reference_cents)
+    return found.percent if found else None
+
+
 def _snapshot(row: PriceObservation) -> CatalogSnapshot:
     return CatalogSnapshot(
         min_price_cents=row.min_price_cents,
@@ -69,6 +78,10 @@ def _snapshot(row: PriceObservation) -> CatalogSnapshot:
         trusted_official=row.trusted_official,
         official_item_id=row.official_item_id,
         official_seller_id=row.official_seller_id,
+        eligible_original_cents=row.eligible_original_cents,
+        trusted_original_cents=row.trusted_original_cents,
+        official_original_cents=row.official_original_cents,
+        originals_known=row.originals_known,
     )
 
 
@@ -230,6 +243,7 @@ class Evaluator:
                 row.last_evaluated_at = now
                 row.last_tier = ev.tier.value
                 row.last_score = ev.score
+                row.listing_discount_pct = listing_pct(ev)
                 # Se o coletor gravou preço novo no meio do caminho, a marcação fica para a próxima.
                 if row.last_observation_at == seen_observation:
                     row.needs_evaluation = False

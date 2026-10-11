@@ -21,6 +21,7 @@ from sqlalchemy import (
     Text,
     TypeDecorator,
     UniqueConstraint,
+    false,
 )
 from sqlalchemy.engine import Dialect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -122,6 +123,8 @@ class CatalogProduct(Base):
     last_score: Mapped[float | None] = mapped_column(Numeric(5, 1, asdecimal=False), nullable=True)
     # Painel (0003): o operador tira o produto da fila de vez.
     operator_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 0013: % OFF do próprio anúncio na última avaliação (travas do post); ordena a fila.
+    listing_discount_pct: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class PriceObservation(Base):
@@ -160,6 +163,11 @@ class PriceObservation(Base):
     trusted_official: Mapped[bool] = mapped_column(Boolean, default=False)
     official_item_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
     official_seller_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    # 0013: o "de" (preço riscado) da oferta de cada régua. Linha antiga: originals_known falso.
+    eligible_original_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    trusted_original_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    official_original_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    originals_known: Mapped[bool] = mapped_column(Boolean, default=True, server_default=false())
 
 
 class MarketplaceSeller(Base):

@@ -111,3 +111,6 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .pix-aprovar label { display: flex; gap: 6px; align-items: center; }
 .formulario input.calculado { background: transparent; border-style: dashed; color: var(--cinza); }
 .formulario .dica { font-size: 12px; color: var(--cinza); margin: 0; }
+.selo.off { background: var(--verm); color: #fff; }
+.preco .de { font-size: 13px; font-weight: 400; color: var(--cinza); }
+.contagem .chip-off { background: #fff; border: 1px solid var(--verm); border-radius: 999px; padding: 2px 10px; font-weight: 700; color: var(--verm); text-decoration: none; }

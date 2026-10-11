@@ -143,3 +143,31 @@ async def test_rows_before_seller_filter_stay_out_of_the_series(
         ev = (await session.execute(select(OfferEvaluation))).scalar_one()
     assert ev.price_cents == 30000
     assert ev.real_discount_bp is None  # a linha de R$ 100 não virou referência
+
+
+async def test_listing_discount_goes_to_the_product_with_the_post_guards(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    async def evaluate_with_original(original: int) -> int | None:
+        async with sessions() as session, session.begin():
+            last = (
+                await session.execute(
+                    select(PriceObservation).order_by(PriceObservation.observed_at.desc()).limit(1)
+                )
+            ).scalar_one()
+            last.official_original_cents = original
+            product = await session.get(CatalogProduct, product_id)
+            assert product is not None
+            product.needs_evaluation = True
+        await Evaluator(sessions).evaluate_due()
+        async with sessions() as session:
+            product = await session.get(CatalogProduct, product_id)
+            assert product is not None
+            return product.listing_discount_pct
+
+    # A loja oficial no mesmo preço é a recomendação (R$ 300 hoje, referência de R$ 450):
+    # o "de" que vale é o dela.
+    product_id = await seed(sessions, history=[(30, 45000, 45000), (0.0035, 30000, 30000)])
+    assert await evaluate_with_original(60000) == 50
+    # "de" acima de 1,5 x a referência medida é âncora inflada: sem selo.
+    assert await evaluate_with_original(70000) is None

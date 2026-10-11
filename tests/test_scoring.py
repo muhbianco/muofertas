@@ -169,3 +169,18 @@ def test_official_store_within_two_percent_is_preferred() -> None:
     s = replace(snap(10000, official=10300), eligible_official=False)
     ev = evaluate(base(snapshot=s, stats=stats(None)))
     assert ev.price_cents == 10000 and ev.offer_kind == "elegivel" and not ev.used_official
+
+
+def test_evaluation_carries_the_strikethrough_price_of_the_chosen_offer() -> None:
+    s = replace(
+        snap(10000, official=10150),
+        eligible_official=False,
+        eligible_original_cents=19990,
+        official_original_cents=15990,
+    )
+    # A loja oficial a até 2% vira a recomendação: o "de" é o dela, não o do elegível.
+    ev = evaluate(base(snapshot=s, stats=stats(None)))
+    assert (ev.offer_kind, ev.offer_original_cents) == ("oficial", 15990)
+    assert ev.as_snapshot()["offer_original_cents"] == 15990
+    s = replace(s, min_official_price_cents=10300, official_original_cents=None)
+    assert evaluate(base(snapshot=s, stats=stats(None))).offer_original_cents == 19990

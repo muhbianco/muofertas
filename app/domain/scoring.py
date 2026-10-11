@@ -74,6 +74,9 @@ class Evaluation:
     offer_kind: str | None = None
     offer_item_id: str | None = None
     offer_seller_id: int | None = None
+    # O "de" do próprio anúncio dessa oferta (preço riscado), quando a página mostra. Não entra
+    # na nota: serve ao selo "% OFF no anúncio" da fila, com as travas do post.
+    offer_original_cents: int | None = None
 
     def as_snapshot(self) -> dict[str, Any]:
         data = asdict(self)
@@ -113,6 +116,15 @@ def kind_price(snap: CatalogSnapshot, kind: str) -> tuple[int | None, str | None
     return snap.eligible_min_price_cents, snap.eligible_item_id, snap.eligible_seller_id
 
 
+def kind_original(snap: CatalogSnapshot, kind: str) -> int | None:
+    """O "de" (preço riscado) da oferta da régua."""
+    if kind == "oficial":
+        return snap.official_original_cents
+    if kind == "confiavel":
+        return snap.trusted_original_cents
+    return snap.eligible_original_cents
+
+
 # Até 2% acima do melhor preço da régua, a loja oficial é preferida.
 OFFICIAL_TOLERANCE = 1.02
 
@@ -145,6 +157,7 @@ def evaluate(inp: ScoringInput) -> Evaluation:
     offer_kind: str | None = None
     offer_item: str | None = None
     offer_seller: int | None = None
+    offer_original: int | None = None
     if snap is not None:
         price, offer_item, offer_seller = kind_price(snap, kind)
         if price is None:
@@ -160,6 +173,7 @@ def evaluate(inp: ScoringInput) -> Evaluation:
                 price, offer_item, offer_seller = kind_price(snap, kind)
                 assert price is not None
             offer_kind = kind
+            offer_original = kind_original(snap, kind)
             used_official = {
                 "oficial": True,
                 "confiavel": snap.trusted_official,
@@ -190,6 +204,7 @@ def evaluate(inp: ScoringInput) -> Evaluation:
             offer_kind=offer_kind,
             offer_item_id=offer_item,
             offer_seller_id=offer_seller,
+            offer_original_cents=offer_original,
         )
     assert price is not None and snap is not None
 
@@ -280,4 +295,5 @@ def evaluate(inp: ScoringInput) -> Evaluation:
         offer_kind=offer_kind,
         offer_item_id=offer_item,
         offer_seller_id=offer_seller,
+        offer_original_cents=offer_original,
     )

@@ -30,6 +30,9 @@ from app.models import (
 TIER_ORDER = ["excepcional", "excelente", "boa", "suspeita", "regular", "bloqueada"]
 QUEUE_DEFAULT_TIERS = ["excepcional", "excelente", "boa", "suspeita"]
 QUEUE_LIMIT = 50
+# Filtro "com % OFF no anúncio": todos os níveis menos bloqueada.
+DISCOUNT_FILTER = "off"
+DISCOUNT_TIERS = [t for t in TIER_ORDER if t != "bloqueada"]
 
 
 def product_url(product: CatalogProduct) -> str:
@@ -106,6 +109,9 @@ class Card:
     offer_url: str | None = None
     seller: SellerView | None = None
     read_at: datetime | None = None
+    # % OFF do próprio anúncio (preço riscado da página), com as travas do post.
+    listing_pct: int | None = None
+    listing_original_cents: int | None = None
 
 
 def reasons(snapshot: dict[str, Any]) -> list[str]:
@@ -142,7 +148,22 @@ async def tier_counts(db: AsyncSession, niche_id: int | None) -> dict[str, int]:
     return {tier or "sem nota": count for tier, count in rows}
 
 
-async def queue(db: AsyncSession, tiers: list[str], niche_id: int | None) -> list[Card]:
+async def discount_count(db: AsyncSession, niche_id: int | None) -> int:
+    """Produtos com % OFF no anúncio fora dos bloqueados (o chip do filtro)."""
+    q = select(func.count()).where(
+        CatalogProduct.active.is_(True),
+        CatalogProduct.operator_blocked.is_(False),
+        CatalogProduct.listing_discount_pct.is_not(None),
+        CatalogProduct.last_tier.in_(DISCOUNT_TIERS),
+    )
+    if niche_id is not None:
+        q = q.where(CatalogProduct.niche_id == niche_id)
+    return int((await db.execute(q)).scalar_one())
+
+
+async def queue(
+    db: AsyncSession, tiers: list[str], niche_id: int | None, *, only_discount: bool = False
+) -> list[Card]:
     since_change = func.coalesce(CatalogProduct.last_changed_at, CatalogProduct.first_seen_at)
     rank = case({t: i for i, t in enumerate(TIER_ORDER)}, value=CatalogProduct.last_tier, else_=99)
     q = (
@@ -168,9 +189,17 @@ async def queue(db: AsyncSession, tiers: list[str], niche_id: int | None) -> lis
     )
     if niche_id is not None:
         q = q.where(CatalogProduct.niche_id == niche_id)
-    rows = (
-        await db.execute(q.order_by(rank, CatalogProduct.last_score.desc()).limit(QUEUE_LIMIT))
-    ).all()
+    if only_discount:
+        q = q.where(CatalogProduct.listing_discount_pct.is_not(None))
+    # % OFF no anúncio primeiro (maior antes): enquanto não há histórico para comprovar desconto,
+    # é o melhor sinal de promoção que a fila tem. Depois o nível e a nota.
+    order = (
+        CatalogProduct.listing_discount_pct.is_(None),
+        CatalogProduct.listing_discount_pct.desc(),
+        rank,
+        CatalogProduct.last_score.desc(),
+    )
+    rows = (await db.execute(q.order_by(*order).limit(QUEUE_LIMIT))).all()
     ids = [p.id for p, _ in rows]
     latest = await _latest_evaluations(db, ids)
     snaps = {pid: json.loads(ev.snapshot) for pid, ev in latest.items()}
@@ -199,6 +228,10 @@ async def queue(db: AsyncSession, tiers: list[str], niche_id: int | None) -> lis
                 offer_url=offer_url(product, snap.get("offer_item_id")),
                 seller=sellers.get(seller_id) if seller_id is not None else None,
                 read_at=product.last_checked_at,
+                listing_pct=product.listing_discount_pct,
+                listing_original_cents=snap.get("offer_original_cents")
+                if product.listing_discount_pct is not None
+                else None,
             )
         )
     return cards

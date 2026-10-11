@@ -260,3 +260,64 @@ async def test_card_shows_where_the_price_comes_from(
     detail = await client.get(f"/produto/{product_id}")
     assert detail.status_code == 200 and "LOJA_BOA" in detail.text
     assert "6/12 elegíveis" in detail.text
+
+
+async def test_queue_puts_listing_discount_first_and_filters_by_it(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    secret = await seed_admin(sessions)
+    plain_id = await seed_product(sessions)  # "boa", sem preço riscado
+    now = utcnow()
+
+    async def add(external_id: str, name: str, tier: str, pct: int, original: int) -> None:
+        async with sessions() as session, session.begin():
+            plain = await session.get(CatalogProduct, plain_id)
+            assert plain is not None
+            product = CatalogProduct(
+                marketplace="mercadolivre",
+                external_id=external_id,
+                niche_id=plain.niche_id,
+                name=name,
+                discovered_via="highlights",
+                active=True,
+                tier="warm",
+                next_check_at=now,
+                consecutive_failures=0,
+                first_seen_at=now,
+                last_tier=tier,
+                last_score=40.0,
+                listing_discount_pct=pct,
+            )
+            session.add(product)
+            await session.flush()
+            session.add(
+                OfferEvaluation(
+                    product_id=product.id,
+                    evaluated_at=now,
+                    trigger="price_change",
+                    ruleset="v2",
+                    tier=tier,
+                    score=40.0,
+                    price_cents=4490,
+                    used_official=True,
+                    real_discount_bp=None,
+                    reference_cents=None,
+                    snapshot=json.dumps(
+                        {"offer_kind": "oficial", "offer_original_cents": original}
+                    ),
+                )
+            )
+
+    await add("MLBP2", "Cebolinha 50 mL", "regular", 53, 9490)
+    await add("MLBP3", "Maleta 18 pol", "boa", 20, 5690)
+    assert (await login(client, secret)).status_code == 303
+
+    page = (await client.get("/")).text  # padrão: excepcional a suspeita
+    assert page.index("Maleta 18 pol") < page.index("Parafusadeira X")
+    assert "Cebolinha" not in page
+    assert "com % OFF: 2" in page
+
+    only = (await client.get("/?nivel=off")).text  # todos os níveis, só com % OFF
+    assert only.index("Cebolinha 50 mL") < only.index("Maleta 18 pol")
+    assert "Parafusadeira X" not in only
+    assert "53% OFF no anúncio" in only and '<s class="de">R$ 94,90</s>' in only

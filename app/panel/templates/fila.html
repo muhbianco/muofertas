@@ -11,6 +11,7 @@
   </select>
   <select name="nivel" aria-label="Nível">
     <option value="">Excepcional a suspeita</option>
+    <option value="off" {% if nivel == 'off' %}selected{% endif %}>com % OFF no anúncio</option>
     {% for t in tier_order %}<option value="{{ t }}" {% if t == nivel %}selected{% endif %}>{{ t }}</option>{% endfor %}
   </select>
   <button type="submit">Filtrar</button>
@@ -18,6 +19,7 @@
 <div class="contagem">
   {% for t in tier_order %}{% if counts.get(t) %}<span>{{ t }}: {{ counts[t] }}</span>{% endif %}{% endfor %}
   {% if counts.get('sem nota') %}<span>sem nota: {{ counts['sem nota'] }}</span>{% endif %}
+  {% if discount_count %}<a class="chip-off" href="/?nivel=off{% if nicho %}&amp;nicho={{ nicho }}{% endif %}">com % OFF: {{ discount_count }}</a>{% endif %}
 </div>
 
 <p class="nota-pix">Preço do anúncio. O desconto no Pix que a página do ML às vezes mostra não vem pela API.</p>
@@ -30,10 +32,10 @@
 <article class="card">
   {% if c.image_url %}<img src="{{ c.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<div class="sem-foto"></div>{% endif %}
   <div>
-    <div><span class="selo {{ c.tier }}">{{ c.tier }}</span>{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
+    <div><span class="selo {{ c.tier }}">{{ c.tier }}</span>{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
     <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
     <div class="linha">{{ c.niche }}</div>
-    <div class="preco">{{ c.price_cents | brl }}</div>
+    <div class="preco">{% if c.listing_original_cents %}<s class="de">{{ c.listing_original_cents | brl }}</s> {% endif %}{{ c.price_cents | brl }}</div>
     {% if c.offer_kind %}<div class="oferta">
       {% if c.used_official %}loja oficial{% elif c.seller %}{{ c.seller.nickname or 'vendedor' }} · reputação {{ c.seller.reputation }}{% if c.seller.power %} · {{ c.seller.power }}{% endif %} · {{ c.seller.sales }} vendas{% else %}{{ c.offer_kind }}{% endif %}
       · <a href="{{ c.offer_url }}" target="_blank" rel="noopener noreferrer">ver esta oferta</a>

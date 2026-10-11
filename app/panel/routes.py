@@ -160,9 +160,14 @@ async def queue_page(
 ) -> Response:
     niches = await queries.niches(db)
     niche = next((n for n in niches if n.slug == nicho), None)
-    tiers = [nivel] if nivel in queries.TIER_ORDER else queries.QUEUE_DEFAULT_TIERS
-    cards = await queries.queue(db, tiers, niche.id if niche else None)
-    counts = await queries.tier_counts(db, niche.id if niche else None)
+    only_discount = nivel == queries.DISCOUNT_FILTER
+    if only_discount:
+        tiers = queries.DISCOUNT_TIERS
+    else:
+        tiers = [nivel] if nivel in queries.TIER_ORDER else queries.QUEUE_DEFAULT_TIERS
+    niche_id = niche.id if niche else None
+    cards = await queries.queue(db, tiers, niche_id, only_discount=only_discount)
+    counts = await queries.tier_counts(db, niche_id)
     return templates.TemplateResponse(
         request,
         "fila.html",
@@ -172,7 +177,8 @@ async def queue_page(
             "counts": counts,
             "niches": niches,
             "nicho": niche.slug if niche else None,
-            "nivel": nivel if nivel in queries.TIER_ORDER else None,
+            "nivel": nivel if nivel in queries.TIER_ORDER or only_discount else None,
+            "discount_count": await queries.discount_count(db, niche_id),
             "tier_order": queries.TIER_ORDER,
             "notice": NOTICES.get(aviso or ""),
             "open_alerts": await queries.open_alerts(db),

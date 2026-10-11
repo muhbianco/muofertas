@@ -431,7 +431,10 @@ class Collector:
                     current.next_check_at = now + _jitter(self._policy.cold)
                     continue
                 changed = outcome.differs_from(prev)
-                heartbeat = needs_heartbeat(
+                # Só o "de" mudou: linha nova e reavaliação para o selo, sem contar como mudança
+                # de preço (que devolveria à fila o que o operador já resolveu).
+                new_original = not changed and outcome.originals_differ_from(prev)
+                heartbeat = new_original or needs_heartbeat(
                     current.last_observation_at,
                     now,
                     timedelta(hours=self._settings.heartbeat_hours),
@@ -445,6 +448,8 @@ class Collector:
                     current.last_changed_at = now
                     current.needs_evaluation = True
                     stats.changed += 1
+                elif new_original:
+                    current.needs_evaluation = True
                 tier = next_tier(
                     Tier(current.tier),
                     previous=prev,
@@ -507,6 +512,10 @@ def _snapshot(row: PriceObservation) -> CatalogSnapshot:
         trusted_official=row.trusted_official,
         official_item_id=row.official_item_id,
         official_seller_id=row.official_seller_id,
+        eligible_original_cents=row.eligible_original_cents,
+        trusted_original_cents=row.trusted_original_cents,
+        official_original_cents=row.official_original_cents,
+        originals_known=row.originals_known,
     )
 
 
@@ -539,4 +548,8 @@ def _observation(
         trusted_official=snap.trusted_official,
         official_item_id=snap.official_item_id,
         official_seller_id=snap.official_seller_id,
+        eligible_original_cents=snap.eligible_original_cents,
+        trusted_original_cents=snap.trusted_original_cents,
+        official_original_cents=snap.official_original_cents,
+        originals_known=True,
     )
