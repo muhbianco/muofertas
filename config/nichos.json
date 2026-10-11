@@ -1,5 +1,5 @@
 {
-  "_comentario": "Nichos e categorias do ML que alimentam o coletor (descoberta pelos mais vendidos). Os 3 primeiros viram grupos; 'observacao' só coleta para comparação (modo sombra). Fonte: docs/fase0/nichos/README.md (varredura de 10/10/2026). Aplicar: python -m app.cli seed-niches config/nichos.json",
+  "_comentario": "Nichos e categorias do ML que alimentam o coletor (descoberta pelos mais vendidos). Cada nicho com grupo vira um grupo no WhatsApp; 'observacao' só coleta para comparação (modo sombra). Fontes: docs/fase0/nichos/README.md (varredura de 10/10/2026) e docs/fase0/nichos/2026-10-11-novos-nichos.md (top 20 de cada categoria nova). Aplicar: python -m app.cli seed-niches config/nichos.json (categoria que muda de nicho leva os produtos junto).",
   "_regras": "comissao_bp: comissão direta do afiliado ML em pontos-base (ajuda 27913: 1600 = beleza/calçados/esportes, 1200 = ferramentas/casa/brinquedos/games, 500 = celulares/eletrônicos). exigir_loja_oficial: só preço de loja oficial entra na nota. marcas_alto_risco: marca falsificada com frequência; exige loja oficial mesmo no nicho que não exige.",
   "nichos": [
     {
@@ -11,7 +11,9 @@
         "Makita",
         "DeWalt",
         "Bosch",
-        "Milwaukee"
+        "Milwaukee",
+        "Stihl",
+        "Husqvarna"
       ],
       "categorias": [
         {
@@ -37,6 +39,26 @@
         {
           "id": "MLB2527",
           "nome": "Ferramentas Manuais"
+        },
+        {
+          "id": "MLB269932",
+          "nome": "Jardim: Ferramentas para Jardim"
+        },
+        {
+          "id": "MLB445854",
+          "nome": "Jardim: Roçadeiras e Aparadores"
+        },
+        {
+          "id": "MLB269940",
+          "nome": "Jardim: Cortadores de Grama"
+        },
+        {
+          "id": "MLB209017",
+          "nome": "Jardim: Pulverizadores Manuais"
+        },
+        {
+          "id": "MLB411908",
+          "nome": "Jardim: Utensílios para Jardinagem"
         }
       ]
     },
@@ -99,26 +121,113 @@
       ]
     },
     {
+      "slug": "tecnologia",
+      "nome": "Tecnologia: celulares, games e PC",
+      "comissao_bp": 500,
+      "exigir_loja_oficial": true,
+      "marcas_alto_risco": [],
+      "categorias": [
+        {
+          "id": "MLB1051",
+          "nome": "Celulares e Telefones"
+        },
+        {
+          "id": "MLB1055",
+          "nome": "Celulares e Smartphones"
+        },
+        {
+          "id": "MLB196208",
+          "nome": "Fones de Ouvido"
+        },
+        {
+          "id": "MLB1664",
+          "nome": "Headsets (PC Gaming)"
+        },
+        {
+          "id": "MLB1144",
+          "nome": "Games"
+        },
+        {
+          "id": "MLB11172",
+          "nome": "Consoles (PS5, Xbox, portáteis)"
+        },
+        {
+          "id": "MLB1694",
+          "nome": "Memórias RAM"
+        },
+        {
+          "id": "MLB1658",
+          "nome": "Placas de Vídeo"
+        },
+        {
+          "id": "MLB1692",
+          "nome": "Placas-Mãe"
+        }
+      ]
+    },
+    {
+      "slug": "casa-mimos",
+      "nome": "Casa e mimos: cama, mesa e banho",
+      "comissao_bp": 1200,
+      "exigir_loja_oficial": false,
+      "marcas_alto_risco": [
+        "Stanley",
+        "Le Creuset",
+        "Zwilling",
+        "Contigo"
+      ],
+      "categorias": [
+        {
+          "id": "MLB1618",
+          "nome": "Cozinha"
+        },
+        {
+          "id": "MLB436280",
+          "nome": "Cozinha: Panelas e Cozimento"
+        },
+        {
+          "id": "MLB436289",
+          "nome": "Mesa: Louça e Artigos para Servir"
+        },
+        {
+          "id": "MLB436298",
+          "nome": "Cozinha: Potes e Organização"
+        },
+        {
+          "id": "MLB438287",
+          "nome": "Eletroportáteis de Cozinha"
+        },
+        {
+          "id": "MLB438286",
+          "nome": "Eletroportáteis para a Casa"
+        },
+        {
+          "id": "MLB436258",
+          "nome": "Cama: Roupa de Cama"
+        },
+        {
+          "id": "MLB1611",
+          "nome": "Cama: Travesseiros"
+        },
+        {
+          "id": "MLB438978",
+          "nome": "Banho: Toalhas e Roupões"
+        },
+        {
+          "id": "MLB264051",
+          "nome": "Cuidado da Casa e Lavanderia"
+        }
+      ]
+    },
+    {
       "slug": "observacao",
       "nome": "Observação (sem grupo, para comparar)",
       "comissao_bp": 1200,
       "exigir_loja_oficial": false,
       "marcas_alto_risco": [
-        "Apple",
-        "Samsung",
-        "Sony",
-        "Nintendo",
         "LEGO"
       ],
       "categorias": [
-        {
-          "id": "MLB1618",
-          "nome": "Casa: Cozinha"
-        },
-        {
-          "id": "MLB264051",
-          "nome": "Casa: Cuidado da Casa e Lavanderia"
-        },
         {
           "id": "MLB455425",
           "nome": "Brinquedos de Montar"
@@ -126,14 +235,6 @@
         {
           "id": "MLB6911",
           "nome": "Brinquedos: Ar Livre e Playground"
-        },
-        {
-          "id": "MLB1144",
-          "nome": "Games"
-        },
-        {
-          "id": "MLB1051",
-          "nome": "Celulares e Telefones"
         }
       ]
     }

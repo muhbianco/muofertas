@@ -10,10 +10,11 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from collections import defaultdict
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select, update
 
 from app.collector.service import MARKETPLACE, Collector
 from app.core.clock import utcnow
@@ -23,10 +24,15 @@ from app.core.logging import configure_logging
 from app.integrations.mercadolivre import MercadoLivreClient
 from app.models import CatalogProduct, Niche, NicheCategory, PriceObservation
 
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-async def seed_niches(data: dict[str, Any]) -> None:
+
+async def seed_niches(
+    data: dict[str, Any], sessions: async_sessionmaker[AsyncSession] = SessionFactory
+) -> None:
     now = utcnow()
-    async with SessionFactory() as session, session.begin():
+    async with sessions() as session, session.begin():
         for item in data["nichos"]:
             niche = (
                 await session.execute(select(Niche).where(Niche.slug == item["slug"]))
@@ -78,6 +84,49 @@ async def seed_niches(data: dict[str, Any]) -> None:
                 if ext_id not in wanted:
                     category.active = False
             print(f"{item['slug']}: {len(wanted)} categorias")
+        await session.flush()
+        moved = await _follow_moved_categories(session)
+        print(f"produtos que mudaram de nicho junto com a categoria: {moved}")
+
+
+async def _follow_moved_categories(session: AsyncSession) -> int:
+    """Categoria que trocou de nicho leva os produtos dela, que voltam para a fila de avaliação.
+
+    Só quando a categoria está ativa em exatamente um nicho (sem ambiguidade). O produto guarda a
+    categoria pela qual foi descoberto, então a troca nunca pega produto de outra categoria.
+    """
+    owners: dict[str, set[int]] = defaultdict(set)
+    rows = await session.execute(
+        select(NicheCategory.external_category_id, NicheCategory.niche_id).where(
+            NicheCategory.active.is_(True), NicheCategory.marketplace == MARKETPLACE
+        )
+    )
+    for category_id, niche_id in rows.tuples():
+        owners[category_id].add(niche_id)
+    moved = 0
+    for category_id, niche_ids in owners.items():
+        if len(niche_ids) != 1:
+            continue
+        (target,) = niche_ids
+        ids = list(
+            (
+                await session.execute(
+                    select(CatalogProduct.id).where(
+                        CatalogProduct.marketplace == MARKETPLACE,
+                        CatalogProduct.category_id == category_id,
+                        or_(CatalogProduct.niche_id.is_(None), CatalogProduct.niche_id != target),
+                    )
+                )
+            ).scalars()
+        )
+        if ids:
+            await session.execute(
+                update(CatalogProduct)
+                .where(CatalogProduct.id.in_(ids))
+                .values(niche_id=target, needs_evaluation=True)
+            )
+        moved += len(ids)
+    return moved
 
 
 async def run_once() -> None:

@@ -4,7 +4,9 @@ Rodar: python -m app.worker
 
 - O lease (`worker_lease`) garante um líder só, inclusive durante deploy (stop-first na stack).
   Expira sozinho: se o processo morrer, outro assume depois de `worker_lease_seconds`.
-- 429 do ML ou teto por hora: o ciclo para e dorme; nada de insistir.
+- 429 do ML ou teto por hora: só o que chama o ML (coleta e revalidação antes do envio) para.
+  A pausa começa curta e dobra a cada 429 seguido. O lease, os links e o laço seguem vivos, então
+  o alerta "worker parado" não dispara por causa de um 429.
 - SIGTERM/SIGINT: termina o lote atual, solta o lease e sai.
 """
 
@@ -13,6 +15,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import signal
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 import httpx
 
@@ -34,7 +38,71 @@ from app.integrations.ml_affiliate import AffiliatePortal
 from app.integrations.wuzapi import WuzapiClient
 
 logger = get_logger(__name__)
-RATE_LIMIT_PAUSE_SECONDS = 15 * 60
+RATE_LIMIT_FIRST_PAUSE_SECONDS = 120
+RATE_LIMIT_MAX_PAUSE_SECONDS = 15 * 60
+
+
+@dataclass
+class MlPause:
+    """Pausa de tudo o que chama a API do ML. O resto do ciclo (lease, links) não para."""
+
+    until: datetime | None = None
+    streak: int = 0
+
+    def active(self, now: datetime) -> bool:
+        return self.until is not None and now < self.until
+
+    def rate_limited(self, now: datetime) -> float:
+        """1º 429: 2 min; cada 429 seguido dobra, até 15 min."""
+        self.streak += 1
+        seconds = min(
+            RATE_LIMIT_FIRST_PAUSE_SECONDS * 2 ** (self.streak - 1), RATE_LIMIT_MAX_PAUSE_SECONDS
+        )
+        self.until = now + timedelta(seconds=seconds)
+        return float(seconds)
+
+    def budget_exhausted(self, now: datetime) -> float:
+        """Teto nosso por hora: volta 5 s depois da virada da hora."""
+        seconds = 3600 - (now.minute * 60 + now.second) + 5
+        self.until = now + timedelta(seconds=seconds)
+        return float(seconds)
+
+    def clear(self) -> None:
+        self.until = None
+        self.streak = 0
+
+
+async def _collect_round(
+    collector: Collector, client: MercadoLivreClient, ml_pause: MlPause
+) -> bool:
+    """Descoberta + um lote de preços. True quando o lote teve trabalho (pode haver mais)."""
+    try:
+        await collector.discover_due()
+        stats = await collector.refresh_due()
+    except RateLimitedError:
+        wait = ml_pause.rate_limited(utcnow())
+        logger.warning(
+            "ML respondeu 429; coleta e envio em pausa",
+            extra={"pause_s": wait, "seguidos": ml_pause.streak},
+        )
+        return False
+    except CallBudgetExceededError:
+        wait = ml_pause.budget_exhausted(utcnow())
+        logger.info("teto de chamadas da hora atingido", extra={"pause_s": wait})
+        return False
+    ml_pause.clear()
+    if stats.seen:
+        logger.info(
+            "lote atualizado",
+            extra={
+                "seen": stats.seen,
+                "changed": stats.changed,
+                "errors": stats.errors,
+                "calls": stats.calls,
+                "calls_this_hour": client.calls_this_hour,
+            },
+        )
+    return bool(stats.seen)
 
 
 async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
@@ -48,6 +116,7 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
     logger.info(
         "worker iniciado", extra={"holder": holder, "collector_enabled": cfg.collector_enabled}
     )
+    ml_pause = MlPause()
     try:
         while not stop.is_set():
             pause = cfg.worker_idle_seconds
@@ -56,40 +125,22 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                     pause = cfg.worker_lease_seconds / 2
                 else:
                     if cfg.collector_enabled:
-                        await collector.discover_due()
-                        stats = await collector.refresh_due()
-                        await evaluator.evaluate_due()
-                        if stats.seen:
-                            logger.info(
-                                "lote atualizado",
-                                extra={
-                                    "seen": stats.seen,
-                                    "changed": stats.changed,
-                                    "errors": stats.errors,
-                                    "calls": stats.calls,
-                                    "calls_this_hour": client.calls_this_hour,
-                                },
-                            )
+                        if not ml_pause.active(utcnow()) and await _collect_round(
+                            collector, client, ml_pause
+                        ):
                             pause = 0.5  # ainda pode haver lote vencido
+                        await evaluator.evaluate_due()  # só banco: roda mesmo com o ML em pausa
                     linked = await resolve_links(SessionFactory, portal, cfg, utcnow())
                     if linked:
                         logger.info("links de afiliado", extra={"linked": linked})
-                    if cfg.autosend_enabled:
+                    # O envio revalida o preço no ML: espera a pausa junto com a coleta.
+                    if cfg.autosend_enabled and not ml_pause.active(utcnow()):
                         # Só com o lease: um envio por vez, nunca dois workers no mesmo grupo.
                         sent = await send_due(
                             SessionFactory, client, wa_client, utcnow(), images=images
                         )
                         if sent:
                             logger.info("envio automático", extra={"sent": sent})
-            except RateLimitedError:
-                logger.warning(
-                    "ML respondeu 429; pausa longa", extra={"pause_s": RATE_LIMIT_PAUSE_SECONDS}
-                )
-                pause = RATE_LIMIT_PAUSE_SECONDS
-            except CallBudgetExceededError:
-                now = utcnow()
-                pause = 3600 - (now.minute * 60 + now.second) + 5
-                logger.info("teto de chamadas da hora atingido", extra={"pause_s": pause})
             except Exception:
                 logger.exception("erro no ciclo do worker")
                 pause = 30

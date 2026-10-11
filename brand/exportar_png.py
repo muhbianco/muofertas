@@ -55,6 +55,9 @@ TARGETS: dict[str, tuple[int, int, str, int, int]] = {
     "grupo-tenis-esporte-640.png": (640, 640, m.avatar_sport(), 640, 640),
     # O nicho virou Beleza (maquiagem, perfume, pele, cabelo): o rótulo segue o nome do grupo.
     "grupo-beleza-640.png": (640, 640, m.avatar(m.lipstick(), "BELEZA", text_length=180), 640, 640),
+    "grupo-tecnologia-640.png": (640, 640, m.avatar(m.gamepad(), "TECNOLOGIA", text_length=240), 640, 640),
+    "grupo-casa-mimos-640.png": (
+        640, 640, m.avatar(m.house_heart(), "CASA E MIMOS", font_size=30, text_length=260), 640, 640),
 }
 
 

@@ -58,7 +58,9 @@ class Settings(BaseSettings):
     collector_enabled: bool = True
     discovery_interval_minutes: int = 360
     tier_hot_minutes: int = 20
-    tier_warm_minutes: int = 180
+    # 180 → 90 em 11/10/2026: 25% dos produtos mudaram de preço em 16 h e a oferta relâmpago dura
+    # poucas horas. Com ~650 produtos dá ~450 chamadas/h, longe do teto abaixo.
+    tier_warm_minutes: int = 90
     tier_cold_minutes: int = 1440
     heartbeat_hours: int = 24
     # Vendedor comum só entra no preço com reputação amarela/verde e este mínimo de vendas.

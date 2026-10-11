@@ -146,6 +146,30 @@ def sneaker() -> str:
             f'<rect x="184" y="394" width="286" height="7" rx="3.5" fill="{EMERALD_DEEP}" opacity=".35"/>')
 
 
+def gamepad() -> str:
+    """Controle genérico (sem o desenho de PlayStation/Xbox): cruz, quatro botões e alças."""
+    body = ('M214,236 Q214,214 244,214 H396 Q426,214 426,236 L462,352 Q474,392 440,400 '
+            'Q414,406 396,380 L376,348 H264 L244,380 Q226,406 200,400 Q166,392 178,352 Z')
+    buttons = "".join(
+        f'<circle cx="{cx}" cy="{cy}" r="12" fill="{fill}"/>'
+        for cx, cy, fill in ((394, 254, GOLD), (420, 280, CREAM), (394, 306, CREAM), (368, 280, GOLD))
+    )
+    return (f'<path d="{body}" fill="{EMERALD_DEEP}"/>'
+            f'<rect x="226" y="270" width="68" height="20" rx="5" fill="{CREAM}"/>'
+            f'<rect x="250" y="246" width="20" height="68" rx="5" fill="{CREAM}"/>' + buttons
+            + f'<rect x="300" y="236" width="40" height="10" rx="5" fill="{EMERALD}"/>')
+
+
+def house_heart() -> str:
+    """Casa com um coração no lugar da porta: casa e mimo na mesma figura."""
+    heart = ('M320,422 C256,382 252,334 284,322 Q306,314 320,336 '
+             'Q334,314 356,322 C388,334 384,382 320,422 Z')
+    return (f'<rect x="392" y="166" width="34" height="70" rx="6" fill="{EMERALD_DEEP}"/>'
+            f'<path d="M320,138 L478,272 Q486,280 474,284 H444 V440 Q444,452 432,452 H208 '
+            f'Q196,452 196,440 V284 H166 Q154,280 162,272 Z" fill="{EMERALD_DEEP}"/>'
+            f'<path d="{heart}" fill="{GOLD}"/>')
+
+
 def avatar(glyph: str, label: str, font_size: int = 32, text_length: int = 264) -> str:
     return (f'<rect width="640" height="640" fill="{EMERALD}"/>'
             f'<circle cx="320" cy="300" r="214" fill="{CREAM}"/>' + glyph
@@ -178,9 +202,14 @@ FILES = {
     "avatar-maquiagem.svg": (640, 640, avatar(lipstick(), "MAQUIAGEM"), "MegaPromoOz Maquiagem, foto do grupo"),
     "avatar-tenis-esporte.svg": (640, 640, avatar_sport(), "MegaPromoOz Tênis e Esporte, foto do grupo"),
     "avatar-beleza.svg": (640, 640, avatar(lipstick(), "BELEZA", text_length=180), "MegaPromoOz Beleza, foto do grupo"),
+    "avatar-tecnologia.svg": (640, 640, avatar(gamepad(), "TECNOLOGIA", text_length=240),
+                              "MegaPromoOz Tecnologia, foto do grupo"),
+    "avatar-casa-mimos.svg": (640, 640, avatar(house_heart(), "CASA E MIMOS", font_size=30, text_length=260),
+                              "MegaPromoOz Casa e Mimos, foto do grupo"),
 }
 SMALL = ("1-etiqueta-icone.svg", "2-lupa-icone.svg", "3-selo-icone.svg", "avatar-ferramentas.svg",
-         "avatar-maquiagem.svg", "avatar-tenis-esporte.svg", "avatar-beleza.svg")
+         "avatar-maquiagem.svg", "avatar-tenis-esporte.svg", "avatar-beleza.svg", "avatar-tecnologia.svg",
+         "avatar-casa-mimos.svg")
 
 
 def data_uri(name: str) -> str:

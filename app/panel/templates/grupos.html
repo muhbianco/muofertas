@@ -18,7 +18,7 @@
     <label>Intervalo (min)<input name="min_interval_minutes" type="number" min="5" max="600" required value="{{ c.min_interval_minutes if c else 40 }}"></label>
   </div>
   <div class="duas">
-    <label>Das (h)<input name="window_start_hour" type="number" min="0" max="23" required value="{{ c.window_start_hour if c else 8 }}"></label>
+    <label>Das (h)<input name="window_start_hour" type="number" min="0" max="23" required value="{{ c.window_start_hour if c else 7 }}"></label>
     <label>Até (h)<input name="window_end_hour" type="number" min="1" max="24" required value="{{ c.window_end_hour if c else 22 }}"></label>
   </div>
   <label>Envio

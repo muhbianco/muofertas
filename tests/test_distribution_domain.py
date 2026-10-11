@@ -203,3 +203,21 @@ def test_message_with_coupon_price() -> None:
     check_coupon(5175, 5375)
     with pytest.raises(PixError, match="com cupom"):
         check_coupon(5375, 5375)
+
+
+def test_message_header_of_the_new_niches() -> None:
+    def header(slug: str, name: str) -> str:
+        return render_message(
+            niche_slug=slug,
+            niche_name=name,
+            product_name="Produto",
+            price_cents=10000,
+            checked_at=NOW,
+            official=True,
+            url="https://meli.la/x",
+        ).split("\n")[0]
+
+    assert header("tecnologia", "Tecnologia: celulares, games e PC") == "#publi · 💻 *TECNOLOGIA*"
+    assert header("casa-mimos", "Casa e mimos: cama, mesa e banho") == (
+        "#publi · 🏠 *CASA E MIMOS*"
+    )

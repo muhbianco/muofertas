@@ -322,7 +322,7 @@ class Channel(Base):
     invite_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
     max_per_day: Mapped[int] = mapped_column(Integer, default=10)
     min_interval_minutes: Mapped[int] = mapped_column(Integer, default=40)
-    window_start_hour: Mapped[int] = mapped_column(Integer, default=8)
+    window_start_hour: Mapped[int] = mapped_column(Integer, default=7)
     window_end_hour: Mapped[int] = mapped_column(Integer, default=22)
     paused: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())

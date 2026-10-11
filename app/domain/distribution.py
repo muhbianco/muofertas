@@ -35,7 +35,13 @@ ML_TAG_RE = re.compile(r"^[a-z0-9]{1,30}$")
 INVITE_PREFIX = "https://chat.whatsapp.com/"
 # Saída do "Gerador de produtos recomendados" do ML: curto oficial em meli.la ou /sec/.
 AFFILIATE_HOSTS = frozenset({"meli.la", "mercadolivre.com", "www.mercadolivre.com"})
-NICHE_EMOJI = {"ferramentas": "🔧", "beleza": "💄", "tenis-esporte": "👟"}
+NICHE_EMOJI = {
+    "ferramentas": "🔧",
+    "beleza": "💄",
+    "tenis-esporte": "👟",
+    "tecnologia": "💻",
+    "casa-mimos": "🏠",
+}
 MAX_NAME = 90
 PIX_MAX_DISCOUNT = 0.30
 # O Pix é visto pelo operador na aprovação; depois disso a mensagem sai sem ele.
