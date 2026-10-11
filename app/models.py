@@ -469,16 +469,16 @@ class AdminInvite(Base):
 
 
 class ChannelInvite(Base):
-    """Convite diário de compartilhamento do grupo (0014): uma linha por grupo por dia.
+    """Convite de compartilhamento do grupo (0014): uma linha por grupo, dia e horário (0016).
 
-    O índice único é a trava do "no máximo um por dia". Estados: `sending` (gravado antes de
+    O índice único é a trava do "no máximo um por horário". Estados: `sending` (gravado antes de
     chamar a WuzAPI), `sent`, `unknown` (a WuzAPI não confirmou: não reenvia), `failed` (recusado)
     e `skipped` (o operador pulou o dia).
     """
 
     __tablename__ = "channel_invite"
     __table_args__ = (
-        UniqueConstraint("channel_id", "local_date", name="uq_channel_invite_day"),
+        UniqueConstraint("channel_id", "local_date", "slot", name="uq_channel_invite_slot"),
         Index("ix_channel_invite_state", "state", "created_at"),
     )
 
@@ -487,6 +487,8 @@ class ChannelInvite(Base):
     )
     channel_id: Mapped[int] = mapped_column(ForeignKey("channel.id", ondelete="CASCADE"))
     local_date: Mapped[date] = mapped_column(Date)
+    # 0016: manha (primeiro horário de envio do grupo) | noite (pico, INVITE_HOUR).
+    slot: Mapped[str] = mapped_column(String(10), default="noite", server_default="noite")
     kind: Mapped[str] = mapped_column(String(12))
     event_slug: Mapped[str | None] = mapped_column(String(60), nullable=True)
     message: Mapped[str] = mapped_column(Text)

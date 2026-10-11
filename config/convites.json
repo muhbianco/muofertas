@@ -1,5 +1,5 @@
 {
-  "_comentario": "Convite diário de compartilhamento: 1 por grupo por dia, no horário de pico (INVITE_HOUR, padrão 19h de Brasília). O texto vem do evento comercial do nicho naquele dia (fases: periodo, vespera, auge, reta_final); sem evento, um convite geral do nicho, alternando as variações. Placeholders: {evento}, {tema}, {link}. Todo texto precisa de {link}. 'nichos': ['*'] vale para todos. 'congela_referencia': o preço de referência da nota para de andar 21 dias antes do auge (desconto da Black Friday contra o preço de antes do esquenta).",
+  "_comentario": "Convite diário de compartilhamento: 1 por grupo por dia, no horário de pico (INVITE_HOUR, padrão 19h de Brasília). O texto vem do evento comercial do nicho naquele dia (fases: periodo, vespera, auge, reta_final); sem evento, um convite geral do nicho, alternando as variações. Placeholders: {evento}, {tema}, {link}. Todo texto precisa de {link}. 'nichos': ['*'] vale para todos. 'congela_referencia': o preço de referência da nota para de andar 21 dias antes do auge (desconto da Black Friday contra o preço de antes do esquenta). Junto vai a indicação de outro grupo da MegaPromoOz, sorteado por grupo e por dia (preferência para o grupo em evento): 'cruzados' e, se o indicado está em evento, 'cruzados_evento'. Placeholders da indicação: {tema_outro}, {evento_outro}, {link_outro} (obrigatório).",
   "temas": {
     "ferramentas": "ferramentas e jardinagem",
     "beleza": "beleza e autocuidado",
@@ -14,6 +14,15 @@
     "💬 Encaminha esse convite pra família e pros amigos: ofertas de {tema} todo dia, sem enrolação.\n{link}",
     "⭐ *Bora economizar junto?* Chama quem também gosta de pagar menos em {tema}:\n{link}"
   ],
+  "cruzados": [
+    "✨ *Conheça outras promoções de {tema_outro}!* Participe do grupo pra não perder nada:\n{link_outro}",
+    "👀 *Conheça também nosso grupo de {tema_outro}!* Ofertas com preço conferido, todo dia. Entra lá:\n{link_outro}",
+    "🛍️ A MegaPromoOz também tem grupo de *{tema_outro}*. Participe e não perca nenhuma oferta:\n{link_outro}"
+  ],
+  "cruzados_evento": [
+    "🎯 *Especial {evento_outro}:* as ofertas de {tema_outro} estão no nosso outro grupo. Participe pra não perder nada:\n{link_outro}",
+    "🎁 *Clima de {evento_outro}!* Conheça nosso grupo de {tema_outro} e garanta as ofertas da data:\n{link_outro}"
+  ],
   "fases_padrao": {
     "periodo": "📅 *{evento} chegando!* As ofertas de {tema} com preço conferido aparecem por aqui. Chama quem também quer economizar:\n{link}",
     "vespera": "⏰ *Amanhã é {evento}!* Fique por dentro: vem oferta de {tema} por aqui. Compartilha o grupo pra ninguém perder nada:\n{link}",
@@ -27,7 +36,11 @@
       "inicio": "2026-10-05",
       "auge": "2026-10-12",
       "fim": "2026-10-12",
-      "nichos": ["pais-maes-filhos", "tecnologia", "tenis-esporte"],
+      "nichos": [
+        "pais-maes-filhos",
+        "tecnologia",
+        "tenis-esporte"
+      ],
       "textos": {
         "periodo": "🎈 *Dia das Crianças chegando!* As ofertas de {tema} pra presentear aparecem por aqui. Chama a família pro grupo:\n{link}",
         "vespera": "🎈 *Amanhã é Dia das Crianças!* Fique por dentro: vamos caçar as melhores ofertas de {tema} pra presentear. Compartilha o grupo pra ninguém perder nada:\n{link}",
@@ -40,7 +53,9 @@
       "inicio": "2026-11-01",
       "auge": "2026-11-27",
       "fim": "2026-11-30",
-      "nichos": ["*"],
+      "nichos": [
+        "*"
+      ],
       "congela_referencia": true,
       "textos": {
         "periodo": "🖤 *A Black Friday está chegando!* A gente confere o preço de cada oferta antes de postar, pra ninguém cair em desconto de mentira. Chama quem vai comprar na BF:\n{link}",
@@ -55,7 +70,9 @@
       "inicio": "2026-12-01",
       "auge": "2026-12-18",
       "fim": "2026-12-24",
-      "nichos": ["*"],
+      "nichos": [
+        "*"
+      ],
       "textos": {
         "periodo": "🎄 *Natal chegando!* Bora adiantar os presentes com preço bom em {tema}. Chama a família pro grupo:\n{link}",
         "vespera": "🎄 *Reta final dos presentes de Natal começando!* Oferta de {tema} pra presentear todo dia por aqui. Manda o grupo pra quem ainda não comprou:\n{link}",
@@ -69,7 +86,10 @@
       "inicio": "2027-01-11",
       "auge": "2027-02-15",
       "fim": "2027-02-15",
-      "nichos": ["pais-maes-filhos", "tecnologia"],
+      "nichos": [
+        "pais-maes-filhos",
+        "tecnologia"
+      ],
       "textos": {
         "periodo": "📚 *Volta às aulas chegando!* Ofertas de {tema} pra começar o ano pagando menos. Chama os pais da turma pro grupo:\n{link}",
         "vespera": "📚 *Volta às aulas chegando!* Ofertas de {tema} pra começar o ano pagando menos. Chama os pais da turma pro grupo:\n{link}",
@@ -82,7 +102,9 @@
       "inicio": "2027-03-10",
       "auge": "2027-03-15",
       "fim": "2027-03-15",
-      "nichos": ["*"]
+      "nichos": [
+        "*"
+      ]
     },
     {
       "slug": "dia-das-maes-2027",
@@ -90,7 +112,12 @@
       "inicio": "2027-04-26",
       "auge": "2027-05-09",
       "fim": "2027-05-09",
-      "nichos": ["beleza", "casa-mimos", "tecnologia", "pais-maes-filhos"]
+      "nichos": [
+        "beleza",
+        "casa-mimos",
+        "tecnologia",
+        "pais-maes-filhos"
+      ]
     },
     {
       "slug": "dia-dos-namorados-2027",
@@ -98,7 +125,11 @@
       "inicio": "2027-06-01",
       "auge": "2027-06-12",
       "fim": "2027-06-12",
-      "nichos": ["beleza", "tecnologia", "tenis-esporte"]
+      "nichos": [
+        "beleza",
+        "tecnologia",
+        "tenis-esporte"
+      ]
     },
     {
       "slug": "dia-dos-pais-2027",
@@ -106,7 +137,11 @@
       "inicio": "2027-07-26",
       "auge": "2027-08-08",
       "fim": "2027-08-08",
-      "nichos": ["ferramentas", "tecnologia", "tenis-esporte"]
+      "nichos": [
+        "ferramentas",
+        "tecnologia",
+        "tenis-esporte"
+      ]
     },
     {
       "slug": "dia-das-criancas-2027",
@@ -114,7 +149,11 @@
       "inicio": "2027-10-04",
       "auge": "2027-10-12",
       "fim": "2027-10-12",
-      "nichos": ["pais-maes-filhos", "tecnologia", "tenis-esporte"]
+      "nichos": [
+        "pais-maes-filhos",
+        "tecnologia",
+        "tenis-esporte"
+      ]
     },
     {
       "slug": "black-friday-2027",
@@ -122,7 +161,9 @@
       "inicio": "2027-11-01",
       "auge": "2027-11-26",
       "fim": "2027-11-29",
-      "nichos": ["*"],
+      "nichos": [
+        "*"
+      ],
       "congela_referencia": true
     }
   ]

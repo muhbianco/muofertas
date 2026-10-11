@@ -232,3 +232,81 @@ async def test_agenda_shows_the_week_and_skips_a_day(
         assert (
             await session.execute(select(func.count()).select_from(ChannelInvite))
         ).scalar() == 0
+
+
+# --------------------------------------------------------------------------- indicação e manhã
+
+
+def test_partner_is_another_group_and_events_come_first() -> None:
+    from app.domain.invites import PartnerGroup, choose_partner
+
+    config = real_config()
+    partners = [
+        PartnerGroup(1, "ferramentas", "https://chat.whatsapp.com/F"),
+        PartnerGroup(2, "beleza", "https://chat.whatsapp.com/B"),
+        PartnerGroup(3, "pais-maes-filhos", "https://chat.whatsapp.com/P"),
+    ]
+    day = date(2026, 10, 11)  # véspera do Dia das Crianças: só Pais, mães e filhos está em evento
+    chosen = choose_partner(day, 1, partners, config, slot="manha")
+    assert chosen is not None and chosen.channel_id == 3
+    assert choose_partner(day, 1, partners, config, slot="manha") == chosen  # sorteio fixo
+    # Fora de evento, nunca indica o próprio grupo.
+    for d in range(1, 28):
+        pick = choose_partner(date(2027, 2, d), 2, partners, config, slot="noite")
+        assert pick is not None and pick.channel_id != 2
+    assert choose_partner(day, 1, partners[:1], config) is None  # só ele mesmo
+
+
+def test_invite_carries_the_other_group_and_morning_differs_from_night() -> None:
+    from app.domain.invites import PartnerGroup
+
+    config = real_config()
+    family = PartnerGroup(3, "pais-maes-filhos", "https://chat.whatsapp.com/P")
+    plan = plan_invite(
+        date(2026, 10, 11), "ferramentas", LINK, config, partner=family, slot="manha"
+    )
+    assert plan.partner_channel_id == 3
+    assert LINK in plan.message and plan.message.endswith("https://chat.whatsapp.com/P")
+    assert "bebês e crianças" in plan.message and "Dia das Crianças" in plan.message
+    day = date(2026, 10, 14)
+    morning = plan_invite(day, "ferramentas", LINK, config, slot="manha").message
+    night = plan_invite(day, "ferramentas", LINK, config, slot="noite").message
+    assert morning != night
+
+
+def test_cross_text_without_the_other_link_is_refused() -> None:
+    base = json.loads(Path("config/convites.json").read_text(encoding="utf-8"))
+    with pytest.raises(InviteConfigError, match="link_outro"):
+        parse_config({**base, "cruzados": ["conheça o grupo de {tema_outro}"]})
+
+
+async def test_morning_invite_goes_at_the_window_start_and_expires(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    ids = await seed_groups(sessions)
+    wa = FakeWuzapi()
+    early = datetime(2026, 10, 12, 9, 59, tzinfo=UTC)  # 06h59 em Brasília
+    assert await run(sessions, wa, early) == 0
+    seven = datetime(2026, 10, 12, 10, 1, tzinfo=UTC)  # 07h01: o primeiro horário do grupo
+    assert await run(sessions, wa, seven) == 2
+    assert await run(sessions, wa, seven) == 0
+    family = next(m for m in wa.sent if m["Phone"] == "12036300@g.us")
+    assert "Hoje é Dia das Crianças" in family["Body"]
+    assert "https://chat.whatsapp.com/G1" in family["Body"]  # indica o outro grupo
+    async with sessions() as session:
+        slots = (
+            await session.execute(
+                select(ChannelInvite.channel_id, ChannelInvite.slot).order_by(
+                    ChannelInvite.channel_id
+                )
+            )
+        ).all()
+    assert [tuple(s) for s in slots] == [
+        (ids["pais-maes-filhos"], "manha"),
+        (ids["ferramentas"], "manha"),
+    ]
+    # Perdido o horário da manhã (worker parado), não sai à tarde.
+    wa2 = FakeWuzapi()
+    async with sessions() as session, session.begin():
+        await session.execute(ChannelInvite.__table__.delete())
+    assert await run(sessions, wa2, datetime(2026, 10, 12, 15, 0, tzinfo=UTC)) == 0

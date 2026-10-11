@@ -636,7 +636,13 @@ async def invites_page(request: Request, db: Db, ctx: Admin) -> Response:
     groups: list[invites.AgendaGroup] = []
     try:
         config = await invites.invite_config(settings.invites_file)
-        groups = await invites.agenda(db, config, utcnow(), hour=settings.invite_hour)
+        groups = await invites.agenda(
+            db,
+            config,
+            utcnow(),
+            hour=settings.invite_hour,
+            morning=settings.invite_morning_enabled,
+        )
     except (OSError, ValueError, InviteConfigError) as exc:
         logger.warning("config de convites inválido", extra={"error": str(exc)[:200]})
         error = "O arquivo de convites está com erro: nenhum convite sai até corrigir."
@@ -668,13 +674,14 @@ async def skip_invite(
     ctx: Admin,
     channel_id: Annotated[int, Form()],
     day: Annotated[str, Form(max_length=10)],
+    slot: Annotated[str, Form(max_length=10)] = "noite",
     csrf: Annotated[str | None, Form()] = None,
 ) -> Response:
     check_csrf(ctx, csrf)
     if await invites.skip_day(
-        db, channel_id=channel_id, day=_day(day), actor=ctx.username, now=utcnow()
+        db, channel_id=channel_id, day=_day(day), slot=slot, actor=ctx.username, now=utcnow()
     ):
-        logger.info("convite pulado", extra={"channel_id": channel_id, "day": day})
+        logger.info("convite pulado", extra={"channel_id": channel_id, "day": day, "slot": slot})
     return _see_other("/convites")
 
 
@@ -684,10 +691,11 @@ async def undo_invite_skip(
     ctx: Admin,
     channel_id: Annotated[int, Form()],
     day: Annotated[str, Form(max_length=10)],
+    slot: Annotated[str, Form(max_length=10)] = "noite",
     csrf: Annotated[str | None, Form()] = None,
 ) -> Response:
     check_csrf(ctx, csrf)
-    await invites.undo_skip(db, channel_id=channel_id, day=_day(day), now=utcnow())
+    await invites.undo_skip(db, channel_id=channel_id, day=_day(day), slot=slot, now=utcnow())
     return _see_other("/convites")
 
 

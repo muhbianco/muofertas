@@ -150,6 +150,17 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                     linked = await resolve_links(SessionFactory, portal, cfg, utcnow())
                     if linked:
                         logger.info("links de afiliado", extra={"linked": linked})
+                    if cfg.invites_enabled and calendar is not None:
+                        # Antes das ofertas: o convite da manhã é a primeira mensagem do dia.
+                        # Não chama o ML, então sai mesmo com a coleta em pausa.
+                        await send_invites(
+                            SessionFactory,
+                            wa_client,
+                            calendar,
+                            utcnow(),
+                            hour=cfg.invite_hour,
+                            morning=cfg.invite_morning_enabled,
+                        )
                     # O envio revalida o preço no ML: espera a pausa junto com a coleta.
                     if cfg.autosend_enabled and not ml_pause.active(utcnow()):
                         # Só com o lease: um envio por vez, nunca dois workers no mesmo grupo.
@@ -158,11 +169,6 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                         )
                         if sent:
                             logger.info("envio automático", extra={"sent": sent})
-                    if cfg.invites_enabled and calendar is not None:
-                        # Convite não chama o ML: sai mesmo com a coleta em pausa.
-                        await send_invites(
-                            SessionFactory, wa_client, calendar, utcnow(), hour=cfg.invite_hour
-                        )
             except Exception:
                 logger.exception("erro no ciclo do worker")
                 pause = 30

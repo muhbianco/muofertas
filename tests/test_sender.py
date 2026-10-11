@@ -529,3 +529,29 @@ async def test_send_now_refuses_a_manual_group(sessions: async_sessionmaker[Asyn
     finally:
         await ml_client.aclose()
         await wa_client.aclose()
+
+
+async def test_offer_waits_a_few_minutes_after_an_invite(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    from app.models import ChannelInvite
+
+    pub_id = await approve(sessions)
+    async with sessions() as session, session.begin():
+        pub = await session.get(Publication, pub_id)
+        assert pub is not None
+        session.add(
+            ChannelInvite(
+                channel_id=pub.channel_id,
+                local_date=NOW.date(),
+                slot="noite",
+                kind="geral",
+                message="convite",
+                state="sent",
+                created_at=NOW - timedelta(minutes=1),
+                sent_at=NOW - timedelta(minutes=1),
+            )
+        )
+    wa = FakeWuzapi()
+    assert await run(sessions, wa) == 0  # o convite acabou de sair
+    assert await run(sessions, wa, now=NOW + timedelta(minutes=5)) == 1

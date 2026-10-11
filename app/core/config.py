@@ -95,6 +95,8 @@ class Settings(BaseSettings):
     # Aprovação automática (plano, semana 3): níveis separados por vírgula; vazio desliga.
     auto_approve_tiers: str = "excepcional,excelente"
     invite_hour: int = 19
+    # Convite da manhã, no primeiro horário de envio de cada grupo (início da janela).
+    invite_morning_enabled: bool = True
     invites_file: str = "config/convites.json"
     # Código de afiliado do ML (`matt_tool`, público: vai em todo link). Com ele e a etiqueta
     # do grupo, o link nasce na aprovação; vazio, o link vem colado pela tela Links.

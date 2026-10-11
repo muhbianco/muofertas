@@ -33,10 +33,12 @@ from app.domain.distribution import jitter
 from app.integrations.images import fetch_product_image
 from app.integrations.mercadolivre import MercadoLivreClient
 from app.integrations.wuzapi import WuzapiClient, WuzapiError
-from app.models import CatalogProduct, Channel, Publication
+from app.models import CatalogProduct, Channel, ChannelInvite, Publication
 
 logger = get_logger(__name__)
 STUCK_AFTER = timedelta(minutes=10)
+# Folga entre o convite do grupo e a oferta seguinte.
+AFTER_INVITE = timedelta(minutes=5)
 ROBOT = "envio automático"
 
 
@@ -101,6 +103,16 @@ async def _due(sessions: async_sessionmaker[AsyncSession], now: datetime) -> lis
                 policy_of(channel).min_interval + jitter(pub.id)
             ):
                 continue
+            last_invite = (
+                await db.execute(
+                    select(func.max(ChannelInvite.created_at)).where(
+                        ChannelInvite.channel_id == channel.id,
+                        ChannelInvite.state.in_(("sending", "sent", "unknown")),
+                    )
+                )
+            ).scalar_one_or_none()
+            if last_invite is not None and now - last_invite < AFTER_INVITE:
+                continue  # o convite acabou de sair: a oferta não vai colada nele
             if await channel_status(db, channel, now) is None:
                 picks.append((channel.id, pub.id))
     return picks
