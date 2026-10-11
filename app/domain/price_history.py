@@ -82,15 +82,26 @@ class PriceStats:
         )
 
 
-def compute_stats(points: Sequence[PricePoint], now: datetime) -> PriceStats:
+def compute_stats(
+    points: Sequence[PricePoint], now: datetime, *, reference_until: date | None = None
+) -> PriceStats:
+    """`reference_until`: referência congelada (evento com esquenta, como a Black Friday).
+
+    A janela de 30 dias da referência termina nesse dia em vez de andar com o relógio, para o
+    preço que sobe no esquenta não virar a base do desconto do dia.
+    """
     if not points:
         return PriceStats(None, 0, None, None, None, None)
     today = now.date()
     cutoff = (now - timedelta(hours=REFERENCE_EXCLUDE_HOURS)).date()
     ref_start = today - timedelta(days=REFERENCE_WINDOW_DAYS)
+    ref_end = cutoff
+    if reference_until is not None and reference_until < cutoff:
+        ref_start = reference_until - timedelta(days=REFERENCE_WINDOW_DAYS)
+        ref_end = reference_until + timedelta(days=1)
     mins_90 = daily_minimums(points, today - timedelta(days=90), today)
 
-    ref_days = [v for d, v in mins_90.items() if ref_start <= d < cutoff]
+    ref_days = [v for d, v in mins_90.items() if ref_start <= d < ref_end]
     reference = int(statistics.median(ref_days)) if len(ref_days) >= MIN_COVERAGE_DAYS else None
 
     baseline_start = today - timedelta(days=INFLATION_BASELINE_DAYS)

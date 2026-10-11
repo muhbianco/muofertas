@@ -53,3 +53,15 @@ def test_inflate_then_drop_is_flagged() -> None:
 def test_stable_price_is_not_inflated() -> None:
     stats = compute_stats([at(50, 1000), at(0.5, 900)], NOW)
     assert not stats.inflated_before_drop()
+
+
+def test_frozen_reference_ignores_the_pre_event_markup() -> None:
+    # R$ 100 até 06/11, esquenta a R$ 150 de 07/11 em diante; hoje é 27/11 (Black Friday).
+    now = datetime(2026, 11, 27, 15, 0, tzinfo=UTC)
+    points = [
+        PricePoint(datetime(2026, 10, 1, 12, 0, tzinfo=UTC), 10000),
+        PricePoint(datetime(2026, 11, 7, 12, 0, tzinfo=UTC), 15000),
+    ]
+    assert compute_stats(points, now).reference_cents == 15000  # sem congelar: o esquenta vira base
+    frozen = compute_stats(points, now, reference_until=date(2026, 11, 6))
+    assert frozen.reference_cents == 10000 and frozen.coverage_days >= 10

@@ -26,6 +26,7 @@ from app.core.config import Settings, settings
 from app.core.database import SessionFactory, dispose_engine
 from app.core.lease import acquire_lease, holder_id, release_lease
 from app.core.logging import configure_logging, get_logger
+from app.distribution.auto_approve import AutoApprover
 from app.distribution.invites import invite_config, send_invites
 from app.distribution.links import resolve_links
 from app.distribution.sender import send_due
@@ -114,18 +115,24 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
     images = httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0))
     portal = AffiliatePortal(cfg)
     collector = Collector(SessionFactory, client, cfg)
-    evaluator = Evaluator(SessionFactory)
     logger.info(
         "worker iniciado", extra={"holder": holder, "collector_enabled": cfg.collector_enabled}
     )
     ml_pause = MlPause()
-    invites: InviteConfig | None = None
-    if cfg.invites_enabled:
-        try:
-            invites = await invite_config(cfg.invites_file)
-        except (OSError, ValueError, InviteConfigError):
-            # Texto quebrado não pode derrubar as ofertas: o convite fica desligado e o log diz.
-            logger.exception("convites desligados: config/convites.json inválido")
+    # Calendário de eventos (config/convites.json): textos do convite diário e o congelamento da
+    # referência da nota antes da Black Friday. Quebrado, não derruba as ofertas: só desliga os
+    # dois, e o log diz.
+    calendar: InviteConfig | None = None
+    try:
+        calendar = await invite_config(cfg.invites_file)
+    except (OSError, ValueError, InviteConfigError):
+        logger.exception("calendário inválido: convites e congelamento desligados")
+    evaluator = Evaluator(SessionFactory, calendar=calendar)
+    approver = AutoApprover(
+        SessionFactory,
+        tiers=cfg.auto_approve_tier_list,
+        affiliate_tool_id=cfg.ml_affiliate_tool_id,
+    )
     try:
         while not stop.is_set():
             pause = cfg.worker_idle_seconds
@@ -139,6 +146,7 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                         ):
                             pause = 0.5  # ainda pode haver lote vencido
                         await evaluator.evaluate_due()  # só banco: roda mesmo com o ML em pausa
+                        await approver.run(utcnow())
                     linked = await resolve_links(SessionFactory, portal, cfg, utcnow())
                     if linked:
                         logger.info("links de afiliado", extra={"linked": linked})
@@ -150,10 +158,10 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                         )
                         if sent:
                             logger.info("envio automático", extra={"sent": sent})
-                    if invites is not None:
+                    if cfg.invites_enabled and calendar is not None:
                         # Convite não chama o ML: sai mesmo com a coleta em pausa.
                         await send_invites(
-                            SessionFactory, wa_client, invites, utcnow(), hour=cfg.invite_hour
+                            SessionFactory, wa_client, calendar, utcnow(), hour=cfg.invite_hour
                         )
             except Exception:
                 logger.exception("erro no ciclo do worker")

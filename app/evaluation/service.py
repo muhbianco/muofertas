@@ -20,7 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.core.clock import utcnow
 from app.core.logging import get_logger
 from app.domain.catalog_offers import CatalogSnapshot
-from app.domain.distribution import listing_discount
+from app.domain.distribution import SP, listing_discount
+from app.domain.invites import InviteConfig, reference_frozen_until
 from app.domain.price_history import PricePoint, compute_stats
 from app.domain.scoring import Evaluation, ScoringInput, evaluate, kind_price, required_kind
 from app.models import CatalogProduct, Niche, OfferEvaluation, PriceObservation
@@ -36,6 +37,7 @@ class NicheRules:
     commission_rate: float
     require_official: bool
     high_risk_brands: frozenset[str]
+    slug: str = ""
 
     @classmethod
     def from_model(cls, niche: Niche) -> NicheRules:
@@ -44,6 +46,7 @@ class NicheRules:
             niche.commission_rate_bp / 10_000,
             niche.require_official,
             frozenset(b.lower() for b in brands),
+            niche.slug,
         )
 
 
@@ -87,10 +90,16 @@ def _snapshot(row: PriceObservation) -> CatalogSnapshot:
 
 class Evaluator:
     def __init__(
-        self, sessions: async_sessionmaker[AsyncSession], *, batch_size: int = 100
+        self,
+        sessions: async_sessionmaker[AsyncSession],
+        *,
+        batch_size: int = 100,
+        calendar: InviteConfig | None = None,
     ) -> None:
         self._sessions = sessions
         self._batch = batch_size
+        # Calendário de eventos comerciais: a Black Friday congela o preço de referência.
+        self._calendar = calendar
         self._p90: dict[int, int | None] = {}
         self._p90_at = 0.0
 
@@ -199,7 +208,15 @@ class Evaluator:
                     require_official=rule.require_official,
                     high_risk_brand=high_risk,
                     snapshot=_snapshot(rows[-1]),
-                    stats=compute_stats(points, now),
+                    stats=compute_stats(
+                        points,
+                        now,
+                        reference_until=reference_frozen_until(
+                            now.astimezone(SP).date(), rule.slug, self._calendar
+                        )
+                        if self._calendar is not None
+                        else None,
+                    ),
                     observed_at=product.last_checked_at,
                     last_changed_at=product.last_changed_at,
                     highlight_position=product.best_highlight_position,

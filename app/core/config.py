@@ -92,6 +92,8 @@ class Settings(BaseSettings):
     # Convite diário de compartilhamento (11/10/2026): 1 por grupo por dia, no horário de pico
     # (hora de Brasília). Textos e calendário de eventos em `config/convites.json`.
     invites_enabled: bool = True
+    # Aprovação automática (plano, semana 3): níveis separados por vírgula; vazio desliga.
+    auto_approve_tiers: str = "excepcional,excelente"
     invite_hour: int = 19
     invites_file: str = "config/convites.json"
     # Código de afiliado do ML (`matt_tool`, público: vai em todo link). Com ele e a etiqueta
@@ -100,6 +102,10 @@ class Settings(BaseSettings):
     # Sessão do portal de afiliados (cookie + X-Csrf-Token) para o link curto oficial: arquivo do
     # host montado só leitura no worker (infra/scripts/set-ml-session-hel1.sh). Sem ele: link longo.
     ml_session_file: str = "/run/megapromooz/ml-session"
+
+    @property
+    def auto_approve_tier_list(self) -> tuple[str, ...]:
+        return tuple(t.strip() for t in self.auto_approve_tiers.split(",") if t.strip())
 
     @property
     def database_url(self) -> str:
