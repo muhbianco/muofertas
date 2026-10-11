@@ -107,3 +107,38 @@ catálogo no top 20 (sondagem de 11/10/2026). A categoria-mãe continua.
 - Em produção eram 22 categorias; agora são 67, com ~1.000–1.100 produtos. Com a faixa morna de 90 min,
   são ~700 chamadas/h, abaixo do teto de 2.500.
 - Conferir os 429 nas primeiras 48 h. Se aparecerem em sequência, a faixa morna volta para 120 min.
+
+## Pais, mães e filhos (mesmo dia)
+Pedido do dono: enxoval, recém-nascido, crianças até 8 anos, vestuário e fralda. A sondagem de
+11/10/2026 cobriu 112 categorias de Bebês e Brinquedos. Entram as 24 com 13 ou mais produtos de
+catálogo no top 20:
+
+- **Higiene:**
+  - fraldas 20, sabonetes 20, shampoos 20;
+  - colônias 19, cremes e pomadas 17, lenços umedecidos 16, kits de cuidados 13.
+- **Passeio:** cadeirinhas para carro 19, carrinhos 17, andadores e mini veículos 17.
+- **Quarto e banho:** banheiras 18, berços e moisés 16, trocadores 15, cercadinhos 13.
+- **Alimentação:** copos, pratos e talheres 17; cadeiras de alimentação 15.
+- **Brinquedos até 8 anos:**
+  - jogos de tabuleiro 19, bicicletas e mini veículos 18, eletrônicos 16;
+  - pelúcias 14, veículos 14, faz de conta 13;
+  - ar livre 14 e de montar 13. Esses dois vieram da observação, que ficou vazia e inativa.
+
+**Regras do nicho:**
+- **Só loja oficial.** Cadeirinha e berço são itens de segurança com certificação do Inmetro, e há
+  fralda revendida por vendedor pequeno.
+- Comissão de 12%. LEGO segue como marca de alto risco.
+
+**Ficaram de fora:**
+- **Vestuário infantil:** o robô não vê o preço.
+  - Bodies têm 3 de 20 produtos de catálogo; conjuntos, macacões, pijamas, calças, calçados e
+    roupa de gestante têm 0.
+  - Roupa no ML quase nunca é produto de catálogo, e `/items/{id}` está fechado para o app.
+- **Fórmula infantil, mamadeira, bico e chupeta:** a Lei 11.265/2006 (NBCAL) veda a promoção
+  comercial desses produtos, e post de desconto é promoção. Saem "Alimentos para Bebês",
+  "Mamadeiras e Acessórios" e "Chupetas e Mordedores". Aquecedor de mamadeira ficou fora pelo
+  mesmo motivo.
+- **Enxoval de tecido** (kit berço 8, jogo de quarto 9, naninha 10) e babá eletrônica (11): pouco
+  catálogo.
+
+**Carga:** de 67 para 89 categorias, ~1.400 produtos, ~950 chamadas/h com a faixa morna de 90 min.

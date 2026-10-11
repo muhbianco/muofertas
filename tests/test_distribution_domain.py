@@ -221,6 +221,9 @@ def test_message_header_of_the_new_niches() -> None:
     assert header("casa-mimos", "Casa e mimos: cama, mesa e banho") == (
         "#publi · 🏠 *CASA E MIMOS*"
     )
+    assert header("pais-maes-filhos", "Pais, mães e filhos: bebês e crianças até 8 anos") == (
+        "#publi · 👶 *PAIS, MÃES E FILHOS*"
+    )
 
 
 def test_spacing_spreads_the_daily_sends_over_the_window() -> None:

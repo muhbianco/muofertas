@@ -41,6 +41,7 @@ NICHE_EMOJI = {
     "tenis-esporte": "👟",
     "tecnologia": "💻",
     "casa-mimos": "🏠",
+    "pais-maes-filhos": "👶",
 }
 MAX_NAME = 90
 PIX_MAX_DISCOUNT = 0.30

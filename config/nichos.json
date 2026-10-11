@@ -320,23 +320,120 @@
       ]
     },
     {
-      "slug": "observacao",
-      "nome": "Observação (sem grupo, para comparar)",
+      "slug": "pais-maes-filhos",
+      "nome": "Pais, mães e filhos: bebês e crianças até 8 anos",
       "comissao_bp": 1200,
-      "exigir_loja_oficial": false,
+      "exigir_loja_oficial": true,
       "marcas_alto_risco": [
         "LEGO"
       ],
       "categorias": [
         {
-          "id": "MLB455425",
-          "nome": "Brinquedos de Montar"
+          "id": "MLB440833",
+          "nome": "Higiene: Fraldas"
+        },
+        {
+          "id": "MLB40585",
+          "nome": "Higiene: Toalhas Umedecidas"
+        },
+        {
+          "id": "MLB455874",
+          "nome": "Higiene: Sabonetes"
+        },
+        {
+          "id": "MLB277729",
+          "nome": "Higiene: Shampoos e Condicionadores"
+        },
+        {
+          "id": "MLB277750",
+          "nome": "Higiene: Cremes, Pomadas e Óleos"
+        },
+        {
+          "id": "MLB40588",
+          "nome": "Higiene: Colônias"
+        },
+        {
+          "id": "MLB1387",
+          "nome": "Passeio: Cadeiras de Bebê para Carro"
+        },
+        {
+          "id": "MLB1386",
+          "nome": "Passeio: Carrinhos de Bebês"
+        },
+        {
+          "id": "MLB420332",
+          "nome": "Passeio: Andadores e Mini Veículos"
+        },
+        {
+          "id": "MLB40602",
+          "nome": "Banho: Banheiras"
+        },
+        {
+          "id": "MLB5369",
+          "nome": "Quarto: Berços e Moisés"
+        },
+        {
+          "id": "MLB269511",
+          "nome": "Enxoval: Trocadores Portáteis"
+        },
+        {
+          "id": "MLB40563",
+          "nome": "Quarto: Cercadinhos"
+        },
+        {
+          "id": "MLB271303",
+          "nome": "Higiene: Kits Cuidados para Bebês"
+        },
+        {
+          "id": "MLB420440",
+          "nome": "Alimentação: Copos, Pratos e Talheres"
+        },
+        {
+          "id": "MLB40554",
+          "nome": "Alimentação: Cadeiras de Alimentação"
+        },
+        {
+          "id": "MLB432988",
+          "nome": "Brinquedos: Jogos de Tabuleiro e Cartas"
+        },
+        {
+          "id": "MLB6905",
+          "nome": "Brinquedos: Mini Veículos e Bicicletas"
+        },
+        {
+          "id": "MLB2961",
+          "nome": "Brinquedos: Eletrônicos"
+        },
+        {
+          "id": "MLB1166",
+          "nome": "Brinquedos: Pelúcias"
+        },
+        {
+          "id": "MLB432871",
+          "nome": "Brinquedos: Veículos de Brinquedo"
+        },
+        {
+          "id": "MLB432818",
+          "nome": "Brinquedos: Faz de Conta"
         },
         {
           "id": "MLB6911",
           "nome": "Brinquedos: Ar Livre e Playground"
+        },
+        {
+          "id": "MLB455425",
+          "nome": "Brinquedos: de Montar"
         }
       ]
+    },
+    {
+      "slug": "observacao",
+      "nome": "Observação (sem grupo, para comparar; vazia desde 11/10/2026)",
+      "comissao_bp": 1200,
+      "exigir_loja_oficial": false,
+      "marcas_alto_risco": [],
+      "categorias": [],
+      "ativo": false
     }
   ]
 }

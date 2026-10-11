@@ -170,6 +170,22 @@ def house_heart() -> str:
             f'<path d="{heart}" fill="{GOLD}"/>')
 
 
+def teddy() -> str:
+    """Ursinho de pelúcia com coração: bebê e criança sem desenhar pessoa nenhuma."""
+    return (f'<circle cx="250" cy="190" r="42" fill="{EMERALD_DEEP}"/>'
+            f'<circle cx="390" cy="190" r="42" fill="{EMERALD_DEEP}"/>'
+            f'<circle cx="250" cy="190" r="20" fill="{GOLD}"/>'
+            f'<circle cx="390" cy="190" r="20" fill="{GOLD}"/>'
+            f'<ellipse cx="320" cy="390" rx="108" ry="84" fill="{EMERALD_DEEP}"/>'
+            f'<circle cx="320" cy="262" r="96" fill="{EMERALD_DEEP}"/>'
+            f'<ellipse cx="320" cy="292" rx="44" ry="34" fill="{CREAM}"/>'
+            f'<ellipse cx="320" cy="280" rx="14" ry="10" fill="{EMERALD_DEEP}"/>'
+            f'<circle cx="286" cy="240" r="10" fill="{CREAM}"/>'
+            f'<circle cx="354" cy="240" r="10" fill="{CREAM}"/>'
+            f'<path d="M320,428 C284,404 282,376 300,370 Q312,366 320,380 '
+            f'Q328,366 340,370 C358,376 356,404 320,428 Z" fill="{GOLD}"/>')
+
+
 def avatar(glyph: str, label: str, font_size: int = 32, text_length: int = 264) -> str:
     return (f'<rect width="640" height="640" fill="{EMERALD}"/>'
             f'<circle cx="320" cy="300" r="214" fill="{CREAM}"/>' + glyph
@@ -206,10 +222,12 @@ FILES = {
                               "MegaPromoOz Tecnologia, foto do grupo"),
     "avatar-casa-mimos.svg": (640, 640, avatar(house_heart(), "CASA E MIMOS", font_size=30, text_length=260),
                               "MegaPromoOz Casa e Mimos, foto do grupo"),
+    "avatar-pais-maes-filhos.svg": (640, 640, avatar(teddy(), "PAIS, MÃES E FILHOS", font_size=24, text_length=284),
+                                    "MegaPromoOz Pais, Mães e Filhos, foto do grupo"),
 }
 SMALL = ("1-etiqueta-icone.svg", "2-lupa-icone.svg", "3-selo-icone.svg", "avatar-ferramentas.svg",
          "avatar-maquiagem.svg", "avatar-tenis-esporte.svg", "avatar-beleza.svg", "avatar-tecnologia.svg",
-         "avatar-casa-mimos.svg")
+         "avatar-casa-mimos.svg", "avatar-pais-maes-filhos.svg")
 
 
 def data_uri(name: str) -> str:

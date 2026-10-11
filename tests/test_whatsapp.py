@@ -228,8 +228,10 @@ def test_group_name_suggests_the_new_niches() -> None:
     niches = [
         Niche(id=4, slug="tecnologia", name="Tecnologia", active=True, created_at=utcnow()),
         Niche(id=5, slug="casa-mimos", name="Casa e mimos", active=True, created_at=utcnow()),
+        Niche(id=6, slug="pais-maes-filhos", name="Pais", active=True, created_at=utcnow()),
     ]
     assert guess_niche("MegaPromoOz - Tecnologia", niches) == 4
     assert guess_niche("MegaPromoOz - Casa e Mimos", niches) == 5
     assert guess_niche("Mimos, casa, cama, mesa e banho", niches) == 5
     assert guess_niche("MegaPromoOz - Casa", niches) is None
+    assert guess_niche("MegaPromoOz - Pais, Mães e Filhos", niches) == 6

@@ -58,6 +58,8 @@ TARGETS: dict[str, tuple[int, int, str, int, int]] = {
     "grupo-tecnologia-640.png": (640, 640, m.avatar(m.gamepad(), "TECNOLOGIA", text_length=240), 640, 640),
     "grupo-casa-mimos-640.png": (
         640, 640, m.avatar(m.house_heart(), "CASA E MIMOS", font_size=30, text_length=260), 640, 640),
+    "grupo-pais-maes-filhos-640.png": (
+        640, 640, m.avatar(m.teddy(), "PAIS, MÃES E FILHOS", font_size=24, text_length=284), 640, 640),
 }
 
 
