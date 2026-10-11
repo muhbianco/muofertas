@@ -11,6 +11,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.collector import watchlist
 from app.core.clock import utcnow
 from app.core.config import settings
 from app.core.database import get_sessionmaker
@@ -645,3 +646,74 @@ async def undo_invite_skip(
     check_csrf(ctx, csrf)
     await invites.undo_skip(db, channel_id=channel_id, day=_day(day), now=utcnow())
     return _see_other("/convites")
+
+
+# --------------------------------------------------------------------------- lista vigiada
+
+WATCH_NOTICES = {
+    "novo": "Produto na lista: o robô lê o preço nos próximos minutos e ele aparece na fila.",
+    "atualizado": "Esse produto já era acompanhado: agora está vigiado, no nicho escolhido.",
+    "parado": "O robô parou de acompanhar esse produto.",
+}
+
+
+async def _render_watch(
+    request: Request,
+    sessions: async_sessionmaker[AsyncSession],
+    ctx: Admin,
+    *,
+    code: int = 200,
+    **extra: object,
+) -> Response:
+    async with sessions() as db:
+        rows = await watchlist.watched(db)
+        niches = list(
+            (
+                await db.execute(select(Niche).where(Niche.active.is_(True)).order_by(Niche.id))
+            ).scalars()
+        )
+    return templates.TemplateResponse(
+        request,
+        "vigiar.html",
+        {"ctx": ctx, "rows": rows, "niches": niches, **extra},
+        status_code=code,
+    )
+
+
+@router.get("/vigiar", response_class=HTMLResponse)
+async def watch_page(
+    request: Request, sessions: Sessions, ctx: Admin, aviso: str | None = None
+) -> Response:
+    return await _render_watch(request, sessions, ctx, notice=WATCH_NOTICES.get(aviso or ""))
+
+
+@router.post("/vigiar", response_class=HTMLResponse)
+async def watch_add(
+    request: Request,
+    sessions: Sessions,
+    ctx: Admin,
+    ml: Ml,
+    url: Annotated[str, Form(max_length=500)],
+    niche_id: Annotated[int, Form()],
+    csrf: Annotated[str | None, Form()] = None,
+) -> Response:
+    check_csrf(ctx, csrf)
+    try:
+        result = await watchlist.watch(sessions, ml, url=url, niche_id=niche_id, now=utcnow())
+    except watchlist.WatchError as exc:
+        return await _render_watch(request, sessions, ctx, error=str(exc), url=url, code=422)
+    logger.info(
+        "produto vigiado",
+        extra={"product_id": result.product_id, "created": result.created, "user": ctx.username},
+    )
+    return _see_other("/vigiar?aviso=" + ("novo" if result.created else "atualizado"))
+
+
+@router.post("/vigiar/{product_id}/parar")
+async def watch_stop(
+    db: Db, ctx: Admin, product_id: int, csrf: Annotated[str | None, Form()] = None
+) -> Response:
+    check_csrf(ctx, csrf)
+    if not await watchlist.unwatch(db, product_id):
+        raise HTTPException(status_code=404)
+    return _see_other("/vigiar?aviso=parado")

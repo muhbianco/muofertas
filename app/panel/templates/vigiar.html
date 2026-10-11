@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Vigiar{% endblock %}
+{% block content %}
+<h1>Vigiar produto</h1>
+<p class="nota-pix">Para o que não está entre os mais vendidos: cole o link da página do produto no Mercado Livre (o endereço com <b>/p/MLB…</b>). O robô lê o preço com frequência e o produto entra na fila como os outros. Link encurtado (meli.la) não serve.</p>
+{% if notice %}<p class="aviso">{{ notice }}</p>{% endif %}
+{% if error %}<p class="erro">{{ error }}</p>{% endif %}
+<article class="bloco">
+  <form class="formulario" method="post" action="/vigiar">
+    <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+    <label>Link do produto<input name="url" type="url" maxlength="500" required placeholder="https://www.mercadolivre.com.br/…/p/MLB…" value="{{ url or '' }}"></label>
+    <label>Nicho
+      <select name="niche_id" required>
+        {% for n in niches %}<option value="{{ n.id }}">{{ n.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="botao aprovar" type="submit">Vigiar</button>
+  </form>
+</article>
+<h2>Vigiados ({{ rows | length }})</h2>
+{% if not rows %}<p class="vazio">Nenhum produto vigiado ainda.</p>{% endif %}
+{% for p, niche in rows %}
+<article class="bloco">
+  <p><a href="/produto/{{ p.id }}">{{ p.name or p.external_id }}</a></p>
+  <p class="linha">{{ niche }} · nota {{ p.last_tier or 'sem nota ainda' }}{% if p.listing_discount_pct %} · {{ p.listing_discount_pct }}% OFF no anúncio{% endif %} · lido {{ p.last_checked_at | local if p.last_checked_at else 'ainda não' }}</p>
+  <form method="post" action="/vigiar/{{ p.id }}/parar">
+    <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+    <button class="botao rejeitar" type="submit">Parar de vigiar</button>
+  </form>
+</article>
+{% endfor %}
+{% endblock %}
