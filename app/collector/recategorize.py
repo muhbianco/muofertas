@@ -35,6 +35,7 @@ class Recategorized:
     niche: str
     changed: bool
     discarded: int = 0
+    domain_id: str | None = None
 
 
 async def recategorize(
@@ -49,17 +50,37 @@ async def recategorize(
         raise RecategorizeError("Escolha um nicho ativo.")
     if product.niche_id == niche.id:
         product.niche_locked = True  # o operador confirmou o nicho atual
-        return Recategorized(niche.name, changed=False)
+        return Recategorized(niche.name, changed=False, domain_id=product.domain_id)
     previous = product.niche_id
     product.niche_id = niche.id
     product.niche_locked = True
     product.needs_evaluation = True
+    discarded = await discard_pending(db, [product.id], niche, actor=actor)
+    logger.info(
+        "nicho trocado",
+        extra={
+            "product_id": product.id,
+            "from": previous,
+            "to": niche.id,
+            "user": actor,
+            "discarded": discarded,
+        },
+    )
+    return Recategorized(niche.name, changed=True, discarded=discarded, domain_id=product.domain_id)
+
+
+async def discard_pending(
+    db: AsyncSession, product_ids: list[int], niche: Niche, *, actor: str
+) -> int:
+    """Tira da fila de envio dos grupos de outro nicho o que ainda esperava link ou horário."""
+    if not product_ids:
+        return 0
     pending = (
         await db.execute(
             select(Publication)
             .join(Channel, Channel.id == Publication.channel_id)
             .where(
-                Publication.product_id == product.id,
+                Publication.product_id.in_(product_ids),
                 Publication.state.in_(PENDING),
                 Channel.niche_id != niche.id,
             )
@@ -71,14 +92,4 @@ async def recategorize(
     for pub in pending:
         discard(pub, actor=actor, reason=f"produto movido para o nicho {niche.name}")
         discarded += 1
-    logger.info(
-        "nicho trocado",
-        extra={
-            "product_id": product.id,
-            "from": previous,
-            "to": niche.id,
-            "user": actor,
-            "discarded": discarded,
-        },
-    )
-    return Recategorized(niche.name, changed=True, discarded=discarded)
+    return discarded

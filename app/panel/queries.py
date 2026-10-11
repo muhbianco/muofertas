@@ -10,6 +10,8 @@ from typing import Any
 from sqlalchemy import case, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.collector.domains import SOURCE_PANEL, label
+from app.collector.marketplace import MARKETPLACE
 from app.core.clock import utcnow
 from app.domain.distribution import offer_page_url, product_page_url
 from app.models import (
@@ -17,6 +19,7 @@ from app.models import (
     CatalogProduct,
     CollectionRun,
     IntegrationError,
+    MarketplaceDomain,
     MarketplaceSeller,
     Niche,
     NicheCategory,
@@ -120,6 +123,9 @@ class Card:
     niche_id: int | None = None
     # Último envio a um grupo nos últimos 7 dias (aprovar de novo sai como repetida).
     sent_at: datetime | None = None
+    # Tipo de produto do ML ("Compressores de ar"): "Trocar nicho" pode valer para todos dele.
+    domain_id: str | None = None
+    domain_label: str | None = None
 
 
 def reasons(snapshot: dict[str, Any]) -> list[str]:
@@ -229,6 +235,7 @@ async def queue(
     snaps = {pid: json.loads(ev.snapshot) for pid, ev in latest.items()}
     sellers = await _sellers(db, {s for s in map(_seller_id, snaps.values()) if s is not None})
     sent_at = await _recently_sent(db, ids, sent_since)
+    domains = await domain_labels(db, {p.domain_id for p, _ in rows if p.domain_id})
     cards = []
     for product, niche_name in rows:
         ev = latest.get(product.id)
@@ -259,9 +266,60 @@ async def queue(
                 else None,
                 niche_id=product.niche_id,
                 sent_at=sent_at.get(product.id),
+                domain_id=product.domain_id,
+                domain_label=domains.get(product.domain_id or ""),
             )
         )
     return cards
+
+
+async def domain_labels(db: AsyncSession, domain_ids: set[str]) -> dict[str, str]:
+    """Nome de cada tipo de produto para o painel (o id legível enquanto o worker não buscou)."""
+    if not domain_ids:
+        return {}
+    names = dict(
+        (
+            await db.execute(
+                select(MarketplaceDomain.domain_id, MarketplaceDomain.name).where(
+                    MarketplaceDomain.marketplace == MARKETPLACE,
+                    MarketplaceDomain.domain_id.in_(list(domain_ids)),
+                )
+            )
+        )
+        .tuples()
+        .all()
+    )
+    return {d: label(d, names.get(d)) for d in domain_ids}
+
+
+@dataclass
+class DomainRuleRow:
+    label: str
+    niche: str
+    from_panel: bool
+    actor: str | None
+    at: datetime | None
+
+
+async def domain_rule_rows(db: AsyncSession) -> list[DomainRuleRow]:
+    """Tipos de produto com nicho fixo (tela Nichos)."""
+    rows = await db.execute(
+        select(MarketplaceDomain, Niche.name)
+        .join(Niche, Niche.id == MarketplaceDomain.niche_id)
+        .where(MarketplaceDomain.marketplace == MARKETPLACE)
+        .order_by(Niche.id, MarketplaceDomain.domain_id)
+        .limit(500)
+    )
+    return [
+        DomainRuleRow(
+            label(d.domain_id, d.name),
+            niche_name,
+            d.rule_source == SOURCE_PANEL,
+            d.rule_actor,
+            d.rule_at,
+        )
+        for d, niche_name in rows.tuples()
+    ]
 
 
 async def _recently_sent(db: AsyncSession, ids: list[int], since: datetime) -> dict[int, datetime]:
@@ -306,6 +364,7 @@ class ProductPage:
     seller: SellerView | None = None
     offer_url: str | None = None
     offer_kind: str | None = None
+    domain_label: str | None = None
 
 
 async def product_page(db: AsyncSession, product_id: int) -> ProductPage | None:
@@ -359,6 +418,9 @@ async def product_page(db: AsyncSession, product_id: int) -> ProductPage | None:
         seller=sellers.get(seller_id) if seller_id is not None else None,
         offer_url=offer_url(product, snap.get("offer_item_id")),
         offer_kind=KIND.get(snap.get("offer_kind") or ""),
+        domain_label=(await domain_labels(db, {product.domain_id})).get(product.domain_id)
+        if product.domain_id
+        else None,
     )
 
 

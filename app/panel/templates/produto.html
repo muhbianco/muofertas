@@ -8,7 +8,7 @@
 <p class="linha">{{ p.niche or '—' }} · {{ prod.brand or 'sem marca' }} · camada {{ prod.tier }} ·
   <a href="{{ url }}" target="_blank" rel="noopener noreferrer">ver no Mercado Livre</a></p>
 {% if notice %}<p class="aviso">{{ notice }}</p>{% endif %}
-{{ trocar_nicho(prod.id, prod.niche_id, niches, ctx, next) }}
+{{ trocar_nicho(prod.id, prod.niche_id, niches, ctx, next, p.domain_label) }}
 
 <div>
   {% if prod.last_tier %}<span class="selo {{ prod.last_tier }}">{{ prod.last_tier }}</span>{% endif %}

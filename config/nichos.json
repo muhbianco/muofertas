@@ -1,6 +1,6 @@
 {
   "_comentario": "Nichos e categorias do ML que alimentam o coletor (descoberta pelos mais vendidos). Cada nicho com grupo vira um grupo no WhatsApp; 'observacao' só coleta para comparação (modo sombra). Fontes: docs/fase0/nichos/README.md (varredura de 10/10/2026) e docs/fase0/nichos/2026-10-11-novos-nichos.md (top 20 de cada categoria nova). Aplicar: python -m app.cli seed-niches config/nichos.json (categoria que muda de nicho leva os produtos junto).",
-  "_regras": "comissao_bp: comissão direta do afiliado ML em pontos-base (ajuda 27913: 1600 = beleza/calçados/esportes, 1200 = ferramentas/casa/brinquedos/games, 500 = celulares/eletrônicos). exigir_loja_oficial: só preço de loja oficial entra na nota. marcas_alto_risco: marca falsificada com frequência; exige loja oficial mesmo no nicho que não exige.",
+  "_regras": "comissao_bp: comissão direta do afiliado ML em pontos-base (ajuda 27913: 1600 = beleza/calçados/esportes, 1200 = ferramentas/casa/brinquedos/games, 500 = celulares/eletrônicos). exigir_loja_oficial: só preço de loja oficial entra na nota. marcas_alto_risco: marca falsificada com frequência; exige loja oficial mesmo no nicho que não exige. dominios: tipo de produto do ML (domain_id) com nicho fixo, mais forte que a categoria da descoberta (Ciclismo traz compressor de pneu de carro); só para tipo que cai no nicho errado, porque o mesmo tipo pode ser de dois nichos (shampoo de bebê e de adulto). Regra criada no painel prevalece sobre a daqui.",
   "nichos": [
     {
       "slug": "ferramentas",
@@ -14,6 +14,10 @@
         "Milwaukee",
         "Stihl",
         "Husqvarna"
+      ],
+      "dominios": [
+        "MLB-AIR_COMPRESSORS",
+        "MLB-MANUAL_AND_FOOT_AIR_PUMPS"
       ],
       "categorias": [
         {
@@ -211,6 +215,12 @@
         "Le Creuset",
         "Zwilling",
         "Contigo"
+      ],
+      "dominios": [
+        "MLB-THERMAL_CUPS_AND_TUMBLERS",
+        "MLB-THERMOSES",
+        "MLB-FRAME_POOLS",
+        "MLB-WASHING_MACHINE_AGITATORS"
       ],
       "categorias": [
         {

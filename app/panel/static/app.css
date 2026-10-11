@@ -45,6 +45,7 @@ h2 { font-size: 17px; margin: 18px 0 8px; }
 .trocar-nicho { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 4px 0 8px; }
 .trocar-nicho select, .trocar-nicho button { font-size: 13px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--linha); background: #fff; color: inherit; max-width: 100%; }
 .trocar-nicho button { cursor: pointer; }
+.trocar-nicho .todos-tipo { font-size: 13px; color: var(--cinza); display: inline-flex; gap: 4px; align-items: center; }
 .preco { font-size: 18px; font-weight: 800; color: var(--esm-esc); }
 .selo { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-right: 6px; }
 .selo.excepcional { background: var(--ouro); color: var(--esm-esc); }

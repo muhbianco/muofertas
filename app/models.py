@@ -79,6 +79,31 @@ class NicheCategory(Base):
     last_discovery_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
 
+class MarketplaceDomain(Base):
+    """Tipo de produto do marketplace (no ML, o `domain_id` do catálogo: "Compressores de ar").
+
+    0020. Guarda o nome em português para o painel e, quando há, o nicho fixo do tipo: vale mais
+    que a categoria pela qual o produto foi descoberto e menos que o nicho escolhido para um
+    produto (`niche_locked`). A regra vem do `nichos.json` (`config`) ou do painel (`painel`); o
+    seed nunca mexe na do painel.
+    """
+
+    __tablename__ = "marketplace_domain"
+    __table_args__ = (UniqueConstraint("marketplace", "domain_id", name="uq_marketplace_domain"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    marketplace: Mapped[str] = mapped_column(String(20))
+    domain_id: Mapped[str] = mapped_column(String(80))
+    name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    name_checked_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    niche_id: Mapped[int | None] = mapped_column(
+        ForeignKey("niche.id", ondelete="SET NULL"), nullable=True
+    )
+    rule_source: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    rule_actor: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    rule_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
 class CatalogProduct(Base):
     """Produto de catálogo monitorado (no ML, a página /p/MLB…)."""
 
@@ -87,6 +112,7 @@ class CatalogProduct(Base):
         UniqueConstraint("marketplace", "external_id"),
         Index("ix_catalog_product_due", "active", "next_check_at"),
         Index("ix_catalog_product_needs_eval", "needs_evaluation", "active"),
+        Index("ix_catalog_product_domain", "domain_id"),
     )
 
     id: Mapped[int] = mapped_column(

@@ -40,7 +40,7 @@
   <div>
     <div><span class="selo {{ c.tier }}">{{ c.tier }}</span>{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}{% if c.sent_at %}<span class="selo enviado" title="Aprovar de novo antes de 7 dias sai como repetida">já foi pro grupo · {{ c.sent_at | local }}</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
     <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
-    <div class="linha nicho-linha">{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next) }}</div>
+    <div class="linha nicho-linha">{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}</div>
     <div class="preco">{% if c.listing_original_cents %}<s class="de">{{ c.listing_original_cents | brl }}</s> {% endif %}{{ c.price_cents | brl }}</div>
     {% if c.offer_kind %}<div class="oferta">
       {% if c.used_official %}loja oficial{% elif c.seller %}{{ c.seller.nickname or 'vendedor' }} · reputação {{ c.seller.reputation }}{% if c.seller.power %} · {{ c.seller.power }}{% endif %} · {{ c.seller.sales }} vendas{% else %}{{ c.offer_kind }}{% endif %}

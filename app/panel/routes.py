@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.collector.domains import DomainRuleError, apply_panel_rule
 from app.collector.recategorize import RecategorizeError, recategorize
 from app.core.clock import utcnow
 from app.core.config import settings
@@ -55,6 +56,8 @@ NOTICES = {
     "nicho": "Nicho trocado. O robô reavalia com as regras do nicho novo em instantes.",
     "nicho-fila": "Nicho trocado. Ele saiu da fila de envio do grupo antigo: aprove de novo na "
     "página do produto para ir ao grupo certo.",
+    "nicho-tipo": "Nicho trocado para este produto e para todos do mesmo tipo. Os novos desse "
+    "tipo já entram nesse nicho (regra na tela Nichos).",
     "nicho-invalido": "Escolha um nicho ativo.",
 }
 
@@ -298,6 +301,7 @@ async def change_niche(
     niche_id: Annotated[int, Form()],
     csrf: Annotated[str | None, Form()] = None,
     next: Annotated[str | None, Form()] = None,
+    todos: Annotated[bool, Form()] = False,
 ) -> Response:
     check_csrf(ctx, csrf)
     target = _safe_next(next)
@@ -306,15 +310,32 @@ async def change_niche(
         result = await recategorize(
             db, product_id=product_id, niche_id=niche_id, actor=ctx.username
         )
+        same_type = 0
+        if todos and result.domain_id:
+            # "Todos deste tipo": vira regra (os novos desse tipo já entram neste nicho).
+            same_type = await apply_panel_rule(
+                db,
+                domain_id=result.domain_id,
+                niche_id=niche_id,
+                actor=ctx.username,
+                now=utcnow(),
+            )
     except LookupError:
         raise HTTPException(status_code=404) from None
-    except RecategorizeError:
+    except (RecategorizeError, DomainRuleError):
         await db.rollback()
         return RedirectResponse(
             target + sep + "aviso=nicho-invalido", status_code=status.HTTP_303_SEE_OTHER
         )
     await db.commit()
-    notice = "nicho-fila" if result.discarded else "nicho"
+    logger.info(
+        "nicho trocado pelo painel",
+        extra={"product_id": product_id, "user": ctx.username, "same_type": same_type},
+    )
+    if todos and result.domain_id:
+        notice = "nicho-tipo"
+    else:
+        notice = "nicho-fila" if result.discarded else "nicho"
     return RedirectResponse(target + sep + f"aviso={notice}", status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -354,6 +375,7 @@ async def niches_page(request: Request, db: Db, ctx: Admin) -> Response:
             "report": await report.niche_report(db, utcnow()),
             "report_days": report.REPORT_DAYS,
             "sales": await report.sales_status(db),
+            "domain_rules": await queries.domain_rule_rows(db),
         },
     )
 

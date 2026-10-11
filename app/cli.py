@@ -16,7 +16,15 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import delete, func, or_, select, update
 
-from app.collector.service import MARKETPLACE, Collector
+from app.collector.domains import (
+    CONFIG_ACTOR,
+    config_rules,
+    domain_rules,
+    follow_domain_rules,
+    seed_rules,
+)
+from app.collector.marketplace import MARKETPLACE
+from app.collector.service import Collector
 from app.core.clock import utcnow
 from app.core.config import settings
 from app.core.database import SessionFactory, dispose_engine
@@ -32,6 +40,8 @@ async def seed_niches(
     data: dict[str, Any], sessions: async_sessionmaker[AsyncSession] = SessionFactory
 ) -> None:
     now = utcnow()
+    domain_owners = config_rules(data)  # valida antes de gravar qualquer coisa
+    niche_ids: dict[str, int] = {}
     async with sessions() as session, session.begin():
         for item in data["nichos"]:
             niche = (
@@ -83,18 +93,32 @@ async def seed_niches(
             for ext_id, category in current.items():
                 if ext_id not in wanted:
                     category.active = False
+            niche_ids[niche.slug] = niche.id
             print(f"{item['slug']}: {len(wanted)} categorias")
         await session.flush()
-        moved = await _follow_moved_categories(session)
+        kept = await seed_rules(
+            session, {d: niche_ids[slug] for d, slug in domain_owners.items()}, now=now
+        )
+        await session.flush()
+        print(f"tipos de produto com nicho fixo no nichos.json: {len(domain_owners)}")
+        for domain_id in kept:
+            print(f"  {domain_id}: vale a regra do painel (mais recente), não a do JSON")
+        ruled = set(await domain_rules(session))
+        moved = await _follow_moved_categories(session, skip_domains=ruled)
         print(f"produtos que mudaram de nicho junto com a categoria: {moved}")
+        by_type = await follow_domain_rules(session, actor=CONFIG_ACTOR)
+        print(f"produtos que mudaram de nicho pelo tipo: {by_type}")
 
 
-async def _follow_moved_categories(session: AsyncSession) -> int:
+async def _follow_moved_categories(
+    session: AsyncSession, *, skip_domains: set[str] | None = None
+) -> int:
     """Categoria que trocou de nicho leva os produtos dela, que voltam para a fila de avaliação.
 
     Só quando a categoria está ativa em exatamente um nicho (sem ambiguidade). O produto guarda a
     categoria pela qual foi descoberto, então a troca nunca pega produto de outra categoria. O
-    produto cujo nicho o operador escolheu (`niche_locked`) fica onde ele pôs.
+    produto cujo nicho o operador escolheu (`niche_locked`) fica onde ele pôs, e o de tipo com
+    nicho fixo (`skip_domains`) segue o tipo.
     """
     owners: dict[str, set[int]] = defaultdict(set)
     rows = await session.execute(
@@ -117,6 +141,10 @@ async def _follow_moved_categories(session: AsyncSession) -> int:
                         CatalogProduct.category_id == category_id,
                         CatalogProduct.niche_locked.is_(False),
                         or_(CatalogProduct.niche_id.is_(None), CatalogProduct.niche_id != target),
+                        or_(
+                            CatalogProduct.domain_id.is_(None),
+                            CatalogProduct.domain_id.not_in(list(skip_domains or ())),
+                        ),
                     )
                 )
             ).scalars()

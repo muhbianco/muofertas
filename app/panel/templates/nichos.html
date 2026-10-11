@@ -37,4 +37,13 @@
   <tr><th>Categorias</th><td>{% for c in r.categories %}{{ c.name }}{% if not c.active %} (inativa){% endif %}{% if not loop.last %} · {% endif %}{% endfor %}</td></tr>
 </table>
 {% endfor %}
+
+<h2>Tipos de produto com nicho fixo</h2>
+<p class="linha">O tipo vale mais que a categoria pela qual o robô achou o produto. Novas regras: "Trocar nicho" com "todos os …" marcado, na fila ou no produto.</p>
+{% if domain_rules %}
+<table>
+  <tr><th>Tipo</th><th>Nicho</th><th>Origem</th></tr>
+  {% for d in domain_rules %}<tr><td>{{ d.label }}</td><td>{{ d.niche }}</td><td>{% if d.from_panel %}painel · {{ d.actor }} · {{ d.at | local }}{% else %}nichos.json{% endif %}</td></tr>{% endfor %}
+</table>
+{% else %}<p class="vazio">Nenhum ainda.</p>{% endif %}
 {% endblock %}

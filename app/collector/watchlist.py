@@ -15,7 +15,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.collector.service import MARKETPLACE, _brand, _picture
+from app.collector.marketplace import MARKETPLACE
+from app.collector.service import _brand, _picture
 from app.domain.catalog_offers import Tier
 from app.integrations.mercadolivre import MercadoLivreClient, MercadoLivreError, NotFoundError
 from app.models import CatalogProduct, Niche

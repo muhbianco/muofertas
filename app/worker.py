@@ -83,6 +83,9 @@ async def _collect_round(
     try:
         await collector.discover_due()
         stats = await collector.refresh_due()
+        if not stats.seen:
+            # Lote em dia: sobra fôlego para o nome dos tipos de produto (painel), poucos por vez.
+            await collector.name_domains()
     except RateLimitedError:
         wait = ml_pause.rate_limited(utcnow())
         logger.warning(

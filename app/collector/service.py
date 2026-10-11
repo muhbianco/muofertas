@@ -12,8 +12,11 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.collector.domains import domain_rules
+from app.collector.marketplace import DOMAIN_ID, MARKETPLACE
 from app.core.clock import utcnow
 from app.core.config import Settings
 from app.core.logging import get_logger
@@ -40,14 +43,15 @@ from app.models import (
     CatalogProduct,
     CollectionRun,
     IntegrationError,
+    MarketplaceDomain,
     MarketplaceSeller,
     NicheCategory,
     PriceObservation,
 )
 
 logger = get_logger(__name__)
-MARKETPLACE = "mercadolivre"
 MAX_FAILURES_BEFORE_COLD = 3
+DOMAIN_NAMES_PER_ROUND = 5
 SELLER_TTL = timedelta(days=7)
 
 
@@ -73,6 +77,10 @@ def _brand(product: dict[str, object]) -> str | None:
             value = attr.get("value_name")
             return str(value)[:80] if value else None
     return None
+
+
+def _domain(product: dict[str, object]) -> str | None:
+    return str(product.get("domain_id") or "")[:80] or None
 
 
 def _picture(product: dict[str, object]) -> str | None:
@@ -218,21 +226,26 @@ class Collector:
                         )
                     ).scalars()
                 }
+                # Tipo de produto com nicho fixo vale mais que a categoria da descoberta.
+                ruled = await domain_rules(
+                    session, {d for info in details.values() if (d := _domain(info))}
+                )
                 for external_id, position in positions.items():
                     product = existing.get(external_id)
                     if product is None:
                         info = details.get(external_id)
                         if info is None:
                             continue
+                        domain = _domain(info)
                         session.add(
                             CatalogProduct(
                                 marketplace=MARKETPLACE,
                                 external_id=external_id,
-                                niche_id=niche_id,
+                                niche_id=ruled.get(domain or "", niche_id),
                                 category_id=external_category_id,
                                 name=str(info.get("name") or "")[:255] or None,
                                 brand=_brand(info),
-                                domain_id=str(info.get("domain_id") or "")[:80] or None,
+                                domain_id=domain,
                                 permalink=str(info.get("permalink") or "")[:512] or None,
                                 image_url=_picture(info),
                                 discovered_via="highlights",
@@ -342,6 +355,86 @@ class Collector:
         }
 
     # ------------------------------------------------------------------ atualização de preço
+
+    async def name_domains(self, limit: int = DOMAIN_NAMES_PER_ROUND) -> int:
+        """Nome em português dos tipos de produto que ainda não têm (para o painel), poucos por vez.
+
+        Quem chama roda isto só com o lote de preços em dia. 429 e teto da hora sobem para o
+        worker como na coleta; o que já veio fica gravado.
+        """
+        async with self._sessions() as session:
+            checked = select(MarketplaceDomain.domain_id).where(
+                MarketplaceDomain.marketplace == MARKETPLACE,
+                MarketplaceDomain.name_checked_at.is_not(None),
+            )
+            pending = [
+                d
+                for d in (
+                    await session.execute(
+                        select(CatalogProduct.domain_id)
+                        .where(
+                            CatalogProduct.marketplace == MARKETPLACE,
+                            CatalogProduct.active.is_(True),
+                            CatalogProduct.domain_id.is_not(None),
+                            CatalogProduct.domain_id.not_in(checked),
+                        )
+                        .distinct()
+                        .limit(limit)
+                    )
+                ).scalars()
+                if d
+            ]
+        names: dict[str, str | None] = {}
+        try:
+            for domain_id in pending:
+                if not DOMAIN_ID.match(domain_id):
+                    names[domain_id] = None  # não vai para a URL; marcado para não voltar
+                    continue
+                try:
+                    data = await self._client.get(f"/catalog_domains/{domain_id}")
+                except (NotFoundError, ForbiddenError):
+                    data = None
+                except (RateLimitedError, CallBudgetExceededError):
+                    raise
+                except MercadoLivreError as exc:
+                    logger.warning(
+                        "nome do tipo de produto: o ML não respondeu",
+                        extra={"domain": domain_id, "error": type(exc).__name__},
+                    )
+                    break
+                name = data.get("name") if isinstance(data, dict) else None
+                names[domain_id] = str(name).strip()[:120] or None if name else None
+        finally:
+            await self._save_domain_names(names)
+        return len(names)
+
+    async def _save_domain_names(self, names: dict[str, str | None]) -> None:
+        if not names:
+            return
+        now = utcnow()
+        try:
+            async with self._sessions() as session, session.begin():
+                rows = {
+                    r.domain_id: r
+                    for r in (
+                        await session.execute(
+                            select(MarketplaceDomain).where(
+                                MarketplaceDomain.marketplace == MARKETPLACE,
+                                MarketplaceDomain.domain_id.in_(list(names)),
+                            )
+                        )
+                    ).scalars()
+                }
+                for domain_id, name in names.items():
+                    row = rows.get(domain_id)
+                    if row is None:
+                        row = MarketplaceDomain(marketplace=MARKETPLACE, domain_id=domain_id)
+                        session.add(row)
+                    row.name = name
+                    row.name_checked_at = now
+        except IntegrityError:
+            # O painel criou a mesma linha (regra) no mesmo instante: fica para a próxima rodada.
+            logger.info("nome do tipo de produto: linha criada por outro processo agora")
 
     async def refresh_due(self) -> RunStats:
         """Atualiza um lote de produtos vencidos (lote limitado; o worker chama de novo)."""

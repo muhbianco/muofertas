@@ -17,6 +17,8 @@ class FakeML:
     offers: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     # id do vendedor -> seller_reputation (o que /users/bulk devolve dentro de cada usuário)
     sellers: dict[int, dict[str, Any]] = field(default_factory=dict)
+    # domain_id -> nome em português (o que /catalog_domains/{id} devolve em "name")
+    domains: dict[str, str] = field(default_factory=dict)
     token_failures: int = 0
     calls: list[str] = field(default_factory=list)
     override: Callable[[httpx.Request], httpx.Response | None] | None = None
@@ -60,6 +62,13 @@ class FakeML:
             page = offers[offset : offset + limit]
             return httpx.Response(
                 200, content=json.dumps({"results": page, "paging": {"total": len(offers)}})
+            )
+        if parts[0] == "catalog_domains" and len(parts) == 2:
+            name = self.domains.get(parts[1])
+            return (
+                httpx.Response(200, json={"id": parts[1], "name": name, "attributes": []})
+                if name
+                else httpx.Response(404, json={"error": "not_found"})
             )
         if parts == ["users", "bulk"]:
             ids = [int(i) for i in request.url.params.get("ids", "").split(",") if i]
