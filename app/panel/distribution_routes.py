@@ -18,7 +18,15 @@ from app.core.logging import get_logger
 from app.distribution import service
 from app.distribution.sender import resend_now
 from app.distribution.service import DistributionError
-from app.domain.distribution import INVITE_PREFIX, ML_TAG_RE, is_fresh, share_url
+from app.domain.distribution import (
+    INVITE_PREFIX,
+    MIN_SPACING_MINUTES,
+    ML_TAG_RE,
+    is_fresh,
+    max_sends_in_window,
+    share_url,
+    spacing_minutes,
+)
 from app.integrations.mercadolivre import MercadoLivreClient
 from app.integrations.wuzapi import WuzapiClient, WuzapiError
 from app.models import CatalogProduct, Channel, Niche, Publication
@@ -67,11 +75,16 @@ class ChannelForm:
     ml_tag: str | None
     invite_url: str | None
     max_per_day: int
-    min_interval_minutes: int
     window_start_hour: int
     window_end_hour: int
     paused: bool
     transport: str = "manual"
+
+
+NEEDS_WHATSAPP_LINK = (
+    "Envio automático só para grupo ligado ao WhatsApp. Crie o grupo no WhatsApp pelo chip, "
+    "ligue em 'No WhatsApp do chip' (opção Novo · nicho) e depois mude o Envio aqui."
+)
 
 
 def _validate(form: ChannelForm, niche_ids: set[int]) -> str | None:
@@ -87,10 +100,14 @@ def _validate(form: ChannelForm, niche_ids: set[int]) -> str | None:
         return f"link de convite precisa começar com {INVITE_PREFIX}"
     if not 1 <= form.max_per_day <= 50:
         return "envios por dia: de 1 a 50"
-    if not 5 <= form.min_interval_minutes <= 600:
-        return "intervalo: de 5 a 600 minutos"
     if not (0 <= form.window_start_hour < form.window_end_hour <= 24):
         return "janela: início antes do fim, entre 0h e 24h"
+    room = max_sends_in_window(form.window_start_hour, form.window_end_hour)
+    if form.max_per_day > room:
+        return (
+            f"nessa janela cabem no máximo {room} envios por dia "
+            f"(um a cada {MIN_SPACING_MINUTES} min)"
+        )
     if form.transport not in ("manual", "wuzapi"):
         return "envio: manual ou automático"
     return None
@@ -138,6 +155,7 @@ async def _render_groups(
             "wa_rows": wa_rows,
             "wa_error": wa_error,
             "wa_session": session,
+            "spacing": spacing_minutes,
         },
         status_code=code,
     )
@@ -164,7 +182,6 @@ async def save_group(
     name: Annotated[str, Form(max_length=80)],
     niche_id: Annotated[int, Form()],
     max_per_day: Annotated[int, Form()],
-    min_interval_minutes: Annotated[int, Form()],
     window_start_hour: Annotated[int, Form()],
     window_end_hour: Annotated[int, Form()],
     csrf: Annotated[str | None, Form()] = None,
@@ -181,7 +198,6 @@ async def save_group(
         ml_tag=(ml_tag or "").strip() or None,
         invite_url=(invite_url or "").strip() or None,
         max_per_day=max_per_day,
-        min_interval_minutes=min_interval_minutes,
         window_start_hour=window_start_hour,
         window_end_hour=window_end_hour,
         paused=paused == "1",
@@ -199,24 +215,20 @@ async def save_group(
             error = "já existe um grupo com esse nome"
     if error:
         return await _render_groups(request, db, ctx, error, 422)
-    if channel_id is None:
-        channel = Channel(created_at=utcnow(), transport="manual")
+    channel = await db.get(Channel, channel_id) if channel_id is not None else None
+    if channel_id is not None and channel is None:
+        raise HTTPException(status_code=404)
+    if form.transport == "wuzapi" and (channel is None or not channel.wa_jid):
+        return await _render_groups(request, db, ctx, NEEDS_WHATSAPP_LINK, 422)
+    if channel is None:
+        # Só depois de validar: a tela de erro faz commit e gravaria um grupo vazio.
+        channel = Channel(created_at=utcnow())
         db.add(channel)
-    else:
-        found = await db.get(Channel, channel_id)
-        if found is None:
-            raise HTTPException(status_code=404)
-        channel = found
-    if form.transport == "wuzapi" and not channel.wa_jid:
-        return await _render_groups(
-            request,
-            db,
-            ctx,
-            "envio automático só com o grupo ligado ao WhatsApp (seção 'No WhatsApp do chip')",
-            422,
-        )
     for key, value in vars(form).items():
         setattr(channel, key, value)
+    channel.min_interval_minutes = spacing_minutes(
+        form.max_per_day, form.window_start_hour, form.window_end_hour
+    )
     logger.info("grupo salvo", extra={"channel": form.name, "user": ctx.username})
     return _see_other("/grupos")
 

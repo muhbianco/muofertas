@@ -109,3 +109,5 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .login .qr { max-width: 240px; }
 .pix-aprovar { flex-wrap: wrap; }
 .pix-aprovar label { display: flex; gap: 6px; align-items: center; }
+.formulario input.calculado { background: transparent; border-style: dashed; color: var(--cinza); }
+.formulario .dica { font-size: 12px; color: var(--cinza); margin: 0; }

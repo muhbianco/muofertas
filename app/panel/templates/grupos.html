@@ -14,13 +14,15 @@
   <label>Link de convite <small>(https://chat.whatsapp.com/…)</small>
     <input name="invite_url" type="url" maxlength="255" value="{{ c.invite_url or '' if c else '' }}"></label>
   <div class="duas">
-    <label>Envios por dia<input name="max_per_day" type="number" min="1" max="50" required value="{{ c.max_per_day if c else 10 }}"></label>
-    <label>Intervalo (min)<input name="min_interval_minutes" type="number" min="5" max="600" required value="{{ c.min_interval_minutes if c else 40 }}"></label>
+    <label>Envios por dia<input name="max_per_day" type="number" min="1" max="50" required value="{{ c.max_per_day if c else 20 }}"></label>
+    <label>Intervalo médio <small>(calculado)</small>
+      <input class="calculado" type="text" readonly tabindex="-1" aria-readonly="true" value="{{ spacing(c.max_per_day, c.window_start_hour, c.window_end_hour) if c else spacing(20, 7, 22) }} min"></label>
   </div>
   <div class="duas">
     <label>Das (h)<input name="window_start_hour" type="number" min="0" max="23" required value="{{ c.window_start_hour if c else 7 }}"></label>
     <label>Até (h)<input name="window_end_hour" type="number" min="1" max="24" required value="{{ c.window_end_hour if c else 22 }}"></label>
   </div>
+  <p class="dica">Os envios são espalhados na janela: intervalo = janela ÷ envios por dia, variando até 5 min para mais ou para menos. Mudou os números? O intervalo é recalculado ao salvar.</p>
   <label>Envio
     <select name="transport">
       <option value="manual" {% if not c or c.transport != 'wuzapi' %}selected{% endif %}>Manual (Postar pelo celular)</option>
@@ -33,7 +35,7 @@
 {% endmacro %}
 {% block content %}
 <h1>Grupos</h1>
-<p class="nota-pix">Cada grupo recebe as ofertas aprovadas do seu nicho. Horários em hora de Brasília. Por enquanto o envio é manual, pelo seu celular.</p>
+<p class="nota-pix">Cada grupo recebe as ofertas aprovadas do seu nicho, espalhadas ao longo da janela (hora de Brasília). Grupo novo: crie no WhatsApp pelo chip e ligue em "No WhatsApp do chip" com a opção Novo · nicho; depois preencha a etiqueta e mude o Envio para automático. O formulário "Novo grupo" lá embaixo é só para grupo de envio manual.</p>
 {% if error %}<p class="erro">{{ error }}</p>{% endif %}
 {% if wa_rows is not none %}
 <article class="bloco">

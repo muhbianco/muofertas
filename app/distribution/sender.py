@@ -26,6 +26,7 @@ from app.distribution.service import (
     channel_status,
     fetch_recheck,
     message_for,
+    policy_of,
 )
 from app.domain.distribution import jitter
 from app.integrations.images import fetch_product_image
@@ -96,7 +97,7 @@ async def _due(sessions: async_sessionmaker[AsyncSession], now: datetime) -> lis
                 )
             ).scalar_one_or_none()
             if last_sent is not None and now - last_sent < (
-                timedelta(minutes=channel.min_interval_minutes) + jitter(pub.id)
+                policy_of(channel).min_interval + jitter(pub.id)
             ):
                 continue
             if await channel_status(db, channel, now) is None:

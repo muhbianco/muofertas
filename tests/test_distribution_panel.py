@@ -258,3 +258,59 @@ async def test_approval_without_group_warns(
     await create_group(client, csrf, niche_id)
     assert (await approve(client, csrf, product_id, ev_id)).endswith("aviso=links")
     assert "Galaxy A17" not in (await client.get("/")).text
+
+
+def _group_form(csrf: str, niche_id: int, **extra: object) -> dict[str, object]:
+    return {
+        "csrf": csrf,
+        "name": "MegaPromoOz - Tecnologia",
+        "niche_id": niche_id,
+        "max_per_day": 20,
+        "window_start_hour": 7,
+        "window_end_hour": 22,
+        **extra,
+    }
+
+
+async def test_interval_is_computed_and_shown_read_only(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    secret = await seed_admin(sessions)
+    await seed(sessions)
+    assert (await login(client, secret)).status_code == 303
+    csrf = csrf_of((await client.get("/grupos")).text)
+    async with sessions() as session:
+        niche_id = (await session.execute(select(Niche.id))).scalar_one()
+
+    r = await client.post("/grupos", data=_group_form(csrf, niche_id))
+    assert r.status_code == 303
+    async with sessions() as session:
+        channel = (await session.execute(select(Channel))).scalar_one()
+    assert (channel.max_per_day, channel.min_interval_minutes) == (20, 45)
+    page = (await client.get("/grupos")).text
+    assert 'readonly tabindex="-1" aria-readonly="true" value="45 min"' in page
+    assert 'name="min_interval_minutes"' not in page
+
+    too_many = await client.post(
+        "/grupos", data=_group_form(csrf, niche_id, name="Outro", window_end_hour=8, max_per_day=7)
+    )
+    assert too_many.status_code == 422
+    assert "cabem no máximo 6 envios por dia" in too_many.text
+
+
+async def test_new_group_with_auto_send_explains_instead_of_crashing(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Regressão de 11/10/2026: o grupo vazio entrava na sessão antes da checagem e dava 500."""
+    secret = await seed_admin(sessions)
+    await seed(sessions)
+    assert (await login(client, secret)).status_code == 303
+    csrf = csrf_of((await client.get("/grupos")).text)
+    async with sessions() as session:
+        niche_id = (await session.execute(select(Niche.id))).scalar_one()
+
+    r = await client.post("/grupos", data=_group_form(csrf, niche_id, transport="wuzapi"))
+    assert r.status_code == 422
+    assert "No WhatsApp do chip" in r.text
+    async with sessions() as session:
+        assert (await session.execute(select(func.count()).select_from(Channel))).scalar_one() == 0

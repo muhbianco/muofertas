@@ -219,7 +219,7 @@ async def test_create_panel_group_from_whatsapp_group(
         beleza.id,
         GROUP_BEL,
     )
-    assert channel.max_per_day == 10 and channel.invite_url and stat.members == 5
+    assert channel.max_per_day == 20 and channel.invite_url and stat.members == 5
 
 
 def test_group_name_suggests_the_new_niches() -> None:

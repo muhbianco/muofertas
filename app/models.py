@@ -320,8 +320,10 @@ class Channel(Base):
     transport: Mapped[str] = mapped_column(String(12), default="manual")
     ml_tag: Mapped[str | None] = mapped_column(String(30), nullable=True)
     invite_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    max_per_day: Mapped[int] = mapped_column(Integer, default=10)
-    min_interval_minutes: Mapped[int] = mapped_column(Integer, default=40)
+    max_per_day: Mapped[int] = mapped_column(Integer, default=20)
+    # Desde 11/10/2026 o intervalo é calculado (janela ÷ envios do dia, `spacing_minutes`) e a
+    # coluna só guarda o último valor calculado ao salvar; o envio não a lê.
+    min_interval_minutes: Mapped[int] = mapped_column(Integer, default=45)
     window_start_hour: Mapped[int] = mapped_column(Integer, default=7)
     window_end_hour: Mapped[int] = mapped_column(Integer, default=22)
     paused: Mapped[bool] = mapped_column(Boolean, default=False)

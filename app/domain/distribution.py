@@ -48,6 +48,8 @@ PIX_MAX_DISCOUNT = 0.30
 PIX_VALID_FOR = timedelta(hours=3)
 # Variação no intervalo do envio automático: grupos não recebem no mesmo minuto exato.
 MAX_JITTER_SECONDS = 600
+# Envio espalhado na janela: intervalo médio = janela ÷ envios do dia, nunca abaixo deste piso.
+MIN_SPACING_MINUTES = 10
 MIN_DISCOUNT_PCT = 5
 MAX_DISCOUNT_PCT = 70
 MAX_ANCHOR_OVER_REFERENCE = 1.5
@@ -94,6 +96,28 @@ class ChannelPolicy:
     window_start_hour: int
     window_end_hour: int
     paused: bool = False
+
+
+def spacing_minutes(max_per_day: int, window_start_hour: int, window_end_hour: int) -> int:
+    """Intervalo médio entre envios do grupo: das 07h às 22h, com 20 por dia → 45 min."""
+    window = max(window_end_hour - window_start_hour, 0) * 60
+    return max(window // max(max_per_day, 1), MIN_SPACING_MINUTES)
+
+
+def max_sends_in_window(window_start_hour: int, window_end_hour: int) -> int:
+    """Quantos envios cabem na janela sem descer do piso de intervalo."""
+    return max(window_end_hour - window_start_hour, 0) * 60 // MIN_SPACING_MINUTES
+
+
+def min_gap(max_per_day: int, window_start_hour: int, window_end_hour: int) -> timedelta:
+    """Menor espera entre dois envios: o intervalo médio menos metade da variação.
+
+    O envio automático soma de 0 a 10 min fixos por publicação (`jitter`), então a espera média
+    fica no intervalo médio e os envios do dia cabem na janela.
+    """
+    return timedelta(
+        minutes=spacing_minutes(max_per_day, window_start_hour, window_end_hour)
+    ) - timedelta(seconds=MAX_JITTER_SECONDS // 2)
 
 
 def local_day_start(now: datetime) -> datetime:

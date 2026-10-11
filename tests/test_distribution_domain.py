@@ -221,3 +221,14 @@ def test_message_header_of_the_new_niches() -> None:
     assert header("casa-mimos", "Casa e mimos: cama, mesa e banho") == (
         "#publi · 🏠 *CASA E MIMOS*"
     )
+
+
+def test_spacing_spreads_the_daily_sends_over_the_window() -> None:
+    from app.domain.distribution import max_sends_in_window, min_gap, spacing_minutes
+
+    assert spacing_minutes(20, 7, 22) == 45  # 900 min ÷ 20
+    assert spacing_minutes(10, 0, 24) == 144
+    assert spacing_minutes(200, 7, 22) == 10  # piso: nunca menos de 10 min
+    assert max_sends_in_window(7, 22) == 90
+    # o envio automático soma de 0 a 10 min ao mínimo: a espera média fica nos 45 min
+    assert min_gap(20, 7, 22) == timedelta(minutes=40)

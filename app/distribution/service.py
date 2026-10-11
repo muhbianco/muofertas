@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +27,7 @@ from app.domain.distribution import (
     is_fresh,
     listing_discount,
     local_day_start,
+    min_gap,
     offer_page_url,
     parse_affiliate_links,
     parse_brl,
@@ -67,7 +68,9 @@ class PixRejectedError(DistributionError):
 def policy_of(channel: Channel) -> ChannelPolicy:
     return ChannelPolicy(
         max_per_day=channel.max_per_day,
-        min_interval=timedelta(minutes=channel.min_interval_minutes),
+        min_interval=min_gap(
+            channel.max_per_day, channel.window_start_hour, channel.window_end_hour
+        ),
         window_start_hour=channel.window_start_hour,
         window_end_hour=channel.window_end_hour,
         paused=channel.paused,
