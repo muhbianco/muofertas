@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Convites{% endblock %}
+{% block content %}
+<h1>Convites</h1>
+<p class="nota-pix">Um convite por grupo por dia, às {{ '%02d' % hour }}h (hora de Brasília), com o link de convite do grupo. O texto segue o calendário de eventos do nicho (véspera, dia e últimos dias); sem evento, sai um convite geral, alternando os textos. Não conta nos envios de oferta do dia.</p>
+{% if not enabled %}<p class="erro">Convites desligados no servidor (INVITES_ENABLED).</p>{% endif %}
+{% if error %}<p class="erro">{{ error }}</p>{% endif %}
+{% set kinds = {'periodo': 'período', 'vespera': 'véspera', 'auge': 'dia', 'reta_final': 'últimos dias', 'geral': 'geral'} %}
+{% for g in groups %}
+<article class="bloco">
+  <h2>{{ g.channel.name }}</h2>
+  {% if g.problem %}<p class="erro">{{ g.problem }}</p>{% endif %}
+  {% for d in g.days %}
+  <div class="convite">
+    <p class="linha"><b>{{ weekdays[d.day.weekday()] }} {{ d.day.strftime('%d/%m') }}</b> · {{ kinds.get(d.plan.kind, d.plan.kind) }}{% if d.plan.event_name %} · {{ d.plan.event_name }}{% endif %} · <span class="estado {{ d.state }}">{{ states.get(d.state, d.state) }}</span>{% if d.note %} · {{ d.note }}{% endif %}</p>
+    {% if d.state != 'skipped' %}<details><summary>ver o texto</summary><pre class="previa">{{ d.plan.message }}</pre></details>{% endif %}
+    {% if d.can_skip %}
+    <form method="post" action="/convites/pular">
+      <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+      <input type="hidden" name="channel_id" value="{{ g.channel.id }}">
+      <input type="hidden" name="day" value="{{ d.day.isoformat() }}">
+      <button class="botao rejeitar" type="submit">Pular este dia</button>
+    </form>
+    {% elif d.can_undo %}
+    <form method="post" action="/convites/desfazer">
+      <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+      <input type="hidden" name="channel_id" value="{{ g.channel.id }}">
+      <input type="hidden" name="day" value="{{ d.day.isoformat() }}">
+      <button class="botao aprovar" type="submit">Desfazer</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</article>
+{% else %}
+<p class="vazio">Nenhum grupo cadastrado.</p>
+{% endfor %}
+{% endblock %}

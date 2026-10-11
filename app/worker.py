@@ -26,8 +26,10 @@ from app.core.config import Settings, settings
 from app.core.database import SessionFactory, dispose_engine
 from app.core.lease import acquire_lease, holder_id, release_lease
 from app.core.logging import configure_logging, get_logger
+from app.distribution.invites import invite_config, send_invites
 from app.distribution.links import resolve_links
 from app.distribution.sender import send_due
+from app.domain.invites import InviteConfig, InviteConfigError
 from app.evaluation.service import Evaluator
 from app.integrations.mercadolivre import (
     CallBudgetExceededError,
@@ -117,6 +119,13 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
         "worker iniciado", extra={"holder": holder, "collector_enabled": cfg.collector_enabled}
     )
     ml_pause = MlPause()
+    invites: InviteConfig | None = None
+    if cfg.invites_enabled:
+        try:
+            invites = await invite_config(cfg.invites_file)
+        except (OSError, ValueError, InviteConfigError):
+            # Texto quebrado não pode derrubar as ofertas: o convite fica desligado e o log diz.
+            logger.exception("convites desligados: config/convites.json inválido")
     try:
         while not stop.is_set():
             pause = cfg.worker_idle_seconds
@@ -141,6 +150,11 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                         )
                         if sent:
                             logger.info("envio automático", extra={"sent": sent})
+                    if invites is not None:
+                        # Convite não chama o ML: sai mesmo com a coleta em pausa.
+                        await send_invites(
+                            SessionFactory, wa_client, invites, utcnow(), hour=cfg.invite_hour
+                        )
             except Exception:
                 logger.exception("erro no ciclo do worker")
                 pause = 30

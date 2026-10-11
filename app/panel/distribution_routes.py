@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
@@ -15,7 +15,7 @@ from app.core.clock import utcnow
 from app.core.config import settings
 from app.core.database import get_sessionmaker
 from app.core.logging import get_logger
-from app.distribution import service
+from app.distribution import invites, service
 from app.distribution.sender import resend_now
 from app.distribution.service import DistributionError
 from app.domain.distribution import (
@@ -27,6 +27,7 @@ from app.domain.distribution import (
     share_url,
     spacing_minutes,
 )
+from app.domain.invites import InviteConfigError
 from app.integrations.mercadolivre import MercadoLivreClient
 from app.integrations.wuzapi import WuzapiClient, WuzapiError
 from app.models import CatalogProduct, Channel, Niche, Publication
@@ -569,3 +570,78 @@ async def discard(
     except DistributionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _see_other("/postar")
+
+
+# --------------------------------------------------------------------------- convites
+
+INVITE_WEEKDAYS = ("seg", "ter", "qua", "qui", "sex", "sáb", "dom")
+INVITE_STATES = {
+    "agendado": "agendado",
+    "sending": "saindo",
+    "sent": "enviado",
+    "unknown": "sem confirmação",
+    "failed": "falhou",
+    "skipped": "pulado",
+    "sem_envio": "não sai",
+}
+
+
+@router.get("/convites", response_class=HTMLResponse)
+async def invites_page(request: Request, db: Db, ctx: Admin) -> Response:
+    error = None
+    groups: list[invites.AgendaGroup] = []
+    try:
+        config = await invites.invite_config(settings.invites_file)
+        groups = await invites.agenda(db, config, utcnow(), hour=settings.invite_hour)
+    except (OSError, ValueError, InviteConfigError) as exc:
+        logger.warning("config de convites inválido", extra={"error": str(exc)[:200]})
+        error = "O arquivo de convites está com erro: nenhum convite sai até corrigir."
+    return templates.TemplateResponse(
+        request,
+        "convites.html",
+        {
+            "ctx": ctx,
+            "groups": groups,
+            "hour": settings.invite_hour,
+            "enabled": settings.invites_enabled,
+            "error": error,
+            "weekdays": INVITE_WEEKDAYS,
+            "states": INVITE_STATES,
+        },
+    )
+
+
+def _day(raw: str) -> date:
+    try:
+        return date.fromisoformat(raw)
+    except ValueError:
+        raise HTTPException(status_code=422) from None
+
+
+@router.post("/convites/pular")
+async def skip_invite(
+    db: Db,
+    ctx: Admin,
+    channel_id: Annotated[int, Form()],
+    day: Annotated[str, Form(max_length=10)],
+    csrf: Annotated[str | None, Form()] = None,
+) -> Response:
+    check_csrf(ctx, csrf)
+    if await invites.skip_day(
+        db, channel_id=channel_id, day=_day(day), actor=ctx.username, now=utcnow()
+    ):
+        logger.info("convite pulado", extra={"channel_id": channel_id, "day": day})
+    return _see_other("/convites")
+
+
+@router.post("/convites/desfazer")
+async def undo_invite_skip(
+    db: Db,
+    ctx: Admin,
+    channel_id: Annotated[int, Form()],
+    day: Annotated[str, Form(max_length=10)],
+    csrf: Annotated[str | None, Form()] = None,
+) -> Response:
+    check_csrf(ctx, csrf)
+    await invites.undo_skip(db, channel_id=channel_id, day=_day(day), now=utcnow())
+    return _see_other("/convites")

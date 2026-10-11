@@ -1,0 +1,129 @@
+{
+  "_comentario": "Convite diário de compartilhamento: 1 por grupo por dia, no horário de pico (INVITE_HOUR, padrão 19h de Brasília). O texto vem do evento comercial do nicho naquele dia (fases: periodo, vespera, auge, reta_final); sem evento, um convite geral do nicho, alternando as variações. Placeholders: {evento}, {tema}, {link}. Todo texto precisa de {link}. 'nichos': ['*'] vale para todos. 'congela_referencia': o preço de referência da nota para de andar 21 dias antes do auge (desconto da Black Friday contra o preço de antes do esquenta).",
+  "temas": {
+    "ferramentas": "ferramentas e jardinagem",
+    "beleza": "beleza e autocuidado",
+    "tenis-esporte": "tênis e esporte",
+    "tecnologia": "celular, games e tecnologia",
+    "casa-mimos": "casa, cozinha e mimos",
+    "pais-maes-filhos": "bebês e crianças"
+  },
+  "gerais": [
+    "🤝 *Conhece alguém que vive caçando oferta de {tema}?* Manda o convite do grupo pra essa pessoa:\n{link}",
+    "📲 *Compartilhe o grupo!* Aqui só sai oferta de {tema} com o preço conferido na hora. Quanto mais gente, mais achados:\n{link}",
+    "💬 Encaminha esse convite pra família e pros amigos: ofertas de {tema} todo dia, sem enrolação.\n{link}",
+    "⭐ *Bora economizar junto?* Chama quem também gosta de pagar menos em {tema}:\n{link}"
+  ],
+  "fases_padrao": {
+    "periodo": "📅 *{evento} chegando!* As ofertas de {tema} com preço conferido aparecem por aqui. Chama quem também quer economizar:\n{link}",
+    "vespera": "⏰ *Amanhã é {evento}!* Fique por dentro: vem oferta de {tema} por aqui. Compartilha o grupo pra ninguém perder nada:\n{link}",
+    "auge": "🎉 *Hoje é {evento}!* Ofertas de {tema} com preço conferido o dia todo. Manda o grupo pra família e amigos:\n{link}",
+    "reta_final": "⌛ *{evento}: últimos dias!* Ainda tem oferta de {tema} por aqui. Compartilha o grupo:\n{link}"
+  },
+  "eventos": [
+    {
+      "slug": "dia-das-criancas-2026",
+      "nome": "Dia das Crianças",
+      "inicio": "2026-10-05",
+      "auge": "2026-10-12",
+      "fim": "2026-10-12",
+      "nichos": ["pais-maes-filhos", "tecnologia", "tenis-esporte"],
+      "textos": {
+        "periodo": "🎈 *Dia das Crianças chegando!* As ofertas de {tema} pra presentear aparecem por aqui. Chama a família pro grupo:\n{link}",
+        "vespera": "🎈 *Amanhã é Dia das Crianças!* Fique por dentro: vamos caçar as melhores ofertas de {tema} pra presentear. Compartilha o grupo pra ninguém perder nada:\n{link}",
+        "auge": "🎁 *Hoje é Dia das Crianças!* Ainda dá tempo de garantir o presente com preço bom. Manda o grupo pra quem ainda está procurando:\n{link}"
+      }
+    },
+    {
+      "slug": "black-friday-2026",
+      "nome": "Black Friday",
+      "inicio": "2026-11-01",
+      "auge": "2026-11-27",
+      "fim": "2026-11-30",
+      "nichos": ["*"],
+      "congela_referencia": true,
+      "textos": {
+        "periodo": "🖤 *A Black Friday está chegando!* A gente confere o preço de cada oferta antes de postar, pra ninguém cair em desconto de mentira. Chama quem vai comprar na BF:\n{link}",
+        "vespera": "🖤 *Amanhã é Black Friday!* As ofertas de {tema} vão pipocar aqui. Compartilha o grupo agora pra ninguém perder:\n{link}",
+        "auge": "🖤 *É hoje: Black Friday!* Ofertas de {tema} com preço conferido o dia todo. Manda o grupo pra família e amigos:\n{link}",
+        "reta_final": "🖤 *A Black Friday ainda não acabou!* Tem oferta de {tema} até segunda (Cyber Monday). Compartilha o grupo:\n{link}"
+      }
+    },
+    {
+      "slug": "natal-2026",
+      "nome": "Natal",
+      "inicio": "2026-12-01",
+      "auge": "2026-12-18",
+      "fim": "2026-12-24",
+      "nichos": ["*"],
+      "textos": {
+        "periodo": "🎄 *Natal chegando!* Bora adiantar os presentes com preço bom em {tema}. Chama a família pro grupo:\n{link}",
+        "vespera": "🎄 *Reta final dos presentes de Natal começando!* Oferta de {tema} pra presentear todo dia por aqui. Manda o grupo pra quem ainda não comprou:\n{link}",
+        "auge": "🎄 *Reta final dos presentes de Natal!* Oferta de {tema} pra presentear todo dia por aqui. Manda o grupo pra quem ainda não comprou:\n{link}",
+        "reta_final": "🎄 *Ainda dá tempo pros presentes de Natal!* Confere as ofertas de {tema} e compartilha o grupo:\n{link}"
+      }
+    },
+    {
+      "slug": "volta-as-aulas-2027",
+      "nome": "Volta às aulas",
+      "inicio": "2027-01-11",
+      "auge": "2027-02-15",
+      "fim": "2027-02-15",
+      "nichos": ["pais-maes-filhos", "tecnologia"],
+      "textos": {
+        "periodo": "📚 *Volta às aulas chegando!* Ofertas de {tema} pra começar o ano pagando menos. Chama os pais da turma pro grupo:\n{link}",
+        "vespera": "📚 *Volta às aulas chegando!* Ofertas de {tema} pra começar o ano pagando menos. Chama os pais da turma pro grupo:\n{link}",
+        "auge": "📚 *Volta às aulas!* Ainda dá tempo de garantir o que falta com preço bom. Compartilha o grupo:\n{link}"
+      }
+    },
+    {
+      "slug": "dia-do-consumidor-2027",
+      "nome": "Dia do Consumidor",
+      "inicio": "2027-03-10",
+      "auge": "2027-03-15",
+      "fim": "2027-03-15",
+      "nichos": ["*"]
+    },
+    {
+      "slug": "dia-das-maes-2027",
+      "nome": "Dia das Mães",
+      "inicio": "2027-04-26",
+      "auge": "2027-05-09",
+      "fim": "2027-05-09",
+      "nichos": ["beleza", "casa-mimos", "tecnologia", "pais-maes-filhos"]
+    },
+    {
+      "slug": "dia-dos-namorados-2027",
+      "nome": "Dia dos Namorados",
+      "inicio": "2027-06-01",
+      "auge": "2027-06-12",
+      "fim": "2027-06-12",
+      "nichos": ["beleza", "tecnologia", "tenis-esporte"]
+    },
+    {
+      "slug": "dia-dos-pais-2027",
+      "nome": "Dia dos Pais",
+      "inicio": "2027-07-26",
+      "auge": "2027-08-08",
+      "fim": "2027-08-08",
+      "nichos": ["ferramentas", "tecnologia", "tenis-esporte"]
+    },
+    {
+      "slug": "dia-das-criancas-2027",
+      "nome": "Dia das Crianças",
+      "inicio": "2027-10-04",
+      "auge": "2027-10-12",
+      "fim": "2027-10-12",
+      "nichos": ["pais-maes-filhos", "tecnologia", "tenis-esporte"]
+    },
+    {
+      "slug": "black-friday-2027",
+      "nome": "Black Friday",
+      "inicio": "2027-11-01",
+      "auge": "2027-11-26",
+      "fim": "2027-11-29",
+      "nichos": ["*"],
+      "congela_referencia": true
+    }
+  ]
+}

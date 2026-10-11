@@ -224,14 +224,14 @@ class WuzapiClient:
         groups = [summarize_group(g) for g in raw or [] if isinstance(g, dict)]
         return sorted((g for g in groups if g), key=lambda g: g.name.lower())
 
-    async def send_text(self, chat_jid: str, body: str) -> str:
+    async def send_text(self, chat_jid: str, body: str, *, link_preview: bool = False) -> str:
         """`POST /chat/send/text` para o grupo (`Phone` = JID `…@g.us`; o parseJID da 1.0.9
-        aceita JID completo). Sem prévia de link: a prévia faria o servidor abrir o link de
-        afiliado, um clique de robô."""
+        aceita JID completo). Sem prévia de link por padrão: a prévia faria o servidor abrir o
+        link de afiliado, um clique de robô. Só o convite do grupo liga a prévia (foto e nome)."""
         data = await self._request(
             "POST",
             "/chat/send/text",
-            json={"Phone": chat_jid, "Body": body, "LinkPreview": False},
+            json={"Phone": chat_jid, "Body": body, "LinkPreview": link_preview},
         )
         return str((data or {}).get("Id") or "") if isinstance(data, dict) else ""
 

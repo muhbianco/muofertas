@@ -463,3 +463,33 @@ class AdminInvite(Base):
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
     used_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     username: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
+
+class ChannelInvite(Base):
+    """Convite diário de compartilhamento do grupo (0014): uma linha por grupo por dia.
+
+    O índice único é a trava do "no máximo um por dia". Estados: `sending` (gravado antes de
+    chamar a WuzAPI), `sent`, `unknown` (a WuzAPI não confirmou: não reenvia), `failed` (recusado)
+    e `skipped` (o operador pulou o dia).
+    """
+
+    __tablename__ = "channel_invite"
+    __table_args__ = (
+        UniqueConstraint("channel_id", "local_date", name="uq_channel_invite_day"),
+        Index("ix_channel_invite_state", "state", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channel.id", ondelete="CASCADE"))
+    local_date: Mapped[date] = mapped_column(Date)
+    kind: Mapped[str] = mapped_column(String(12))
+    event_slug: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    message: Mapped[str] = mapped_column(Text)
+    state: Mapped[str] = mapped_column(String(10))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    sent_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    external_message_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    actor: Mapped[str | None] = mapped_column(String(80), nullable=True)

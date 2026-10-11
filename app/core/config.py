@@ -89,6 +89,11 @@ class Settings(BaseSettings):
     wuzapi_timeout_seconds: float = 15.0
     # Envio automático para grupos com transporte "wuzapi" (decisão do dono, 10/10/2026).
     autosend_enabled: bool = True
+    # Convite diário de compartilhamento (11/10/2026): 1 por grupo por dia, no horário de pico
+    # (hora de Brasília). Textos e calendário de eventos em `config/convites.json`.
+    invites_enabled: bool = True
+    invite_hour: int = 19
+    invites_file: str = "config/convites.json"
     # Código de afiliado do ML (`matt_tool`, público: vai em todo link). Com ele e a etiqueta
     # do grupo, o link nasce na aprovação; vazio, o link vem colado pela tela Links.
     ml_affiliate_tool_id: str = ""

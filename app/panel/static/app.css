@@ -114,3 +114,9 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .selo.off { background: var(--verm); color: #fff; }
 .preco .de { font-size: 13px; font-weight: 400; color: var(--cinza); }
 .contagem .chip-off { background: #fff; border: 1px solid var(--verm); border-radius: 999px; padding: 2px 10px; font-weight: 700; color: var(--verm); text-decoration: none; }
+.convite { border-top: 1px solid var(--linha); padding: 8px 0; }
+.convite form { margin-top: 6px; }
+.previa { white-space: pre-wrap; font-family: inherit; font-size: 13px; background: #fff; border: 1px solid var(--linha); border-radius: 8px; padding: 8px; margin: 6px 0 0; }
+.estado.sent { color: var(--esm); font-weight: 700; }
+.estado.skipped, .estado.sem_envio { color: var(--cinza); }
+.estado.failed, .estado.unknown { color: var(--verm); font-weight: 700; }
