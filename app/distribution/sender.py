@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.logging import get_logger
 from app.distribution.service import (
+    READY_ORDER,
     DistributionError,
     apply_recheck,
     channel_status,
@@ -82,7 +83,7 @@ async def _due(sessions: async_sessionmaker[AsyncSession], now: datetime) -> lis
                 await db.execute(
                     select(Publication)
                     .where(Publication.channel_id == channel.id, Publication.state == "ready")
-                    .order_by(Publication.created_at, Publication.id)
+                    .order_by(*READY_ORDER)
                     .limit(1)
                 )
             ).scalar_one_or_none()

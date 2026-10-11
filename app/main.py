@@ -28,10 +28,12 @@ from app.panel.operators_routes import router as operators_router
 from app.panel.routes import router as panel_router
 from app.panel.whatsapp_routes import router as whatsapp_router
 
-# Só o próprio painel; imagem de produto vem do CDN do ML. Sem script, sem estilo inline.
+# Só o próprio painel; imagem de produto vem do CDN do ML. Sem estilo inline. Script só arquivo
+# nosso em /static (arrastar na fila de envio): inline, eval e de outro domínio seguem bloqueados.
 CSP = (
     "default-src 'self'; img-src 'self' https://http2.mlstatic.com data:; style-src 'self'; "
-    "script-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+    "script-src 'self'; connect-src 'none'; form-action 'self'; frame-ancestors 'none'; "
+    "base-uri 'none'; object-src 'none'"
 )
 
 

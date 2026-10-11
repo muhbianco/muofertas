@@ -7,7 +7,7 @@
   <title>{% block title %}MegaPromoOz{% endblock %} · painel</title>
   <link rel="icon" href="/static/favicon-48.png">
   <link rel="apple-touch-icon" href="/static/apple-touch-icon-180.png">
-  <link rel="stylesheet" href="/static/app.css?v=11">
+  <link rel="stylesheet" href="/static/app.css?v=12">
 </head>
 <body>
 {% if ctx %}
@@ -34,5 +34,6 @@
 <main>
 {% block content %}{% endblock %}
 </main>
+{% block scripts %}{% endblock %}
 </body>
 </html>

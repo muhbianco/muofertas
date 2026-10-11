@@ -387,6 +387,9 @@ class Publication(Base):
     # 0012: preço com o cupom da loja, visto pelo operador na aprovação (a API não traz cupom).
     coupon_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     coupon_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    # 0015: posição na fila de envio do grupo, quando o operador reordena (vazio = ordem de
+    # aprovação, depois das posicionadas).
+    queue_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     note: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())

@@ -120,3 +120,12 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .estado.sent { color: var(--esm); font-weight: 700; }
 .estado.skipped, .estado.sem_envio { color: var(--cinza); }
 .estado.failed, .estado.unknown { color: var(--verm); font-weight: 700; }
+.fila-envio { list-style: none; padding: 0; margin: 0; }
+.fila-envio li { display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--linha); background: var(--creme); }
+.fila-envio li .item { flex: 1; border-top: 0; }
+.fila-envio .alca { cursor: grab; touch-action: none; user-select: none; font-size: 22px; padding: 10px 4px; color: var(--cinza); }
+.fila-envio .subir { display: flex; gap: 4px; }
+.fila-envio .subir button { min-width: 36px; min-height: 36px; border: 1px solid var(--linha); border-radius: 8px; background: #fff; }
+.fila-envio li.arrastando { position: relative; z-index: 2; opacity: .9; box-shadow: 0 4px 14px rgba(0, 0, 0, .15); }
+.fila-envio li.alvo { box-shadow: 0 -3px 0 var(--esm); }
+form.mover { display: none; }

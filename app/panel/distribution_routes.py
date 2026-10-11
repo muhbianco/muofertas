@@ -338,6 +338,26 @@ class ReadyGroup:
     rows: list[ReadyRow]
 
 
+@router.post("/postar/{publication_id}/subir")
+async def post_move_up(
+    db: Db,
+    ctx: Admin,
+    publication_id: int,
+    csrf: Annotated[str | None, Form()] = None,
+    antes_de: Annotated[int | None, Form()] = None,
+) -> Response:
+    """Reordena a fila de envio: a publicação sobe para antes de `antes_de` (ou para o topo)."""
+    check_csrf(ctx, csrf)
+    moved = await service.move_up(db, publication_id=publication_id, before_id=antes_de)
+    if moved:
+        logger.info(
+            "fila reordenada",
+            extra={"publication_id": publication_id, "before": antes_de, "user": ctx.username},
+        )
+    pub = await db.get(Publication, publication_id)
+    return _see_other(f"/postar#grupo-{pub.channel_id}" if pub else "/postar")
+
+
 @router.get("/postar", response_class=HTMLResponse)
 async def post_list(request: Request, db: Db, ctx: Admin) -> Response:
     now = utcnow()
@@ -346,7 +366,7 @@ async def post_list(request: Request, db: Db, ctx: Admin) -> Response:
             select(Publication, CatalogProduct.name, CatalogProduct.image_url)
             .join(CatalogProduct, CatalogProduct.id == Publication.product_id)
             .where(Publication.state == "ready")
-            .order_by(Publication.channel_id, Publication.id)
+            .order_by(Publication.channel_id, *service.READY_ORDER)
             .limit(LIST_LIMIT)
         )
     ).all()

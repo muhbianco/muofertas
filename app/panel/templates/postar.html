@@ -25,15 +25,37 @@
 {% endif %}
 {% if not groups %}<p class="vazio">Nada esperando. Aprove na Fila: nos grupos automáticos o envio sai sozinho no próximo horário livre.</p>{% endif %}
 {% for g in groups %}
-<article class="bloco">
+<article class="bloco" id="grupo-{{ g.channel.id }}">
   <h2>{{ g.channel.name }}{% if g.channel.transport == 'wuzapi' %} <span class="selo oficial">automático</span>{% endif %}</h2>
   {% if g.block %}<p class="linha">Próximo envio: {{ g.block }}.</p>{% elif g.channel.transport == 'wuzapi' %}<p class="linha ok">Sai sozinho nos próximos minutos.</p>{% else %}<p class="linha ok">Pode enviar agora.</p>{% endif %}
+  {% if g.rows | length > 1 %}<p class="dica">Ordem de saída: o primeiro é o próximo. Arraste pela alça ⠿ para cima, ou use ▲ (sobe uma) e ⤒ (vira o próximo).</p>{% endif %}
+  <ol class="fila-envio">
   {% for r in g.rows %}
-  <a class="item" href="/postar/{{ r.pub.id }}">
-    {% if r.image_url %}<img src="{{ r.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="sem-foto"></span>{% endif %}
-    <span><b>{{ r.name }}</b><br><small>aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}</small></span>
-  </a>
+  <li data-pub="{{ r.pub.id }}">
+    {% if g.rows | length > 1 %}<span class="alca" title="Arraste para cima" aria-hidden="true">⠿</span>{% endif %}
+    <a class="item" href="/postar/{{ r.pub.id }}">
+      {% if r.image_url %}<img src="{{ r.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="sem-foto"></span>{% endif %}
+      <span><b>{{ r.name }}</b><br><small>aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}</small></span>
+    </a>
+    {% if loop.first %}{% if g.rows | length > 1 %}<span class="selo oficial">próximo</span>{% endif %}{% else %}
+    <span class="subir">
+      <form method="post" action="/postar/{{ r.pub.id }}/subir">
+        <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+        <input type="hidden" name="antes_de" value="{{ g.rows[loop.index0 - 1].pub.id }}">
+        <button type="submit" title="Subir uma posição">▲</button>
+      </form>
+      <form method="post" action="/postar/{{ r.pub.id }}/subir">
+        <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+        <button type="submit" title="Sair como o próximo">⤒</button>
+      </form>
+    </span>{% endif %}
+  </li>
   {% endfor %}
+  </ol>
+  <form class="mover" method="post" action="/postar">
+    <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+    <input type="hidden" name="antes_de" value="">
+  </form>
 </article>
 {% endfor %}
 {% if recent %}
@@ -51,3 +73,4 @@
 </table>
 {% endif %}
 {% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=1" defer></script>{% endblock %}

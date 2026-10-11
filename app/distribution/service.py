@@ -65,6 +65,50 @@ class PixRejectedError(DistributionError):
         self.field = field
 
 
+# Ordem de saída das publicações prontas de um grupo: as que o operador posicionou primeiro, na
+# ordem dele; depois as outras, por ordem de aprovação.
+READY_ORDER = (
+    Publication.queue_position.is_(None),
+    Publication.queue_position,
+    Publication.created_at,
+    Publication.id,
+)
+QUEUE_STEP = 10
+
+
+async def move_up(db: AsyncSession, *, publication_id: int, before_id: int | None) -> bool:
+    """Leva a publicação para antes de `before_id` (ou para o topo). Só sobe, nunca desce.
+
+    Renumera a fila pronta do grupo inteira (é curta): sem posição repetida nem buraco.
+    """
+    pub = await db.get(Publication, publication_id)
+    if pub is None or pub.state != "ready":
+        return False
+    queue = list(
+        (
+            await db.execute(
+                select(Publication)
+                .where(Publication.channel_id == pub.channel_id, Publication.state == "ready")
+                .order_by(*READY_ORDER)
+                .limit(500)
+            )
+        ).scalars()
+    )
+    order = [p.id for p in queue]
+    if pub.id not in order:
+        return False
+    current = order.index(pub.id)
+    target = 0 if before_id is None else (order.index(before_id) if before_id in order else -1)
+    if target < 0 or target >= current:
+        return False  # alvo de outro grupo, ou seria descer
+    order.remove(pub.id)
+    order.insert(target, pub.id)
+    by_id = {p.id: p for p in queue}
+    for n, pid in enumerate(order, start=1):
+        by_id[pid].queue_position = n * QUEUE_STEP
+    return True
+
+
 def policy_of(channel: Channel) -> ChannelPolicy:
     return ChannelPolicy(
         max_per_day=channel.max_per_day,
