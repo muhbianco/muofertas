@@ -53,6 +53,7 @@ MAX_JITTER_SECONDS = 600
 MIN_SPACING_MINUTES = 10
 MIN_DISCOUNT_PCT = 5
 MAX_DISCOUNT_PCT = 70
+MIN_OFFICIAL_GAP_PCT = 10  # "mais barato que a loja oficial" só a partir disso
 MAX_ANCHOR_OVER_REFERENCE = 1.5
 
 
@@ -196,16 +197,31 @@ class Recheck:
     status: str  # ok | gone | price_up
     price_cents: int | None
     original_cents: int | None = None  # o "de" do próprio anúncio, se houver
+    official_cents: int | None = None  # menor preço de loja oficial do produto, na mesma leitura
 
 
 def recheck_offer(raw_offers: list[dict[str, Any]], item_id: str, approved_cents: int) -> Recheck:
-    """Preço atual da oferta que o link aponta (não do produto): é o que o membro vai ver."""
-    for raw in raw_offers:
-        offer = Offer.from_api(raw)
-        if offer is not None and offer.item_id == item_id:
-            if offer.price_cents > approved_cents * (1 + PRICE_UP_TOLERANCE):
-                return Recheck("price_up", offer.price_cents, offer.original_price_cents)
-            return Recheck("ok", offer.price_cents, offer.original_price_cents)
+    """Preço atual da oferta que o link aponta (não do produto): é o que o membro vai ver.
+
+    Junto vem o menor preço de loja oficial (novo) do mesmo produto, para o post comparar.
+    """
+    offers = [o for o in map(Offer.from_api, raw_offers) if o is not None]
+    official = min(
+        (
+            o.price_cents
+            for o in offers
+            if o.official_store_id is not None and o.condition in (None, "new")
+        ),
+        default=None,
+    )
+    for offer in offers:
+        if offer.item_id == item_id:
+            status = (
+                "price_up"
+                if offer.price_cents > approved_cents * (1 + PRICE_UP_TOLERANCE)
+                else "ok"
+            )
+            return Recheck(status, offer.price_cents, offer.original_price_cents, official)
     return Recheck("gone", None)
 
 
@@ -248,6 +264,37 @@ def listing_discount(
     return ListingDiscount(original_cents, percent)
 
 
+def official_comparison(price_cents: int, official_cents: int | None) -> ListingDiscount | None:
+    """Quanto o anúncio sai mais barato que a loja oficial do mesmo produto (post de vendedor
+    comum). Mesmas travas do % OFF, com piso maior: abaixo de 10% não vale a linha, acima de 70%
+    cheira a falsificação ou erro de preço."""
+    if official_cents is None or official_cents <= price_cents:
+        return None
+    percent = (official_cents - price_cents) * 100 // official_cents
+    if not MIN_OFFICIAL_GAP_PCT <= percent <= MAX_DISCOUNT_PCT:
+        return None
+    return ListingDiscount(official_cents, percent)
+
+
+REPUTATION = {
+    "5_green": "verde",
+    "4_light_green": "verde-claro",
+    "3_yellow": "amarela",
+    "2_orange": "laranja",
+    "1_red": "vermelha",
+}
+
+
+def seller_line(level_id: str | None, sales: int | None) -> str | None:
+    """ "Vendedor com reputação verde e 2.211 vendas" (só para oferta fora da loja oficial)."""
+    color = REPUTATION.get(level_id or "")
+    if color is None:
+        return None
+    if sales:
+        return f"Vendedor com reputação {color} e {sales:,} vendas".replace(",", ".")
+    return f"Vendedor com reputação {color}"
+
+
 def jitter(publication_id: int) -> timedelta:
     """De 0 a 10 minutos, fixo por publicação (o mesmo item não "anda" entre ciclos)."""
     return timedelta(seconds=(publication_id * 7919) % MAX_JITTER_SECONDS)
@@ -273,6 +320,8 @@ def render_message(
     pix_cents: int | None = None,
     discount: ListingDiscount | None = None,
     coupon_cents: int | None = None,
+    versus_official: ListingDiscount | None = None,
+    seller: str | None = None,
 ) -> str:
     """Formato do WhatsApp: *negrito*, _itálico_ e blocos separados por linha em branco.
 
@@ -293,8 +342,18 @@ def render_message(
             f"💰 De ~{format_brl(discount.original_cents)}~ por *{format_brl(price_cents)}* "
             "no Mercado Livre",
         ]
+    elif versus_official is not None:
+        # Sem "de" no próprio anúncio: a comparação é com a loja oficial do mesmo produto, e o
+        # texto diz de onde vem o preço riscado.
+        lines += [
+            f"🔥 *{versus_official.percent}% mais barato que a loja oficial*",
+            f"🏬 Na loja oficial: ~{format_brl(versus_official.original_cents)}~",
+            f"💰 Aqui: *{format_brl(price_cents)}* no Mercado Livre",
+        ]
     else:
         lines.append(f"💰 *{format_brl(price_cents)}* no Mercado Livre")
+    if seller and not official:
+        lines.append(f"👍 {seller}")
     if pix_cents:
         lines.append(f"⚡ *{format_brl(pix_cents)} no Pix*")
     if coupon_cents:

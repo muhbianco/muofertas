@@ -7,13 +7,13 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import case, exists, func, select
+from sqlalchemy import ColumnElement, case, exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.collector.domains import SOURCE_PANEL, label
 from app.collector.marketplace import MARKETPLACE
 from app.core.clock import utcnow
-from app.domain.distribution import offer_page_url, product_page_url
+from app.domain.distribution import REPUTATION, offer_page_url, product_page_url
 from app.models import (
     Alert,
     CatalogProduct,
@@ -48,13 +48,7 @@ def product_url(product: CatalogProduct) -> str:
     return product_page_url(product.permalink, product.external_id)
 
 
-LEVELS = {
-    "5_green": "verde",
-    "4_light_green": "verde-claro",
-    "3_yellow": "amarela",
-    "2_orange": "laranja",
-    "1_red": "vermelha",
-}
+LEVELS = REPUTATION
 POWER = {"platinum": "MercadoLíder Platinum", "gold": "MercadoLíder Gold", "silver": "MercadoLíder"}
 KIND = {"oficial": "loja oficial", "confiavel": "oferta confiável", "elegivel": "vendedor elegível"}
 
@@ -178,6 +172,63 @@ async def discount_count(db: AsyncSession, niche_id: int | None) -> int:
     return int((await db.execute(q)).scalar_one())
 
 
+def _queue_filters(
+    tiers: list[str], *, only_discount: bool, sent: str | None, now: datetime | None
+) -> list[ColumnElement[bool]]:
+    """O que está na fila de aprovação (a lista e o KPI por nicho usam o mesmo critério)."""
+    sent_since = (now or utcnow()) - SENT_WINDOW
+    since_change = func.coalesce(CatalogProduct.last_changed_at, CatalogProduct.first_seen_at)
+    filters: list[ColumnElement[bool]] = [
+        CatalogProduct.active.is_(True),
+        CatalogProduct.operator_blocked.is_(False),
+        CatalogProduct.last_tier.in_(tiers),
+        # Resolvido desde a última mudança de preço sai da fila até o preço mudar:
+        # rejeitado, ou aprovado que virou publicação. Aprovado sem grupo no nicho continua
+        # na fila (a aprovação não levou a lugar nenhum).
+        ~exists().where(
+            OperatorDecision.product_id == CatalogProduct.id,
+            OperatorDecision.decision == "rejected",
+            OperatorDecision.decided_at >= since_change,
+        ),
+        ~exists().where(
+            Publication.product_id == CatalogProduct.id,
+            Publication.created_at >= since_change,
+        ),
+    ]
+    if only_discount:
+        filters.append(CatalogProduct.listing_discount_pct.is_not(None))
+    recently_sent = exists().where(
+        Publication.product_id == CatalogProduct.id,
+        Publication.state == "sent",
+        Publication.sent_at >= sent_since,
+    )
+    if sent == SENT_HIDE:
+        filters.append(~recently_sent)
+    elif sent == SENT_ONLY:
+        filters.append(recently_sent)
+    return filters
+
+
+async def queue_by_niche(
+    db: AsyncSession,
+    tiers: list[str],
+    *,
+    only_discount: bool = False,
+    sent: str | None = None,
+    now: datetime | None = None,
+) -> dict[int, int]:
+    """Quantos produtos estão na fila em cada nicho, com os mesmos filtros da lista."""
+    rows = await db.execute(
+        select(CatalogProduct.niche_id, func.count())
+        .where(
+            CatalogProduct.niche_id.is_not(None),
+            *_queue_filters(tiers, only_discount=only_discount, sent=sent, now=now),
+        )
+        .group_by(CatalogProduct.niche_id)
+    )
+    return {niche_id: count for niche_id, count in rows.tuples() if niche_id is not None}
+
+
 async def queue(
     db: AsyncSession,
     tiers: list[str],
@@ -188,42 +239,14 @@ async def queue(
     now: datetime | None = None,
 ) -> list[Card]:
     sent_since = (now or utcnow()) - SENT_WINDOW
-    since_change = func.coalesce(CatalogProduct.last_changed_at, CatalogProduct.first_seen_at)
     rank = case({t: i for i, t in enumerate(TIER_ORDER)}, value=CatalogProduct.last_tier, else_=99)
     q = (
         select(CatalogProduct, Niche.name)
         .join(Niche, Niche.id == CatalogProduct.niche_id)
-        .where(
-            CatalogProduct.active.is_(True),
-            CatalogProduct.operator_blocked.is_(False),
-            CatalogProduct.last_tier.in_(tiers),
-            # Resolvido desde a última mudança de preço sai da fila até o preço mudar:
-            # rejeitado, ou aprovado que virou publicação. Aprovado sem grupo no nicho continua
-            # na fila (a aprovação não levou a lugar nenhum).
-            ~exists().where(
-                OperatorDecision.product_id == CatalogProduct.id,
-                OperatorDecision.decision == "rejected",
-                OperatorDecision.decided_at >= since_change,
-            ),
-            ~exists().where(
-                Publication.product_id == CatalogProduct.id,
-                Publication.created_at >= since_change,
-            ),
-        )
+        .where(*_queue_filters(tiers, only_discount=only_discount, sent=sent, now=now))
     )
     if niche_id is not None:
         q = q.where(CatalogProduct.niche_id == niche_id)
-    if only_discount:
-        q = q.where(CatalogProduct.listing_discount_pct.is_not(None))
-    recently_sent = exists().where(
-        Publication.product_id == CatalogProduct.id,
-        Publication.state == "sent",
-        Publication.sent_at >= sent_since,
-    )
-    if sent == SENT_HIDE:
-        q = q.where(~recently_sent)
-    elif sent == SENT_ONLY:
-        q = q.where(recently_sent)
     # % OFF no anúncio primeiro: enquanto não há histórico para comprovar desconto, é o melhor
     # sinal de promoção que a fila tem. Pesa junto a posição nos mais vendidos da categoria (o 1º
     # dobra o peso, o 20º quase não muda; sem posição, como o vigiado, fica o % puro): 44% OFF no

@@ -22,6 +22,11 @@
   </select>
   <button type="submit">Filtrar</button>
 </form>
+{% set kpi_q %}{% if nivel %}&amp;nivel={{ nivel }}{% endif %}{% if enviados %}&amp;enviados={{ enviados }}{% endif %}{% endset %}
+<nav class="kpi-nichos" aria-label="Na fila, por nicho">
+  <a class="kpi{% if not nicho %} atual{% endif %}" href="/?{{ kpi_q[5:] if kpi_q else '' }}"><b>{{ queue_total }}</b><span>na fila</span></a>
+  {% for n in niches if n.active %}<a class="kpi{% if n.slug == nicho %} atual{% endif %}" href="/?nicho={{ n.slug }}{{ kpi_q }}"><b>{{ by_niche.get(n.id, 0) }}</b><span>{{ n.name.split(':')[0] }}</span></a>{% endfor %}
+</nav>
 <div class="contagem">
   {% for t in tier_order %}{% if counts.get(t) %}<span>{{ t }}: {{ counts[t] }}</span>{% endif %}{% endfor %}
   {% if counts.get('sem nota') %}<span>sem nota: {{ counts['sem nota'] }}</span>{% endif %}

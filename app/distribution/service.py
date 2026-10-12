@@ -29,18 +29,21 @@ from app.domain.distribution import (
     local_day_start,
     min_gap,
     offer_page_url,
+    official_comparison,
     parse_affiliate_links,
     parse_brl,
     pix_to_show,
     recheck_offer,
     render_message,
     repeat_block_reason,
+    seller_line,
     send_block_reason,
 )
 from app.integrations.mercadolivre import MercadoLivreClient, MercadoLivreError
 from app.models import (
     CatalogProduct,
     Channel,
+    MarketplaceSeller,
     Niche,
     OfferEvaluation,
     OperatorDecision,
@@ -303,6 +306,7 @@ def apply_recheck(pub: Publication, recheck: Recheck, now: datetime) -> None:
     pub.checked_at = now
     pub.checked_price_cents = recheck.price_cents
     pub.original_price_cents = recheck.original_cents
+    pub.official_price_cents = recheck.official_cents
     pub.message = (
         None  # remontada com o preço e a hora novos (o Pix vale pela hora em que foi visto)
     )
@@ -342,13 +346,19 @@ async def message_for(db: AsyncSession, pub: Publication) -> str:
         raise DistributionError("revalide o preço antes de montar a mensagem")
     niche = await db.get(Niche, channel.niche_id)
     evaluation = await db.get(OfferEvaluation, pub.evaluation_id) if pub.evaluation_id else None
+    official = bool(evaluation and evaluation.used_official)
+    discount = listing_discount(
+        pub.checked_price_cents,
+        pub.original_price_cents,
+        evaluation.reference_cents if evaluation else None,
+    )
     return render_message(
         niche_slug=niche.slug if niche else "",
         niche_name=niche.name if niche else "",
         product_name=product.name or product.external_id,
         price_cents=pub.checked_price_cents,
         checked_at=pub.checked_at,
-        official=bool(evaluation and evaluation.used_official),
+        official=official,
         url=pub.affiliate_url,
         pix_cents=pix_to_show(
             pub.pix_price_cents, pub.pix_at, pub.checked_price_cents, pub.checked_at
@@ -356,12 +366,30 @@ async def message_for(db: AsyncSession, pub: Publication) -> str:
         coupon_cents=pix_to_show(
             pub.coupon_price_cents, pub.coupon_at, pub.checked_price_cents, pub.checked_at
         ),
-        discount=listing_discount(
-            pub.checked_price_cents,
-            pub.original_price_cents,
-            evaluation.reference_cents if evaluation else None,
-        ),
+        discount=discount,
+        versus_official=None
+        if official or discount is not None
+        else official_comparison(pub.checked_price_cents, pub.official_price_cents),
+        seller=None if official else await _seller_line(db, evaluation),
     )
+
+
+async def _seller_line(db: AsyncSession, evaluation: OfferEvaluation | None) -> str | None:
+    """Reputação e vendas de quem vende a oferta aprovada (vem da avaliação)."""
+    if evaluation is None:
+        return None
+    seller_id = json.loads(evaluation.snapshot).get("offer_seller_id")
+    if not isinstance(seller_id, int):
+        return None
+    seller = (
+        await db.execute(
+            select(MarketplaceSeller).where(
+                MarketplaceSeller.marketplace == "mercadolivre",
+                MarketplaceSeller.external_id == seller_id,
+            )
+        )
+    ).scalar_one_or_none()
+    return seller_line(seller.level_id, seller.transactions_total) if seller else None
 
 
 async def set_pix(db: AsyncSession, pub: Publication, text: str, now: datetime) -> None:

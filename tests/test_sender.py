@@ -23,6 +23,7 @@ from app.integrations.wuzapi import WuzapiClient
 from app.models import (
     CatalogProduct,
     Channel,
+    MarketplaceSeller,
     Niche,
     OfferEvaluation,
     OperatorDecision,
@@ -153,8 +154,10 @@ async def run(
     *,
     price: float = 449.90,
     now: datetime = NOW,
+    others: list[dict[str, object]] | None = None,
 ) -> int:
-    fake_ml = FakeML(offers={"MLBP1": [{"item_id": ITEM, "price": price, "currency_id": "BRL"}]})
+    offers = [{"item_id": ITEM, "price": price, "currency_id": "BRL"}, *(others or [])]
+    fake_ml = FakeML(offers={"MLBP1": offers})
     ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
     wa_client = WuzapiClient(cfg(), transport=wa.transport())
     try:
@@ -184,6 +187,34 @@ async def test_approved_offer_goes_to_the_group_once(
     assert "matt_word=megapromooz&matt_tool=19964746" in sent["Body"]
     pub = await state(sessions)
     assert (pub.state, pub.actor, pub.external_message_id) == ("sent", "envio automático", "MSG1")
+
+
+async def test_common_seller_post_compares_with_the_official_store(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await approve(sessions)
+    async with sessions() as session, session.begin():
+        ev = (await session.execute(select(OfferEvaluation))).scalar_one()
+        ev.used_official = False
+        ev.snapshot = json.dumps({"offer_item_id": ITEM, "offer_seller_id": 7})
+        session.add(
+            MarketplaceSeller(
+                marketplace="mercadolivre",
+                external_id=7,
+                level_id="5_green",
+                transactions_total=2211,
+                checked_at=NOW,
+            )
+        )
+    wa = FakeWuzapi()
+    official = {"item_id": "MLB999", "price": 1049.30, "currency_id": "BRL", "official_store_id": 3}
+    assert await run(sessions, wa, others=[official]) == 1
+    body = wa.sent[0]["Body"]
+    assert "🔥 *57% mais barato que a loja oficial*" in body
+    assert "🏬 Na loja oficial: ~R$ 1.049,30~" in body
+    assert "💰 Aqui: *R$ 449,90* no Mercado Livre" in body
+    assert "👍 Vendedor com reputação verde e 2.211 vendas" in body
+    assert (await state(sessions)).official_price_cents == 104930
 
 
 async def test_price_up_and_window_and_manual_groups_do_not_send(
