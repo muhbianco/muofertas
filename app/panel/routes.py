@@ -24,7 +24,13 @@ from app.distribution.service import (
     PixRejectedError,
     publications_for_approval,
 )
-from app.domain.distribution import PixError, format_brl, parse_brl
+from app.domain.distribution import (
+    PixError,
+    UnitsError,
+    format_brl,
+    parse_brl,
+    parse_last_units,
+)
 from app.models import AdminUser, CatalogProduct, OfferEvaluation, OperatorDecision
 from app.panel import queries, report
 from app.panel.auth import (
@@ -50,6 +56,7 @@ NOTICES = {
     "pronta": "Aprovada. O link sai em instantes e ela aparece em Postar.",
     "pix": "Não aprovada: o Pix precisa ser menor que o preço e até 30% abaixo (ex.: 49,90).",
     "cupom": "Não aprovada: o preço com cupom precisa ser menor que o preço e até 30% abaixo.",
+    "unidades": "Não aprovada: últimas unidades é um número de 1 a 20 (o que a página mostra).",
     "sem-grupo": "Aprovada, mas o nicho não tem grupo cadastrado (Grupos).",
     "repetida": "Aprovada, mas não vai agora: já foi para o grupo nos últimos 7 dias.",
     "sem-preco": "Aprovada, mas esta avaliação não tem preço válido para publicar.",
@@ -213,10 +220,17 @@ async def decide(
     next: Annotated[str | None, Form()] = None,
     pix: Annotated[str, Form(max_length=20)] = "",
     cupom: Annotated[str, Form(max_length=20)] = "",
+    ultimas: Annotated[str, Form(max_length=4)] = "",
 ) -> Response:
     check_csrf(ctx, csrf)
     target = _safe_next(next)
     sep = "&" if "?" in target else "?"
+    try:
+        last_units = parse_last_units(ultimas) if decision == "approved" else None
+    except UnitsError:
+        return RedirectResponse(
+            target + sep + "aviso=unidades", status_code=status.HTTP_303_SEE_OTHER
+        )
     try:
         pix_cents = parse_brl(pix) if decision == "approved" else None
     except PixError:
@@ -260,6 +274,7 @@ async def decide(
                 pix_cents=pix_cents,
                 affiliate_tool_id=settings.ml_affiliate_tool_id,
                 coupon_cents=coupon_cents,
+                last_units=last_units,
             )
         except PixRejectedError as exc:
             await db.rollback()  # nem a decisão fica: o operador corrige e aprova de novo

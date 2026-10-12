@@ -421,6 +421,9 @@ class Publication(Base):
     # 0012: preço com o cupom da loja, visto pelo operador na aprovação (a API não traz cupom).
     coupon_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     coupon_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    # 0024: "últimas N unidades" visto na página pelo operador ao aprovar (a API não traz estoque).
+    last_units: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_units_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     # 0015: posição na fila de envio do grupo, quando o operador reordena (vazio = ordem de
     # aprovação, depois das posicionadas).
     queue_position: Mapped[int | None] = mapped_column(Integer, nullable=True)

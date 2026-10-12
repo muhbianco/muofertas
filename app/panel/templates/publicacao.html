@@ -42,6 +42,19 @@
   <p class="linha">{{ pub.note or '' }}</p>
 {% endif %}
 
+{% if pub.state in ("awaiting_link", "ready") and move_targets %}
+<h2 id="mudar-grupo">Mudar de grupo</h2>
+<form class="formulario" method="post" action="/postar/{{ pub.id }}/grupo">
+  <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+  <label>Enviar para
+    <select name="niche_id" required>
+      {% for c in move_targets if c.niche_id != channel.niche_id %}<option value="{{ c.niche_id }}">{{ c.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <p class="dica">Só este produto muda: ele passa para o nicho do grupo escolhido e entra no fim da fila desse grupo, com link novo.</p>
+  <button class="botao" type="submit">Mudar de grupo</button>
+</form>
+{% endif %}
 {% if pub.state in ("awaiting_link", "ready") %}
 <h2>Desistir</h2>
 <form class="formulario" method="post" action="/postar/{{ pub.id }}/descartar">

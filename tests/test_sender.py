@@ -72,7 +72,11 @@ def cfg() -> Settings:
 
 
 async def approve(
-    sessions: async_sessionmaker[AsyncSession], *, transport: str = "wuzapi", pix: int | None = None
+    sessions: async_sessionmaker[AsyncSession],
+    *,
+    transport: str = "wuzapi",
+    pix: int | None = None,
+    last_units: int | None = None,
 ) -> int:
     async with sessions() as session, session.begin():
         niche = Niche(slug="tenis-esporte", name="Tênis e Esporte", active=True, created_at=NOW)
@@ -132,6 +136,7 @@ async def approve(
             now=NOW,
             pix_cents=pix,
             affiliate_tool_id="19964746",
+            last_units=last_units,
         )
     assert result.created == 1 and result.auto_link == 1
     async with sessions() as session:
@@ -215,6 +220,24 @@ async def test_common_seller_post_compares_with_the_official_store(
     assert "💰 Aqui: *R$ 449,90* no Mercado Livre" in body
     assert "👍 Vendedor com reputação verde e 2.211 vendas" in body
     assert (await state(sessions)).official_price_cents == 104930
+
+
+async def test_last_units_go_in_the_post_while_fresh(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await approve(sessions, last_units=4)
+    wa = FakeWuzapi()
+    assert await run(sessions, wa) == 1
+    assert "⏳ *Últimas 4 unidades!*" in wa.sent[0]["Body"]
+
+
+async def test_last_units_expire_after_two_hours(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await approve(sessions, last_units=4)
+    wa = FakeWuzapi()
+    assert await run(sessions, wa, now=NOW + timedelta(hours=3)) == 1
+    assert "⏳" not in wa.sent[0]["Body"]
 
 
 async def test_price_up_and_window_and_manual_groups_do_not_send(

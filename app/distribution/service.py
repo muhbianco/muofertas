@@ -38,6 +38,7 @@ from app.domain.distribution import (
     repeat_block_reason,
     seller_line,
     send_block_reason,
+    units_to_show,
 )
 from app.integrations.mercadolivre import MercadoLivreClient, MercadoLivreError
 from app.models import (
@@ -146,11 +147,18 @@ async def publications_for_approval(
     pix_cents: int | None = None,
     affiliate_tool_id: str = "",
     coupon_cents: int | None = None,
+    last_units: int | None = None,
+    seen_at: datetime | None = None,
+    key_tag: str = "",
 ) -> ApprovalResult:
     """Uma publicação por grupo do nicho. Repetida em 7 dias ou grupo pausado: `skipped`.
 
-    `pix_cents`: o Pix que o operador viu na página ao aprovar (vale por 3 horas).
+    `pix_cents`, `coupon_cents` e `last_units`: o que o operador viu na página ao aprovar (o Pix
+    vale por 3 horas, as últimas unidades por 2). `seen_at`: quando viu (a troca de grupo
+    mantém a hora da aprovação, para não esticar a validade). `key_tag`: separa a publicação de
+    uma troca de grupo da aprovação original (a mesma avaliação pode voltar ao mesmo grupo).
     """
+    seen = seen_at or now
     result = ApprovalResult(skipped=[])
     if evaluation.price_cents is None or product.niche_id is None:
         raise DistributionError("esta avaliação não tem preço válido para publicar")
@@ -180,7 +188,7 @@ async def publications_for_approval(
     )
     dedup_key = f"{product.marketplace}:{product.external_id}"
     for channel in channels:
-        key = f"{channel.id}:{evaluation.id}"
+        key = f"{channel.id}:{evaluation.id}{key_tag}"
         exists = (
             await db.execute(select(Publication.id).where(Publication.idempotency_key == key))
         ).scalar_one_or_none()
@@ -227,9 +235,11 @@ async def publications_for_approval(
                 target_url=target_url,
                 approved_price_cents=evaluation.price_cents,
                 pix_price_cents=pix_cents,
-                pix_at=now if pix_cents is not None else None,
+                pix_at=seen if pix_cents is not None else None,
                 coupon_price_cents=coupon_cents,
-                coupon_at=now if coupon_cents is not None else None,
+                coupon_at=seen if coupon_cents is not None else None,
+                last_units=last_units,
+                last_units_at=seen if last_units is not None else None,
                 note=reason,
                 created_at=now,
             )
@@ -371,6 +381,7 @@ async def message_for(db: AsyncSession, pub: Publication) -> str:
         if official or discount is not None
         else official_comparison(pub.checked_price_cents, pub.official_price_cents),
         seller=None if official else await _seller_line(db, evaluation),
+        last_units=units_to_show(pub.last_units, pub.last_units_at, pub.checked_at),
     )
 
 

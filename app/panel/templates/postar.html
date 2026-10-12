@@ -2,6 +2,7 @@
 {% block title %}Postar{% endblock %}
 {% block content %}
 <h1>Postar</h1>
+{% if notice %}<p class="aviso">{{ notice }}</p>{% endif %}
 {% if attention %}
 <article class="bloco">
   <h2>Conferir no grupo</h2>
@@ -49,6 +50,7 @@
       {% if r.image_url %}<img src="{{ r.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="sem-foto"></span>{% endif %}
       <span><b>{{ r.name }}</b><br><small>aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}</small></span>
     </a>
+    <a class="mudar" href="/postar/{{ r.pub.id }}#mudar-grupo" data-mudar-grupo data-pub="{{ r.pub.id }}" data-nicho="{{ g.channel.niche_id }}" data-nome="{{ r.name }}" title="Mudar de grupo" aria-label="Mudar de grupo">⇄</a>
     {% if g.channel.transport == 'wuzapi' and g.channel.wa_jid %}
     <form method="post" action="/postar/{{ r.pub.id }}/enviar-agora" data-confirmar="Enviar agora para o grupo, sem esperar o intervalo?">
       <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
@@ -78,6 +80,25 @@
   </div>
 </details>
 {% endfor %}
+{% if move_targets %}
+<dialog id="mudar-grupo" class="modal" aria-labelledby="mudar-titulo">
+  <form method="post" action="/postar">
+    <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+    <h2 id="mudar-titulo">Mudar de grupo</h2>
+    <p class="linha" data-produto></p>
+    <label>Enviar para
+      <select name="niche_id" required>
+        {% for c in move_targets %}<option value="{{ c.niche_id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <p class="dica">Só este produto muda: ele passa para o nicho do grupo escolhido e entra no fim da fila desse grupo, com link novo. Pix, cupom e últimas unidades informados na aprovação vão junto.</p>
+    <div class="acoes">
+      <button type="button" class="rejeitar" data-fechar>Cancelar</button>
+      <button type="submit" class="aprovar">Mudar de grupo</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
 {% if recent %}
 <h2>Últimos 2 dias</h2>
 <table>
@@ -93,4 +114,4 @@
 </table>
 {% endif %}
 {% endblock %}
-{% block scripts %}<script src="/static/fila.js?v=3" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=4" defer></script>{% endblock %}

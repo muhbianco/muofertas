@@ -145,3 +145,49 @@
     closeAll.addEventListener("click", function () { setAll(false); });
   }
 })();
+
+// "Mudar de grupo" (tela Postar): o ⇄ de cada post abre a janela com os grupos; o grupo atual
+// fica de fora. Sem este arquivo, o ⇄ leva à página do post, que tem o mesmo formulário.
+(function () {
+  "use strict";
+
+  var dialog = document.getElementById("mudar-grupo");
+  if (!dialog || typeof dialog.showModal !== "function") {
+    return;
+  }
+  var form = dialog.querySelector("form");
+  var select = form.querySelector("select[name=niche_id]");
+  var product = dialog.querySelector("[data-produto]");
+
+  document.querySelectorAll("[data-mudar-grupo]").forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      form.action = "/postar/" + link.getAttribute("data-pub") + "/grupo";
+      product.textContent = link.getAttribute("data-nome");
+      var current = link.getAttribute("data-nicho");
+      var first = null;
+      Array.prototype.forEach.call(select.options, function (opt) {
+        var same = opt.value === current;
+        opt.disabled = same;
+        opt.hidden = same;
+        if (!same && first === null) {
+          first = opt;
+        }
+      });
+      if (first) {
+        select.value = first.value;
+      }
+      dialog.showModal();
+      select.focus();
+    });
+  });
+
+  dialog.querySelector("[data-fechar]").addEventListener("click", function () {
+    dialog.close();
+  });
+  dialog.addEventListener("click", function (ev) {
+    if (ev.target === dialog) {
+      dialog.close(); // clique fora da caixa
+    }
+  });
+})();

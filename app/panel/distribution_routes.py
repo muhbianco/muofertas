@@ -12,11 +12,13 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.collector import watchlist
+from app.collector.recategorize import RecategorizeError
 from app.core.clock import utcnow
 from app.core.config import settings
 from app.core.database import get_sessionmaker
 from app.core.logging import get_logger
 from app.distribution import invites, service
+from app.distribution.move import move_publication
 from app.distribution.sender import resend_now, send_now
 from app.distribution.service import DistributionError
 from app.domain.distribution import (
@@ -42,6 +44,15 @@ logger = get_logger(__name__)
 router = APIRouter()
 LIST_LIMIT = 100
 PER_GROUP = 60  # itens por grupo na tela Postar (o resto aparece quando estes saírem)
+
+POST_NOTICES = {
+    "movido": "Post mudou de grupo: entrou no fim da fila do grupo novo; o link novo sai em "
+    "segundos. O produto ficou no nicho escolhido.",
+    "movido-repetido": "O produto mudou de nicho, mas não entrou na fila do grupo novo: já foi "
+    "para esse grupo nos últimos 7 dias.",
+    "movido-sem-grupo": "O produto mudou de nicho, mas esse nicho não tem grupo ativo.",
+    "mover-erro": "Não deu para mudar de grupo: o post já saiu ou está no grupo desse nicho.",
+}
 
 ERRORS = {
     "ml": "O Mercado Livre não respondeu. Tente revalidar de novo.",
@@ -363,7 +374,7 @@ async def post_move_up(
 
 
 @router.get("/postar", response_class=HTMLResponse)
-async def post_list(request: Request, db: Db, ctx: Admin) -> Response:
+async def post_list(request: Request, db: Db, ctx: Admin, aviso: str | None = None) -> Response:
     now = utcnow()
     # Teto por grupo, não global: com um teto só, os primeiros grupos enchiam a lista e os
     # últimos (Tecnologia, Pais) sumiam da tela sem aviso.
@@ -459,10 +470,27 @@ async def post_list(request: Request, db: Db, ctx: Admin) -> Response:
         {
             "ctx": ctx,
             "groups": list(groups.values()),
+            "move_targets": await _move_targets(db),
+            "notice": POST_NOTICES.get(aviso or ""),
             "attention": attention,
             "recent": recent,
         },
     )
+
+
+async def _move_targets(db: AsyncSession) -> list[Channel]:
+    """Destinos do "Mudar de grupo": um por nicho ativo (o primeiro grupo ativo do nicho)."""
+    rows = await db.execute(
+        select(Channel)
+        .join(Niche, Niche.id == Channel.niche_id)
+        .where(Niche.active.is_(True), Channel.paused.is_(False))
+        .order_by(Channel.id)
+        .limit(LIST_LIMIT)
+    )
+    targets: dict[int, Channel] = {}
+    for channel in rows.scalars():
+        targets.setdefault(channel.niche_id, channel)
+    return list(targets.values())
 
 
 async def _publication(db: Db, pub_id: int) -> Publication:
@@ -497,6 +525,7 @@ async def post_page(
             "message": message,
             "share": share_url(message) if message and block is None else None,
             "error": ERRORS.get(erro or ""),
+            "move_targets": await _move_targets(db),
         },
     )
 
@@ -638,6 +667,39 @@ async def post_send_now(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     logger.info("envio agora", extra={"publication_id": pub_id, "sent": sent, "user": ctx.username})
     return _see_other("/postar")
+
+
+@router.post("/postar/{pub_id}/grupo")
+async def post_move(
+    db: Db,
+    ctx: Admin,
+    pub_id: int,
+    niche_id: Annotated[int, Form()],
+    csrf: Annotated[str | None, Form()] = None,
+) -> Response:
+    """Manda o post (só este produto) para a fila do grupo de outro nicho."""
+    check_csrf(ctx, csrf)
+    try:
+        moved = await move_publication(
+            db,
+            publication_id=pub_id,
+            niche_id=niche_id,
+            actor=ctx.username,
+            now=utcnow(),
+            affiliate_tool_id=settings.ml_affiliate_tool_id,
+        )
+    except LookupError:
+        raise HTTPException(status_code=404) from None
+    except (DistributionError, RecategorizeError) as exc:
+        await db.rollback()
+        logger.info("mudar de grupo recusado", extra={"publication_id": pub_id, "why": str(exc)})
+        return _see_other("/postar?aviso=mover-erro")
+    await db.commit()
+    notice = (
+        "movido" if moved.created else "movido-repetido" if moved.skipped else "movido-sem-grupo"
+    )
+    anchor = f"#grupo-{moved.channel_id}" if moved.channel_id else ""
+    return _see_other(f"/postar?aviso={notice}{anchor}")
 
 
 @router.post("/postar/{pub_id}/descartar")

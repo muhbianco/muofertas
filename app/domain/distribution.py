@@ -47,6 +47,10 @@ MAX_NAME = 90
 PIX_MAX_DISCOUNT = 0.30
 # O Pix é visto pelo operador na aprovação; depois disso a mensagem sai sem ele.
 PIX_VALID_FOR = timedelta(hours=3)
+# "Últimas N unidades" (visto na página pelo operador; a API não traz estoque): vale menos que o
+# Pix porque estoque baixo acaba rápido, e só para número pequeno (é o que a página mostra).
+LAST_UNITS_VALID_FOR = timedelta(hours=2)
+MAX_LAST_UNITS = 20
 # Variação no intervalo do envio automático: grupos não recebem no mesmo minuto exato.
 MAX_JITTER_SECONDS = 600
 # Envio espalhado na janela: intervalo médio = janela ÷ envios do dia, nunca abaixo deste piso.
@@ -322,6 +326,7 @@ def render_message(
     coupon_cents: int | None = None,
     versus_official: ListingDiscount | None = None,
     seller: str | None = None,
+    last_units: int | None = None,
 ) -> str:
     """Formato do WhatsApp: *negrito*, _itálico_ e blocos separados por linha em branco.
 
@@ -358,6 +363,10 @@ def render_message(
         lines.append(f"⚡ *{format_brl(pix_cents)} no Pix*")
     if coupon_cents:
         lines.append(f"🎟️ *{format_brl(coupon_cents)} com cupom da loja* (ative na página)")
+    if last_units:
+        lines.append(
+            "⏳ *Última unidade!*" if last_units == 1 else f"⏳ *Últimas {last_units} unidades!*"
+        )
     lines += [
         "",
         f"👉 {url}",
@@ -404,6 +413,27 @@ def check_special_price(cents: int, card_cents: int, what: str) -> None:
         raise PixError(f"o preço {what} precisa ser menor que o preço do anúncio")
     if cents < card_cents * (1 - PIX_MAX_DISCOUNT):
         raise PixError(f"preço {what} mais de 30% abaixo do anúncio: confira o valor digitado")
+
+
+class UnitsError(ValueError):
+    """Quantidade de últimas unidades que não confere."""
+
+
+def parse_last_units(text: str) -> int | None:
+    """'4' → 4; vazio → None. Só de 1 a 20: acima disso não é "últimas unidades"."""
+    raw = text.strip()
+    if not raw:
+        return None
+    if not raw.isdigit() or not 1 <= int(raw) <= MAX_LAST_UNITS:
+        raise UnitsError(f"últimas unidades: um número de 1 a {MAX_LAST_UNITS}")
+    return int(raw)
+
+
+def units_to_show(units: int | None, units_at: datetime | None, checked_at: datetime) -> int | None:
+    """As últimas unidades informadas valem por 2 horas; depois o post sai sem a linha."""
+    if units is None or units_at is None or checked_at - units_at > LAST_UNITS_VALID_FOR:
+        return None
+    return units
 
 
 def check_pix(pix_cents: int, card_cents: int) -> None:
