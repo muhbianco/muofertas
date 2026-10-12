@@ -112,7 +112,7 @@ class AutoApprover:
                 extra={
                     "product_id": product_id,
                     "tier": evaluation.tier,
-                    "created": result.created,
+                    "publications": result.created,
                     "no_channel": result.no_channel,
                 },
             )

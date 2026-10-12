@@ -14,7 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.collector.domains import DomainRuleError, apply_panel_rule
-from app.collector.recategorize import RecategorizeError, recategorize
+from app.collector.recategorize import ProductNotFound, RecategorizeError, recategorize
 from app.core.clock import utcnow
 from app.core.config import settings
 from app.core.database import get_session
@@ -338,7 +338,7 @@ async def change_niche(
                 actor=ctx.username,
                 now=utcnow(),
             )
-    except LookupError:
+    except ProductNotFound:
         raise HTTPException(status_code=404) from None
     except (RecategorizeError, DomainRuleError):
         await db.rollback()

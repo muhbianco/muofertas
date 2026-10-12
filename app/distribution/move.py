@@ -29,6 +29,10 @@ logger = get_logger(__name__)
 MOVABLE = ("awaiting_link", "ready")
 
 
+class PublicationNotFound(Exception):
+    """Publicação inexistente (a rota responde 404); não herda de LookupError (ver recategorize)."""
+
+
 @dataclass
 class Moved:
     channel_id: int | None  # grupo novo (o primeiro do nicho), para voltar à tela nele
@@ -48,7 +52,7 @@ async def move_publication(
     """Não faz commit: a rota fecha a unidade de trabalho."""
     pub = await db.get(Publication, publication_id, with_for_update=True)
     if pub is None:
-        raise LookupError(publication_id)
+        raise PublicationNotFound(publication_id)
     if pub.state not in MOVABLE:
         raise DistributionError("só dá para mudar de grupo o que ainda não saiu")
     current = await db.get(Channel, pub.channel_id)
@@ -98,7 +102,7 @@ async def move_publication(
             "publication_id": pub.id,
             "from_channel": pub.channel_id,
             "to_niche": niche_id,
-            "created": result.created,
+            "publications": result.created,
             "user": actor,
         },
     )

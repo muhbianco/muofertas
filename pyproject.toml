@@ -41,3 +41,6 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 filterwarnings = ["error::sqlalchemy.exc.SAWarning"]
+# Como em produção: com INFO ligado, cada logger.info monta o LogRecord (um `extra` com nome
+# reservado, como "created", só quebra assim).
+log_level = "INFO"

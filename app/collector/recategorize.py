@@ -30,6 +30,11 @@ class RecategorizeError(ValueError):
     """Mensagem pronta para o operador."""
 
 
+class ProductNotFound(Exception):
+    """Produto inexistente (a rota responde 404). Não herda de LookupError: um KeyError de
+    verdade no meio do caminho não pode virar 404."""
+
+
 @dataclass(frozen=True, slots=True)
 class Recategorized:
     niche: str
@@ -44,7 +49,7 @@ async def recategorize(
     """Move o produto para o nicho escolhido. Não faz commit: a rota fecha a unidade de trabalho."""
     product = await db.get(CatalogProduct, product_id, with_for_update=True)
     if product is None:
-        raise LookupError(product_id)
+        raise ProductNotFound(product_id)
     niche = await db.get(Niche, niche_id)
     if niche is None or not niche.active:
         raise RecategorizeError("Escolha um nicho ativo.")

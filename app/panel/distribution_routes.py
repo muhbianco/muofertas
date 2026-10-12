@@ -18,7 +18,7 @@ from app.core.config import settings
 from app.core.database import get_sessionmaker
 from app.core.logging import get_logger
 from app.distribution import invites, service
-from app.distribution.move import move_publication
+from app.distribution.move import PublicationNotFound, move_publication
 from app.distribution.sender import resend_now, send_now
 from app.distribution.service import DistributionError
 from app.domain.distribution import (
@@ -688,7 +688,7 @@ async def post_move(
             now=utcnow(),
             affiliate_tool_id=settings.ml_affiliate_tool_id,
         )
-    except LookupError:
+    except PublicationNotFound:
         raise HTTPException(status_code=404) from None
     except (DistributionError, RecategorizeError) as exc:
         await db.rollback()
@@ -858,7 +858,7 @@ async def watch_add(
         return await _render_watch(request, sessions, ctx, error=str(exc), url=url, code=422)
     logger.info(
         "produto vigiado",
-        extra={"product_id": result.product_id, "created": result.created, "user": ctx.username},
+        extra={"product_id": result.product_id, "new": result.created, "user": ctx.username},
     )
     return _see_other("/vigiar?aviso=" + ("novo" if result.created else "atualizado"))
 
