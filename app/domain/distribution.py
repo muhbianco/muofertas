@@ -530,6 +530,15 @@ def parse_flash_left(text: str) -> timedelta:
     return left
 
 
+def flash_to_show(flash_ends_at: datetime | None, at: datetime) -> datetime | None:
+    """A linha da relâmpago só vai enquanto faltam mais de 10 minutos para ela acabar. Post do
+    robô que sai depois disso vai sem a linha (o preço foi relido, a oferta é que não é mais
+    relâmpago); o avulso nem sai (`manual_block_reason`)."""
+    if flash_ends_at is None or at > flash_ends_at - FLASH_MIN_LEFT:
+        return None
+    return flash_ends_at
+
+
 def manual_block_reason(
     created_at: datetime, flash_ends_at: datetime | None, now: datetime
 ) -> str | None:

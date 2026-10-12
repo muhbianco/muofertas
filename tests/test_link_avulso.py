@@ -16,6 +16,7 @@ from app.distribution.sender import send_due
 from app.domain.distribution import (
     FlashError,
     LinkError,
+    flash_to_show,
     manual_block_reason,
     parse_flash_left,
     parse_manual_link,
@@ -272,3 +273,10 @@ async def test_photo_can_be_set_on_a_queued_manual_post(
     # Só o produto do link avulso: a foto do catálogo vem da API e não se troca à mão.
     other = await client.post(f"/postar/{pub_id}/foto", data={"csrf": csrf.group(1), "foto": webp})
     assert other.status_code == 404
+
+
+def test_flash_line_only_while_the_deal_lasts() -> None:
+    ends = NOW + timedelta(hours=1)
+    assert flash_to_show(ends, NOW + timedelta(minutes=50)) == ends
+    assert flash_to_show(ends, NOW + timedelta(minutes=51)) is None  # menos de 10 min
+    assert flash_to_show(None, NOW) is None

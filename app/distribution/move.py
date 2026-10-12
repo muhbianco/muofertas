@@ -22,7 +22,7 @@ from app.distribution.service import (
     discard,
     publications_for_approval,
 )
-from app.domain.distribution import pix_to_show, units_to_show
+from app.domain.distribution import flash_to_show, pix_to_show, units_to_show
 from app.models import CatalogProduct, Channel, OfferEvaluation, OperatorDecision, Publication
 
 logger = get_logger(__name__)
@@ -91,6 +91,7 @@ async def move_publication(
         seen_at=seen,
         affiliate_tool_id=affiliate_tool_id,
         key_tag=f":mv{pub.id}",
+        flash_ends_at=flash_to_show(pub.flash_ends_at, now),
     )
     target = (
         await db.execute(
@@ -168,6 +169,7 @@ async def copy_publication(
         affiliate_tool_id=affiliate_tool_id,
         key_tag=f":cp{pub.id}",
         channels=channels,
+        flash_ends_at=flash_to_show(pub.flash_ends_at, now),
     )
     logger.info(
         "post copiado para outros grupos",

@@ -25,6 +25,7 @@ from app.domain.distribution import (
     Recheck,
     check_coupon,
     check_pix,
+    flash_to_show,
     is_fresh,
     listing_discount,
     local_day_start,
@@ -153,6 +154,7 @@ async def publications_for_approval(
     seen_at: datetime | None = None,
     key_tag: str = "",
     channels: list[Channel] | None = None,
+    flash_ends_at: datetime | None = None,
 ) -> ApprovalResult:
     """Uma publicação por grupo do nicho. Repetida em 7 dias ou grupo pausado: `skipped`.
 
@@ -161,6 +163,7 @@ async def publications_for_approval(
     mantém a hora da aprovação, para não esticar a validade). `key_tag`: separa a publicação de
     uma troca de grupo da aprovação original (a mesma avaliação pode voltar ao mesmo grupo).
     `channels`: grupos escolhidos pelo operador ("enviar também em"); sem isso, os do nicho.
+    `flash_ends_at`: fim da oferta relâmpago que o operador viu na página.
     """
     seen = seen_at or now
     result = ApprovalResult(skipped=[])
@@ -227,6 +230,7 @@ async def publications_for_approval(
                 coupon_at=seen if coupon_cents is not None else None,
                 last_units=last_units,
                 last_units_at=seen if last_units is not None else None,
+                flash_ends_at=flash_ends_at,
                 note=reason,
                 created_at=now,
             )
@@ -435,7 +439,7 @@ async def message_for(db: AsyncSession, pub: Publication, now: datetime | None =
         else official_comparison(pub.checked_price_cents, pub.official_price_cents),
         seller=None if official else await _seller_line(db, evaluation),
         last_units=units_to_show(pub.last_units, pub.last_units_at, at),
-        flash_ends_at=pub.flash_ends_at,
+        flash_ends_at=flash_to_show(pub.flash_ends_at, at),
     )
 
 

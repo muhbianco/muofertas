@@ -26,10 +26,12 @@ from app.distribution.service import (
     publications_for_approval,
 )
 from app.domain.distribution import (
+    FlashError,
     PixError,
     UnitsError,
     format_brl,
     parse_brl,
+    parse_flash_left,
     parse_last_units,
 )
 from app.models import (
@@ -64,6 +66,8 @@ NOTICES = {
     "pix": "Não aprovada: o Pix precisa ser menor que o preço e até 30% abaixo (ex.: 49,90).",
     "cupom": "Não aprovada: o preço com cupom precisa ser menor que o preço e até 30% abaixo.",
     "unidades": "Não aprovada: últimas unidades é um número de 1 a 20 (o que a página mostra).",
+    "relampago": "Não aprovada: o tempo da relâmpago é o relógio “Encerra em” da página (ex.: "
+    "07:10:38), de 10 minutos a 24 horas.",
     "sem-grupo": "Aprovada, mas o nicho não tem grupo cadastrado (Grupos).",
     "grupos": "Não aprovada: marque pelo menos um grupo ativo em “Grupos”.",
     "varios": "Aprovada para os grupos marcados. O link de cada grupo sai em instantes e o post "
@@ -234,6 +238,7 @@ async def decide(
     pix: Annotated[str, Form(max_length=20)] = "",
     cupom: Annotated[str, Form(max_length=20)] = "",
     ultimas: Annotated[str, Form(max_length=4)] = "",
+    acaba_em: Annotated[str, Form(max_length=12)] = "",
     grupos: Annotated[str | None, Form(max_length=1)] = None,
     channel_id: Annotated[list[int] | None, Form()] = None,
 ) -> Response:
@@ -256,6 +261,14 @@ async def decide(
         coupon_cents = parse_brl(cupom) if decision == "approved" else None
     except PixError:
         return RedirectResponse(target + sep + "aviso=cupom", status_code=status.HTTP_303_SEE_OTHER)
+    try:
+        flash_left = (
+            parse_flash_left(acaba_em) if decision == "approved" and acaba_em.strip() else None
+        )
+    except FlashError:
+        return RedirectResponse(
+            target + sep + "aviso=relampago", status_code=status.HTTP_303_SEE_OTHER
+        )
     if decision not in DECISIONS:
         raise HTTPException(status_code=422, detail="decisão inválida")
     channels: list[Channel] | None = None
@@ -300,6 +313,7 @@ async def decide(
                 coupon_cents=coupon_cents,
                 last_units=last_units,
                 channels=channels,
+                flash_ends_at=now + flash_left if flash_left is not None else None,
             )
         except PixRejectedError as exc:
             await db.rollback()  # nem a decisão fica: o operador corrige e aprova de novo

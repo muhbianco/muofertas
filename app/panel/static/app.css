@@ -144,6 +144,7 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .pix-aprovar { flex-wrap: wrap; }
 .pix-aprovar label { display: flex; gap: 6px; align-items: center; }
 .pix-aprovar input[name=ultimas] { width: 64px; }
+.pix-aprovar input[name=acaba_em] { width: 100px; }
 .fila-envio .mudar { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--linha); border-radius: 8px; background: #fff; color: var(--esm-esc); text-decoration: none; font-size: 18px; flex: none; }
 .fila-envio .remover { width: 34px; height: 34px; padding: 0; border: 1px solid #f1c4c1; border-radius: 8px; background: #fff; color: var(--verm); font-size: 16px; cursor: pointer; }
 .modal { border: 1px solid var(--linha); border-radius: 14px; padding: 16px; width: min(92vw, 420px); background: #fff; color: var(--tinta); }

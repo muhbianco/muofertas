@@ -160,3 +160,45 @@ async def test_product_page_offers_the_groups_too(
     assert f'data-grupos="aprovar-{ids["product"]}"' in page
     assert _box(ids["family"]) in page and 'name="grupos" value="1"' in page
     assert '<script src="/static/fila.js?v=6" defer></script>' in page
+
+
+async def test_flash_deal_on_approval_goes_with_the_post_and_its_copies(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    secret = await seed_admin(sessions)
+    ids = await _whey(sessions)
+    assert (await login(client, secret)).status_code == 303
+    page = (await client.get("/")).text
+    assert f'form="aprovar-{ids["product"]}" name="acaba_em"' in page
+    base = {
+        "csrf": csrf_of(page),
+        "product_id": ids["product"],
+        "evaluation_id": ids["ev"],
+        "decision": "approved",
+        "next": "/",
+        "grupos": "1",
+        "channel_id": str(ids["sport"]),
+    }
+    late = await client.post("/decisao", data=base | {"acaba_em": "0:05"})
+    assert late.headers["location"] == "/?aviso=relampago"  # acaba em 5 min: não aprova
+    async with sessions() as s:
+        assert (await s.execute(select(func.count(OperatorDecision.id)))).scalar_one() == 0
+
+    before = utcnow()
+    r = await client.post("/decisao", data=base | {"acaba_em": "02:00:00"})
+    assert r.status_code == 303 and "aviso=relampago" not in r.headers["location"]
+    async with sessions() as s:
+        pub = (await s.execute(select(Publication))).scalar_one()
+    assert pub.flash_ends_at is not None
+    assert before + timedelta(hours=2) <= pub.flash_ends_at <= utcnow() + timedelta(hours=2)
+
+    # "Enviar também em" leva o fim da relâmpago para a cópia.
+    copy = await client.post(
+        f"/postar/{pub.id}/copiar", data={"csrf": base["csrf"], "channel_id": str(ids["family"])}
+    )
+    assert "aviso=copiado" in copy.headers["location"]
+    async with sessions() as s:
+        flashes = {
+            p.channel_id: p.flash_ends_at for p in (await s.execute(select(Publication))).scalars()
+        }
+    assert flashes == {ids["sport"]: pub.flash_ends_at, ids["family"]: pub.flash_ends_at}
