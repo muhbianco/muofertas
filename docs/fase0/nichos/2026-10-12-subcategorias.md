@@ -70,3 +70,25 @@ feminino. Medição do top 20 em Calçados, Roupas e Bolsas (MLB1430):
 
 Entraram as seis com catálogo (bonés ×2, cintas, acessórios de moda, sandálias e chinelos, bolsas
 esportivas). O slug continua `tenis-esporte` (convites, regras e grupo apontam para ele).
+
+## Tecnologia: TVs, monitores e o resto que escapava (mesmo dia)
+
+O dono notou que não vinham monitores nem televisores. Varredura de dois níveis em Informática
+(MLB1648), Eletrônicos, Áudio e Vídeo (MLB1000) e Câmeras (MLB1039): 253 categorias medidas, ~1.700
+produtos de catálogo que não tínhamos. Televisores: 18 dos 20 do top eram novos. Monitores: os 19 de
+catálogo eram novos.
+
+Entraram 24, as de mais apelo de oferta para o grupo (~390 produtos):
+- **TV:** Televisores, Home Theaters/Soundbars, Media Streaming, Projetores.
+- **Informática:** Monitores, Notebooks, Tablets.
+- **PC:** Processadores, SSD, Fontes, Gabinetes, Roteadores, Webcams, Caixas de som de PC, Pen
+  drives, Cartões de memória.
+- **PC gaming:** Cadeiras, Microfones, Óculos VR.
+- **Áudio:** Caixas bluetooth, Boomboxes, Assistentes (Alexa).
+- **Outros:** Impressoras, Drones.
+
+Ficaram de fora cabos, componentes eletrônicos, infraestrutura de rede (racks, patch panel),
+scanners, filmes e lentes de câmera, binóculos e suprimentos de impressão.
+
+Custo: a ~1.650–1.950 chamadas/h de hoje somam ~+250/h e o pico da primeira descoberta, colado no
+teto de 2.500/h. A faixa morna foi de 90 para 120 min até o frio começar (17/10).

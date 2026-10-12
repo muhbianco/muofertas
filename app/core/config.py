@@ -59,8 +59,11 @@ class Settings(BaseSettings):
     discovery_interval_minutes: int = 360
     tier_hot_minutes: int = 20
     # 180 → 90 em 11/10/2026: 25% dos produtos mudaram de preço em 16 h e a oferta relâmpago dura
-    # poucas horas. Com ~650 produtos dá ~450 chamadas/h, longe do teto abaixo.
-    tier_warm_minutes: int = 90
+    # poucas horas. 90 → 120 em 12/10/2026: com ~2.800 produtos e nenhum ainda no frio (só após 7
+    # dias sem mudança, a partir de 17/10), 90 min dava ~2.200 chamadas/h, colado no teto abaixo;
+    # bater o teto pausa a coleta e o envio até a virada da hora. Quente (20 min) segue pegando a
+    # queda relevante. Rever depois que o frio pegar.
+    tier_warm_minutes: int = 120
     tier_cold_minutes: int = 1440
     heartbeat_hours: int = 24
     # Vendedor comum só entra no preço com reputação amarela/verde e este mínimo de vendas.

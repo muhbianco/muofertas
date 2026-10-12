@@ -408,6 +408,102 @@
         {
           "id": "MLB272187",
           "nome": "Games: Controles de Nintendo Switch"
+        },
+        {
+          "id": "MLB1002",
+          "nome": "TV: Televisores"
+        },
+        {
+          "id": "MLB3839",
+          "nome": "TV e áudio: Home Theaters e Soundbars"
+        },
+        {
+          "id": "MLB133950",
+          "nome": "TV: Media Streaming (Fire TV, Chromecast)"
+        },
+        {
+          "id": "MLB2830",
+          "nome": "TV: Projetores e Telas"
+        },
+        {
+          "id": "MLB99245",
+          "nome": "Informática: Monitores"
+        },
+        {
+          "id": "MLB1652",
+          "nome": "Informática: Notebooks"
+        },
+        {
+          "id": "MLB91757",
+          "nome": "Informática: Tablets e Acessórios"
+        },
+        {
+          "id": "MLB1693",
+          "nome": "PC: Processadores"
+        },
+        {
+          "id": "MLB430796",
+          "nome": "PC: SSD e Discos"
+        },
+        {
+          "id": "MLB430916",
+          "nome": "PC: Fontes de Alimentação"
+        },
+        {
+          "id": "MLB438783",
+          "nome": "PC: Gabinetes"
+        },
+        {
+          "id": "MLB5867",
+          "nome": "Redes: Roteadores"
+        },
+        {
+          "id": "MLB73364",
+          "nome": "Periféricos: Webcams"
+        },
+        {
+          "id": "MLB3378",
+          "nome": "Periféricos: Caixas de Som para PC"
+        },
+        {
+          "id": "MLB4980",
+          "nome": "Armazenamento: Pen Drives"
+        },
+        {
+          "id": "MLB430367",
+          "nome": "Cartões de Memória e Leitores"
+        },
+        {
+          "id": "MLB447782",
+          "nome": "PC Gaming: Cadeiras Gamer"
+        },
+        {
+          "id": "MLB8279",
+          "nome": "PC Gaming: Microfones"
+        },
+        {
+          "id": "MLB447780",
+          "nome": "PC Gaming: Óculos VR"
+        },
+        {
+          "id": "MLB11507",
+          "nome": "Áudio: Caixas de Som Bluetooth"
+        },
+        {
+          "id": "MLB3847",
+          "nome": "Áudio: Boomboxes"
+        },
+        {
+          "id": "MLB278167",
+          "nome": "Áudio: Assistentes (Alexa, Echo)"
+        },
+        {
+          "id": "MLB1676",
+          "nome": "Impressão: Impressoras"
+        },
+        {
+          "id": "MLB264065",
+          "nome": "Drones e Acessórios"
         }
       ]
     },
