@@ -29,7 +29,7 @@ from app.distribution.service import (
     message_for,
     policy_of,
 )
-from app.domain.distribution import jitter
+from app.domain.distribution import MANUAL_TIER, Recheck, jitter, manual_block_reason
 from app.integrations.images import fetch_product_image
 from app.integrations.mercadolivre import MercadoLivreClient
 from app.integrations.wuzapi import WuzapiClient, WuzapiError
@@ -150,16 +150,24 @@ async def send_one(
         external_id, item_id, approved = product.external_id, pub.item_id, pub.approved_price_cents
         jid = channel.wa_jid
         image_url = product.image_url
+        manual = pub.tier == MANUAL_TIER
+        expired = manual_block_reason(pub.created_at, pub.flash_ends_at, now) if manual else None
 
+    if expired:
+        await _finish(sessions, publication_id, state="skipped", note=expired)
+        logger.info("link avulso vencido", extra={"publication_id": publication_id})
+        return False
     if not item_id:
         await _finish(sessions, publication_id, state="failed", note="sem a oferta registrada")
         return False
-    try:
-        result = await fetch_recheck(
-            ml, external_id=external_id, item_id=item_id, approved_cents=approved
-        )
-    except DistributionError:
-        return False  # ML fora: tenta na próxima rodada
+    result: Recheck | None = None
+    if not manual:  # o link avulso não tem revalidação: a API não lê o anúncio
+        try:
+            result = await fetch_recheck(
+                ml, external_id=external_id, item_id=item_id, approved_cents=approved
+            )
+        except DistributionError:
+            return False  # ML fora: tenta na próxima rodada
     photo = await fetch_product_image(images, image_url) if images is not None else None
 
     async with sessions() as db, db.begin():
@@ -168,15 +176,16 @@ async def send_one(
         pub = await db.get(Publication, publication_id, with_for_update=True)
         if pub is None or pub.state != "ready":
             return False  # o operador mexeu enquanto o ML respondia
-        apply_recheck(pub, result, now)
-        if result.status != "ok":
-            pub.state = "skipped"
-            logger.info(
-                "envio cancelado na revalidação",
-                extra={"publication_id": publication_id, "status": result.status},
-            )
-            return False
-        pub.message = await message_for(db, pub)
+        if result is not None:
+            apply_recheck(pub, result, now)
+            if result.status != "ok":
+                pub.state = "skipped"
+                logger.info(
+                    "envio cancelado na revalidação",
+                    extra={"publication_id": publication_id, "status": result.status},
+                )
+                return False
+        pub.message = await message_for(db, pub, now=now)
         pub.state = "sending"
         pub.sending_at = now
         message = pub.message

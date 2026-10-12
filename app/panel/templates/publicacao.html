@@ -42,7 +42,7 @@
   <p class="linha">{{ pub.note or '' }}</p>
 {% endif %}
 
-{% if pub.state in ("awaiting_link", "ready") and move_targets | length > 1 %}
+{% if pub.state in ("awaiting_link", "ready") and pub.tier != "avulso" and move_targets | length > 1 %}
 <h2 id="enviar-tambem">Enviar também em</h2>
 <form class="formulario" method="post" action="/postar/{{ pub.id }}/copiar">
   <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
@@ -53,7 +53,7 @@
   <button class="botao" type="submit">Enviar também</button>
 </form>
 {% endif %}
-{% if pub.state in ("awaiting_link", "ready") and move_targets %}
+{% if pub.state in ("awaiting_link", "ready") and pub.tier != "avulso" and move_targets %}
 <h2 id="mudar-grupo">Mudar de grupo</h2>
 <form class="formulario" method="post" action="/postar/{{ pub.id }}/grupo">
   <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">

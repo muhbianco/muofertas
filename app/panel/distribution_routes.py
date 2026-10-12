@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Annotated
@@ -9,6 +10,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.collector import watchlist
@@ -18,6 +20,7 @@ from app.core.config import settings
 from app.core.database import get_sessionmaker
 from app.core.logging import get_logger
 from app.distribution import invites, service
+from app.distribution.manual import ManualError, ManualForm, post_from_form, queue_manual
 from app.distribution.move import (
     PublicationNotFound,
     copy_publication,
@@ -27,10 +30,12 @@ from app.distribution.sender import resend_now, send_now
 from app.distribution.service import DistributionError
 from app.domain.distribution import (
     INVITE_PREFIX,
+    MANUAL_TIER,
     MIN_SPACING_MINUTES,
     ML_TAG_RE,
     is_fresh,
     local_day_start,
+    manual_block_reason,
     max_sends_in_window,
     share_url,
     spacing_minutes,
@@ -39,7 +44,8 @@ from app.domain.invites import InviteConfigError
 from app.integrations.mercadolivre import MercadoLivreClient
 from app.integrations.wuzapi import WuzapiClient, WuzapiError
 from app.models import CatalogProduct, Channel, Niche, Publication
-from app.panel.auth import check_csrf
+from app.panel import queries
+from app.panel.auth import AuthContext, check_csrf
 from app.panel.routes import Admin, Db, templates
 from app.panel.whatsapp_routes import get_wa_client
 from app.whatsapp import service as wa
@@ -50,6 +56,12 @@ LIST_LIMIT = 100
 PER_GROUP = 60  # itens por grupo na tela Postar (o resto aparece quando estes saírem)
 
 POST_NOTICES = {
+    "avulso": "Link avulso na fila: é o próximo a sair nos grupos marcados. O link de cada grupo "
+    "sai em segundos.",
+    "avulso-parte": "Link avulso na fila em parte dos grupos: os outros já receberam este produto "
+    "nos últimos 7 dias.",
+    "avulso-repetido": "O link avulso não entrou: os grupos marcados já receberam este produto "
+    "nos últimos 7 dias.",
     "movido": "Post mudou de grupo: entrou no fim da fila do grupo novo; o link novo sai em "
     "segundos. O produto ficou no nicho escolhido.",
     "movido-repetido": "O produto mudou de nicho, mas não entrou na fila do grupo novo: já foi "
@@ -515,6 +527,95 @@ async def _publication(db: Db, pub_id: int) -> Publication:
     return pub
 
 
+async def _render_manual(
+    request: Request,
+    db: AsyncSession,
+    ctx: AuthContext,
+    *,
+    form: ManualForm | None = None,
+    marked: set[int] | None = None,
+    error: str | None = None,
+    code: int = 200,
+) -> Response:
+    form = form or ManualForm(nonce=secrets.token_urlsafe(12))
+    return templates.TemplateResponse(
+        request,
+        "avulso.html",
+        {
+            "ctx": ctx,
+            "form": form,
+            "marked": marked or set(),
+            "targets": await queries.approval_targets(db),
+            "error": error,
+        },
+        status_code=code,
+    )
+
+
+@router.get("/postar/avulso", response_class=HTMLResponse)
+async def manual_page(request: Request, db: Db, ctx: Admin) -> Response:
+    return await _render_manual(request, db, ctx)
+
+
+@router.post("/postar/avulso", response_class=HTMLResponse)
+async def manual_add(
+    request: Request,
+    db: Db,
+    ctx: Admin,
+    url: Annotated[str, Form(max_length=2000)] = "",
+    nome: Annotated[str, Form(max_length=300)] = "",
+    preco: Annotated[str, Form(max_length=20)] = "",
+    de: Annotated[str, Form(max_length=20)] = "",
+    pix: Annotated[str, Form(max_length=20)] = "",
+    cupom: Annotated[str, Form(max_length=20)] = "",
+    ultimas: Annotated[str, Form(max_length=4)] = "",
+    foto: Annotated[str, Form(max_length=600)] = "",
+    relampago: Annotated[str | None, Form(max_length=4)] = None,
+    acaba_em: Annotated[str, Form(max_length=12)] = "",
+    nonce: Annotated[str, Form(max_length=40)] = "",
+    channel_id: Annotated[list[int] | None, Form()] = None,
+    csrf: Annotated[str | None, Form()] = None,
+) -> Response:
+    """Link avulso: entra em 1º na fila dos grupos marcados (ver `app.distribution.manual`)."""
+    check_csrf(ctx, csrf)
+    form = ManualForm(
+        url=url,
+        nome=nome,
+        preco=preco,
+        de=de,
+        pix=pix,
+        cupom=cupom,
+        ultimas=ultimas,
+        foto=foto,
+        relampago=bool(relampago),
+        acaba_em=acaba_em,
+        nonce=nonce,
+    )
+    marked = set(channel_id or [])
+    try:
+        post = post_from_form(form, sorted(marked))
+        result = await queue_manual(db, post, actor=ctx.username, now=utcnow())
+        await db.commit()
+    except ManualError as exc:
+        await db.rollback()
+        return await _render_manual(
+            request, db, ctx, form=form, marked=marked, error=str(exc), code=422
+        )
+    except IntegrityError:
+        await db.rollback()  # o mesmo produto entrando por dois formulários ao mesmo tempo
+        return await _render_manual(
+            request, db, ctx, form=form, marked=marked, error="tente de novo", code=409
+        )
+    if result.created and result.skipped:
+        notice = "avulso-parte"
+    elif result.created:
+        notice = "avulso"
+    else:
+        notice = "avulso-repetido"
+    anchor = f"#grupo-{result.channel_ids[0]}" if result.channel_ids else ""
+    return _see_other(f"/postar?aviso={notice}{anchor}")
+
+
 @router.get("/postar/{pub_id}", response_class=HTMLResponse)
 async def post_page(
     request: Request, db: Db, ctx: Admin, pub_id: int, erro: str | None = None
@@ -552,6 +653,15 @@ async def recheck(
     check_csrf(ctx, csrf)
     pub = await _publication(db, pub_id)
     if pub.state != "ready":
+        return _see_other(f"/postar/{pub_id}")
+    if pub.tier == MANUAL_TIER:
+        # Link avulso: a API não lê o anúncio; vale o preço digitado até vencer.
+        now = utcnow()
+        reason = manual_block_reason(pub.created_at, pub.flash_ends_at, now)
+        if reason:
+            pub.state, pub.note = "skipped", reason
+        else:
+            pub.message = await service.message_for(db, pub, now=now)
         return _see_other(f"/postar/{pub_id}")
     if not pub.item_id:
         return _see_other(f"/postar/{pub_id}?erro=sem-item")

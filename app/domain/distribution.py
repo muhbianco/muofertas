@@ -28,7 +28,10 @@ from app.domain.catalog_offers import Offer
 SP = ZoneInfo("America/Sao_Paulo")
 DEDUP_WINDOW = timedelta(days=7)
 REPOST_DROP = 0.10
-REPOST_TIERS = frozenset({"excepcional", "excelente"})
+# Nível das publicações de link avulso (o operador escolheu o anúncio e digitou o preço).
+MANUAL_TIER = "avulso"
+# Volta ao grupo em 7 dias se 10% mais barato: Excelente+, e o avulso (o operador escolheu).
+REPOST_TIERS = frozenset({"excepcional", "excelente", MANUAL_TIER})
 PRICE_UP_TOLERANCE = 0.03
 FRESH_FOR_SEND = timedelta(minutes=5)
 ML_TAG_RE = re.compile(r"^[a-z0-9]{1,30}$")
@@ -327,6 +330,7 @@ def render_message(
     versus_official: ListingDiscount | None = None,
     seller: str | None = None,
     last_units: int | None = None,
+    flash_ends_at: datetime | None = None,
 ) -> str:
     """Formato do WhatsApp: *negrito*, _itálico_ e blocos separados por linha em branco.
 
@@ -341,6 +345,10 @@ def render_message(
     if official:
         lines.append("✅ Loja oficial")
     lines.append("")
+    if flash_ends_at is not None:
+        end = flash_ends_at.astimezone(SP)
+        when = f"às {end:%H:%M}" if end.date() == local.date() else f"em {end:%d/%m} às {end:%H:%M}"
+        lines.append(f"⏰ *OFERTA RELÂMPAGO* · acaba {when}")
     if discount is not None:
         lines += [
             f"🔥 *{discount.percent}% OFF*",
@@ -447,3 +455,89 @@ def check_coupon(coupon_cents: int, card_cents: int) -> None:
 def share_url(message: str) -> str:
     """Abre o WhatsApp do celular com o texto pronto; o operador escolhe o grupo."""
     return "https://wa.me/?text=" + quote(message, safe="")
+
+
+# --------------------------------------------------------------------------- link avulso
+
+# O preço do link avulso é o que o operador digitou (a API do app não lê anúncio fora do
+# catálogo): vale 6 horas, ou até a oferta relâmpago acabar. Relâmpago que acaba em menos de 10
+# minutos não sai (o lead clicaria numa oferta que já acabou).
+MANUAL_VALID_FOR = timedelta(hours=6)
+FLASH_MIN_LEFT = timedelta(minutes=10)
+FLASH_MAX = timedelta(hours=24)
+ML_PAGE_HOSTS = frozenset(
+    {"www.mercadolivre.com.br", "mercadolivre.com.br", "produto.mercadolivre.com.br"}
+)
+_CATALOG_ID = re.compile(r"/p/(MLB\d{5,15})(?=[/?#]|$)", re.IGNORECASE)
+_USER_PRODUCT_ID = re.compile(r"/up/(MLBU\d{5,15})(?=[/?#]|$)", re.IGNORECASE)
+_ITEM_ID = re.compile(r"(?<![A-Za-z0-9])MLB-?(\d{6,15})(?![0-9])", re.IGNORECASE)
+_ITEM_PARAM = re.compile(r"(?:^|[?&])(?:wid|item_id)=(MLB\d{6,15})", re.IGNORECASE)
+_PDP_ITEM = re.compile(r"item_id(?::|%3A)(MLB\d{6,15})", re.IGNORECASE)
+_FLASH_LEFT = re.compile(r"^(\d{1,2}):([0-5]\d)(?::([0-5]\d))?$")
+
+
+@dataclass(frozen=True, slots=True)
+class ManualLink:
+    external_id: str  # o código do produto ou do anúncio (repetição em 7 dias)
+    item_id: str | None  # o anúncio, quando o link diz qual
+    target_url: str  # a página, sem rastreio, para o gerador de links do afiliado
+
+
+def parse_manual_link(url: str) -> ManualLink:
+    """Link de página do ML colado pelo operador: produto (/p/MLB…), produto do vendedor
+    (/up/MLBU…) ou anúncio (MLB-123…). Só páginas do ML (nada de encurtado: o link de cada grupo
+    é gerado com a etiqueta dele)."""
+    raw = url.strip()
+    parts = urlsplit(raw)
+    host = (parts.hostname or "").lower()
+    if host == "meli.la" or parts.path.startswith("/sec/"):
+        raise LinkError(
+            "cole o link da página do anúncio, não o encurtado: o link de cada grupo o sistema "
+            "gera com a etiqueta do grupo"
+        )
+    if parts.scheme != "https" or host not in ML_PAGE_HOSTS or len(raw) > 2000:
+        raise LinkError("cole o link da página do anúncio no Mercado Livre (mercadolivre.com.br)")
+    query_item = _ITEM_PARAM.search("?" + parts.query) or _PDP_ITEM.search(parts.query)
+    item = query_item.group(1).upper() if query_item else None
+    page = f"https://{host}{parts.path}"
+    if catalog := _CATALOG_ID.search(parts.path):
+        external = catalog.group(1).upper()
+        return ManualLink(external, item, offer_page_url(page, external, item))
+    if user_product := _USER_PRODUCT_ID.search(parts.path):
+        external = user_product.group(1).upper()
+        return ManualLink(external, item, offer_page_url(page, external, item))
+    if listing := _ITEM_ID.search(parts.path):
+        item_id = f"MLB{listing.group(1)}"
+        return ManualLink(item_id, item_id, page)
+    raise LinkError("não achei o código do anúncio (MLB…) no link")
+
+
+class FlashError(ValueError):
+    """Tempo da oferta relâmpago que não confere (mensagem pronta para o operador)."""
+
+
+def parse_flash_left(text: str) -> timedelta:
+    """O relógio "Encerra em 07:10:38" da página (horas:minutos, segundos opcionais)."""
+    match = _FLASH_LEFT.match(text.strip())
+    if match is None:
+        raise FlashError("o tempo da oferta relâmpago é o relógio da página, ex.: 07:10:38")
+    hours, minutes, seconds = (int(g or 0) for g in match.groups())
+    left = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+    if left <= FLASH_MIN_LEFT:
+        raise FlashError("a oferta relâmpago acaba em menos de 10 minutos: não dá tempo de postar")
+    if left > FLASH_MAX:
+        raise FlashError("oferta relâmpago dura no máximo 24 horas: confira o relógio da página")
+    return left
+
+
+def manual_block_reason(
+    created_at: datetime, flash_ends_at: datetime | None, now: datetime
+) -> str | None:
+    """Por que o post avulso não sai mais (o preço digitado venceu), ou None."""
+    if flash_ends_at is not None:
+        if now > flash_ends_at - FLASH_MIN_LEFT:
+            return "a oferta relâmpago acabou (ou acaba em menos de 10 min)"
+        return None
+    if now - created_at > MANUAL_VALID_FOR:
+        return "preço digitado há mais de 6 h: cole o link de novo se ainda valer"
+    return None

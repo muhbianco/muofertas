@@ -22,6 +22,7 @@ from app.core.logging import get_logger
 from app.distribution.service import (
     DistributionError,
     PixRejectedError,
+    chosen_channels,
     publications_for_approval,
 )
 from app.domain.distribution import (
@@ -35,7 +36,6 @@ from app.models import (
     AdminUser,
     CatalogProduct,
     Channel,
-    Niche,
     OfferEvaluation,
     OperatorDecision,
 )
@@ -260,7 +260,7 @@ async def decide(
         raise HTTPException(status_code=422, detail="decisão inválida")
     channels: list[Channel] | None = None
     if decision == "approved" and grupos:
-        channels = await _chosen_channels(db, channel_id or [])
+        channels = await chosen_channels(db, channel_id or [])
         if not channels:
             return RedirectResponse(
                 target + sep + "aviso=grupos", status_code=status.HTTP_303_SEE_OTHER
@@ -336,21 +336,6 @@ async def decide(
     if notice:
         target += ("&" if "?" in target else "?") + f"aviso={notice}"
     return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
-
-
-async def _chosen_channels(db: AsyncSession, ids: list[int]) -> list[Channel]:
-    """Os grupos marcados que ainda valem (ativos, de nicho ativo); id desconhecido some."""
-    wanted = sorted(set(ids))[: queries.GROUP_TARGETS_LIMIT]
-    if not wanted:
-        return []
-    rows = await db.execute(
-        select(Channel)
-        .join(Niche, Niche.id == Channel.niche_id)
-        .where(Channel.id.in_(wanted), Niche.active.is_(True), Channel.paused.is_(False))
-        .order_by(Channel.id)
-        .limit(queries.GROUP_TARGETS_LIMIT)
-    )
-    return list(rows.scalars())
 
 
 # --------------------------------------------------------------------------- páginas

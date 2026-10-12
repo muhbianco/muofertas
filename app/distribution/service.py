@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.distribution import (
     DEDUP_WINDOW,
+    MANUAL_TIER,
     ChannelPolicy,
     LinkError,
     PixError,
@@ -52,6 +53,7 @@ from app.models import (
 )
 
 PRIOR_LIMIT = 20
+MAX_GROUPS = 20  # grupos escolhidos de uma vez (aprovar, enviar também, link avulso)
 
 
 class DistributionError(Exception):
@@ -197,32 +199,14 @@ async def publications_for_approval(
         ).scalar_one_or_none()
         if exists is not None:
             continue  # o mesmo toque de novo (outra aba, reenvio do formulário)
-        prior = (
-            await db.execute(
-                select(
-                    func.coalesce(
-                        Publication.checked_price_cents, Publication.approved_price_cents
-                    ),
-                    Publication.created_at,
-                )
-                .where(
-                    Publication.channel_id == channel.id,
-                    Publication.dedup_key == dedup_key,
-                    Publication.created_at >= now - DEDUP_WINDOW,
-                    Publication.state.in_(("awaiting_link", "ready", "sending", "unknown", "sent")),
-                )
-                .order_by(Publication.created_at.desc())
-                .limit(PRIOR_LIMIT)
-            )
-        ).all()
-        reason = repeat_block_reason(
-            [PriorPost(price, created) for price, created in prior],
+        reason = await repeat_reason(
+            db,
+            channel,
+            dedup_key=dedup_key,
             price_cents=evaluation.price_cents,
             tier=evaluation.tier,
             now=now,
         )
-        if reason is None and channel.paused:
-            reason = "grupo pausado"
         target_url = offer_page_url(product.permalink, product.external_id, item_id)
         db.add(
             Publication(
@@ -350,7 +334,72 @@ async def channel_status(db: AsyncSession, channel: Channel, now: datetime) -> s
     )
 
 
-async def message_for(db: AsyncSession, pub: Publication) -> str:
+async def repeat_reason(
+    db: AsyncSession,
+    channel: Channel,
+    *,
+    dedup_key: str,
+    price_cents: int,
+    tier: str,
+    now: datetime,
+) -> str | None:
+    """Por que o produto não entra agora neste grupo (repetido em 7 dias, grupo pausado)."""
+    prior = (
+        await db.execute(
+            select(
+                func.coalesce(Publication.checked_price_cents, Publication.approved_price_cents),
+                Publication.created_at,
+            )
+            .where(
+                Publication.channel_id == channel.id,
+                Publication.dedup_key == dedup_key,
+                Publication.created_at >= now - DEDUP_WINDOW,
+                Publication.state.in_(("awaiting_link", "ready", "sending", "unknown", "sent")),
+            )
+            .order_by(Publication.created_at.desc())
+            .limit(PRIOR_LIMIT)
+        )
+    ).all()
+    reason = repeat_block_reason(
+        [PriorPost(price, created) for price, created in prior],
+        price_cents=price_cents,
+        tier=tier,
+        now=now,
+    )
+    if reason is None and channel.paused:
+        reason = "grupo pausado"
+    return reason
+
+
+async def chosen_channels(db: AsyncSession, ids: list[int]) -> list[Channel]:
+    """Os grupos marcados que ainda valem (ativos, de nicho ativo); id desconhecido some."""
+    wanted = sorted(set(ids))[:MAX_GROUPS]
+    if not wanted:
+        return []
+    rows = await db.execute(
+        select(Channel)
+        .join(Niche, Niche.id == Channel.niche_id)
+        .where(Channel.id.in_(wanted), Niche.active.is_(True), Channel.paused.is_(False))
+        .order_by(Channel.id)
+        .limit(MAX_GROUPS)
+    )
+    return list(rows.scalars())
+
+
+async def top_position(db: AsyncSession, channel_id: int) -> int:
+    """Posição que põe uma publicação à frente de toda a fila do grupo (a mais nova fica em 1º)."""
+    first = (
+        await db.execute(
+            select(func.min(Publication.queue_position)).where(
+                Publication.channel_id == channel_id,
+                Publication.state.in_(("awaiting_link", "ready")),
+            )
+        )
+    ).scalar_one_or_none()
+    return (first if first is not None else QUEUE_STEP) - QUEUE_STEP
+
+
+async def message_for(db: AsyncSession, pub: Publication, now: datetime | None = None) -> str:
     product = await db.get(CatalogProduct, pub.product_id)
     channel = await db.get(Channel, pub.channel_id)
     if product is None or channel is None or pub.affiliate_url is None:
@@ -359,6 +408,9 @@ async def message_for(db: AsyncSession, pub: Publication) -> str:
         raise DistributionError("revalide o preço antes de montar a mensagem")
     niche = await db.get(Niche, channel.niche_id)
     evaluation = await db.get(OfferEvaluation, pub.evaluation_id) if pub.evaluation_id else None
+    # Link avulso: o preço é o digitado e a hora dele não muda; Pix e últimas unidades vencem
+    # pela hora do envio (`now`), não pela hora em que foram digitados junto com o preço.
+    at = now if now is not None and pub.tier == MANUAL_TIER else pub.checked_at
     official = bool(evaluation and evaluation.used_official)
     discount = listing_discount(
         pub.checked_price_cents,
@@ -373,18 +425,17 @@ async def message_for(db: AsyncSession, pub: Publication) -> str:
         checked_at=pub.checked_at,
         official=official,
         url=pub.affiliate_url,
-        pix_cents=pix_to_show(
-            pub.pix_price_cents, pub.pix_at, pub.checked_price_cents, pub.checked_at
-        ),
+        pix_cents=pix_to_show(pub.pix_price_cents, pub.pix_at, pub.checked_price_cents, at),
         coupon_cents=pix_to_show(
-            pub.coupon_price_cents, pub.coupon_at, pub.checked_price_cents, pub.checked_at
+            pub.coupon_price_cents, pub.coupon_at, pub.checked_price_cents, at
         ),
         discount=discount,
         versus_official=None
         if official or discount is not None
         else official_comparison(pub.checked_price_cents, pub.official_price_cents),
         seller=None if official else await _seller_line(db, evaluation),
-        last_units=units_to_show(pub.last_units, pub.last_units_at, pub.checked_at),
+        last_units=units_to_show(pub.last_units, pub.last_units_at, at),
+        flash_ends_at=pub.flash_ends_at,
     )
 
 

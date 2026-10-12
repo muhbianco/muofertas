@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Link avulso{% endblock %}
+{% block content %}
+<h1>Link avulso</h1>
+<p class="nota-pix">Para postar um anúncio que o robô não acompanha. Cole o link da página, digite o que ela mostra e marque os grupos: o post entra em <b>1º lugar</b> na fila de cada um, com o link de afiliado do grupo. A API não lê o anúncio, então vale o preço que você digitar, por <b>6 horas</b> (ou até a oferta relâmpago acabar); depois disso ele sai da fila sozinho.</p>
+{% if error %}<p class="erro">Não entrou: {{ error }}.</p>{% endif %}
+<article class="bloco">
+  <form class="formulario" method="post" action="/postar/avulso">
+    <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+    <input type="hidden" name="nonce" value="{{ form.nonce }}">
+    <label>Link da página do anúncio<input name="url" type="url" maxlength="2000" required placeholder="https://www.mercadolivre.com.br/…" value="{{ form.url }}"></label>
+    <label>Nome do produto <small>como está na página (se já temos o produto, pode deixar vazio)</small><input name="nome" maxlength="200" value="{{ form.nome }}"></label>
+    <div class="pix-aprovar">
+      <label>Preço<input name="preco" inputmode="decimal" maxlength="20" required placeholder="308,00" value="{{ form.preco }}"></label>
+      <label>De (riscado, opcional)<input name="de" inputmode="decimal" maxlength="20" placeholder="699,00" value="{{ form.de }}"></label>
+      <label>Pix (opcional)<input name="pix" inputmode="decimal" maxlength="20" placeholder="292,60" value="{{ form.pix }}"></label>
+      <label>Com cupom (opcional)<input name="cupom" inputmode="decimal" maxlength="20" placeholder="295,00" value="{{ form.cupom }}"></label>
+      <label>Últimas unidades (opcional)<input name="ultimas" inputmode="numeric" maxlength="2" placeholder="4" value="{{ form.ultimas }}"></label>
+    </div>
+    <fieldset class="grupos-marcar relampago">
+      <legend>Oferta relâmpago</legend>
+      <label><input type="checkbox" name="relampago" value="1"{% if form.relampago %} checked{% endif %}> ⏰ É oferta relâmpago</label>
+      <label class="campo">Acaba em <small>o relógio “Encerra em” da página, ex.: 07:10:38</small><input name="acaba_em" inputmode="numeric" maxlength="12" placeholder="07:10:38" value="{{ form.acaba_em }}"></label>
+      <p class="dica">O post diz a hora em que ela acaba e não sai depois disso (nem nos últimos 10 minutos).</p>
+    </fieldset>
+    <label>Foto (opcional) <small>endereço da imagem do anúncio (https://http2.mlstatic.com/…); sem foto, o post vai só com texto</small><input name="foto" type="url" maxlength="512" value="{{ form.foto }}"></label>
+    <fieldset class="grupos-marcar">
+      <legend>Grupos</legend>
+      {% for t in targets %}<label><input type="checkbox" name="channel_id" value="{{ t.id }}"{% if t.id in marked %} checked{% endif %}> {{ t.label }}</label>{% endfor %}
+      {% if not targets %}<p class="vazio">Nenhum grupo ativo (Grupos).</p>{% endif %}
+    </fieldset>
+    <button class="botao aprovar" type="submit">Pôr em 1º na fila</button>
+  </form>
+</article>
+<p class="linha"><a href="/postar">← Voltar para Postar</a></p>
+{% endblock %}

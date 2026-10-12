@@ -2,6 +2,7 @@
 {% block title %}Postar{% endblock %}
 {% block content %}
 <h1>Postar</h1>
+<p><a class="botao aprovar" href="/postar/avulso">＋ Link avulso</a></p>
 {% if notice %}<p class="aviso">{{ notice }}</p>{% endif %}
 {% if attention %}
 <article class="bloco">
@@ -48,10 +49,10 @@
     {% if g.rows | length > 1 %}<span class="alca" title="Arraste para cima" aria-hidden="true">⠿</span>{% endif %}
     <a class="item" href="/postar/{{ r.pub.id }}">
       {% if r.image_url %}<img src="{{ r.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="sem-foto"></span>{% endif %}
-      <span><b>{{ r.name }}</b><br><small>aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}</small></span>
+      <span><b>{{ r.name }}</b><br><small>{% if r.pub.tier == 'avulso' %}<span class="selo off">avulso</span>{{ r.pub.approved_price_cents | brl }} digitado {{ r.pub.created_at | local }}{% if r.pub.flash_ends_at %} · ⏰ relâmpago até {{ r.pub.flash_ends_at | local }}{% endif %}{% else %}aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}{% endif %}</small></span>
     </a>
-    <a class="mudar" href="/postar/{{ r.pub.id }}#enviar-tambem" data-enviar-tambem data-pub="{{ r.pub.id }}" data-canal="{{ g.channel.id }}" data-nome="{{ r.name }}" title="Enviar também em outro grupo" aria-label="Enviar também em outro grupo">＋</a>
-    <a class="mudar" href="/postar/{{ r.pub.id }}#mudar-grupo" data-mudar-grupo data-pub="{{ r.pub.id }}" data-nicho="{{ g.channel.niche_id }}" data-nome="{{ r.name }}" title="Mudar de grupo" aria-label="Mudar de grupo">⇄</a>
+    {% if r.pub.tier != 'avulso' %}<a class="mudar" href="/postar/{{ r.pub.id }}#enviar-tambem" data-enviar-tambem data-pub="{{ r.pub.id }}" data-canal="{{ g.channel.id }}" data-nome="{{ r.name }}" title="Enviar também em outro grupo" aria-label="Enviar também em outro grupo">＋</a>
+    <a class="mudar" href="/postar/{{ r.pub.id }}#mudar-grupo" data-mudar-grupo data-pub="{{ r.pub.id }}" data-nicho="{{ g.channel.niche_id }}" data-nome="{{ r.name }}" title="Mudar de grupo" aria-label="Mudar de grupo">⇄</a>{% endif %}
     {% if g.channel.transport == 'wuzapi' and g.channel.wa_jid %}
     <form method="post" action="/postar/{{ r.pub.id }}/enviar-agora" data-confirmar="Enviar agora para o grupo, sem esperar o intervalo?">
       <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">

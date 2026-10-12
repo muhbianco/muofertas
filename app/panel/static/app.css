@@ -121,6 +121,8 @@ details.grupo > summary .resumo b { color: var(--esm-esc); }
 textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
 .formulario .marcar { display: flex; gap: 8px; align-items: center; }
 .formulario .marcar input { width: auto; }
+.formulario input[type="checkbox"] { width: auto; flex: none; }
+.grupos-marcar label.campo { display: grid; gap: 4px; }
 .duas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .botao { display: block; text-align: center; line-height: 48px; text-decoration: none; margin: 8px 0; }
 .passos { font-size: 14px; color: var(--cinza); padding-left: 20px; }
