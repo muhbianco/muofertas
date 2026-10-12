@@ -54,3 +54,19 @@ Conferir nas primeiras 48 h: 429 em sequência no log do worker. Se vierem, volt
 - Tênis Sandrini Aero Run (10º em Calçados > Tênis, loja oficial): não é produto de catálogo. O top
   20 de Calçados > Tênis (MLB23332) tem 2 produtos de catálogo, 13 anúncios e 5 "produto de vendedor";
   a API do app não dá preço dos dois últimos. A categoria entrou mesmo assim (traz os 2 de catálogo).
+
+## Moda Unissex e Esportes (mesmo dia)
+
+O dono renomeou "Tênis e Esporte" para "Moda Unissex e Esportes" e pediu vestuário masculino e
+feminino. Medição do top 20 em Calçados, Roupas e Bolsas (MLB1430):
+
+- **roupa não tem produto de catálogo.** Agasalhos, bermudas, blusas, calças, camisas, camisetas,
+  leggings, macacão, moda praia, moda íntima e roupa fitness: 0 de 20 em todas, só anúncio (`ITEM`) e
+  "produto de vendedor" (`USER_PRODUCT`). A API do app não dá preço desses; nem a aba Vigiar resolve,
+  porque ela só aceita `/p/MLB…`;
+- calçados de moda, quase nada: Sandálias e Chinelos 3, Tênis 2, o resto 0;
+- o que tem catálogo é acessório: bonés (fitness 12, casual 11), cintas 11, acessórios de moda 11,
+  bolsas esportivas 4.
+
+Entraram as seis com catálogo (bonés ×2, cintas, acessórios de moda, sandálias e chinelos, bolsas
+esportivas). O slug continua `tenis-esporte` (convites, regras e grupo apontam para ele).

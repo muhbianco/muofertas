@@ -257,7 +257,7 @@
     },
     {
       "slug": "tenis-esporte",
-      "nome": "Tênis e Esporte",
+      "nome": "Moda Unissex e Esportes",
       "comissao_bp": 1600,
       "exigir_loja_oficial": true,
       "marcas_alto_risco": [],
@@ -305,6 +305,30 @@
         {
           "id": "MLB23332",
           "nome": "Calçados: Tênis (moda; quase tudo fora do catálogo)"
+        },
+        {
+          "id": "MLB439241",
+          "nome": "Moda fitness: Bonés"
+        },
+        {
+          "id": "MLB430275",
+          "nome": "Moda: Bonés, Chapéus e Boinas"
+        },
+        {
+          "id": "MLB437678",
+          "nome": "Moda: Cintas"
+        },
+        {
+          "id": "MLB1451",
+          "nome": "Moda: Acessórios de Moda"
+        },
+        {
+          "id": "MLB273770",
+          "nome": "Calçados: Sandálias e Chinelos"
+        },
+        {
+          "id": "MLB432028",
+          "nome": "Moda fitness: Bolsas Esportivas"
         }
       ]
     },
