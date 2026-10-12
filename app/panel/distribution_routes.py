@@ -52,6 +52,8 @@ POST_NOTICES = {
     "para esse grupo nos últimos 7 dias.",
     "movido-sem-grupo": "O produto mudou de nicho, mas esse nicho não tem grupo ativo.",
     "mover-erro": "Não deu para mudar de grupo: o post já saiu ou está no grupo desse nicho.",
+    "removido": "Post tirado da fila de envio. O produto volta para a aprovação quando o preço "
+    "mudar.",
 }
 
 ERRORS = {
@@ -711,12 +713,18 @@ async def discard(
     reason: Annotated[str | None, Form(max_length=200)] = None,
 ) -> Response:
     check_csrf(ctx, csrf)
-    pub = await _publication(db, pub_id)
+    pub = await db.get(Publication, pub_id, with_for_update=True)
+    if pub is None:
+        raise HTTPException(status_code=404)
+    if pub.state not in ("awaiting_link", "ready"):
+        # Saindo agora, já saiu ou incerto: não some da tela (o "Conferir no grupo" cuida).
+        raise HTTPException(status_code=409, detail="este post não está mais na fila de envio")
     try:
         service.discard(pub, actor=ctx.username, reason=reason)
     except DistributionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return _see_other("/postar")
+    logger.info("post tirado da fila", extra={"publication_id": pub.id, "user": ctx.username})
+    return _see_other(f"/postar?aviso=removido#grupo-{pub.channel_id}")
 
 
 # --------------------------------------------------------------------------- convites

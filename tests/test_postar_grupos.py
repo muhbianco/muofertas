@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import re
+
 import httpx
 import pytest
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.clock import utcnow
@@ -67,3 +70,65 @@ async def test_every_group_shows_up_even_when_another_fills_the_cap(
     assert page.count('<li data-pub="') == 5  # 3 do cheio + 2 do segundo
     assert '<details class="bloco grupo" id="grupo-' in page  # recolhível
     assert "Nada pronto para este grupo" in page
+
+
+async def test_remove_a_post_from_the_send_queue(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    secret = await seed_admin(sessions)
+    now = utcnow()
+    async with sessions() as s, s.begin():
+        niche = Niche(slug="tecnologia", name="Tecnologia", active=True, created_at=now)
+        s.add(niche)
+        await s.flush()
+        product = CatalogProduct(
+            marketplace="mercadolivre",
+            external_id="MLBDRONE",
+            niche_id=niche.id,
+            name="Drone",
+            discovered_via="highlights",
+            active=True,
+            tier="warm",
+            next_check_at=now,
+            consecutive_failures=0,
+            first_seen_at=now,
+        )
+        channel = Channel(
+            niche_id=niche.id, name="Grupo Tecnologia", transport="manual", created_at=now
+        )
+        s.add_all([product, channel])
+        await s.flush()
+        pubs = [
+            Publication(
+                channel_id=channel.id,
+                product_id=product.id,
+                idempotency_key=f"k{n}",
+                dedup_key=f"d{n}",
+                state=state,
+                tier="boa",
+                target_url="https://x",
+                approved_price_cents=10000,
+                created_at=now,
+            )
+            for n, state in enumerate(("ready", "sending"))
+        ]
+        s.add_all(pubs)
+        await s.flush()
+        ready_id, sending_id, channel_id = pubs[0].id, pubs[1].id, channel.id
+    assert (await login(client, secret)).status_code == 303
+    page = (await client.get("/postar")).text
+    assert f'action="/postar/{ready_id}/descartar" data-confirmar=' in page
+    csrf = re.search(r'name="csrf" value="([^"]+)"', page)
+    assert csrf is not None
+
+    r = await client.post(f"/postar/{ready_id}/descartar", data={"csrf": csrf.group(1)})
+    assert r.headers["location"] == f"/postar?aviso=removido#grupo-{channel_id}"
+    busy = await client.post(f"/postar/{sending_id}/descartar", data={"csrf": csrf.group(1)})
+    assert busy.status_code == 409  # saindo agora: não some da tela
+    async with sessions() as s:
+        states = [
+            p.state
+            for p in (await s.execute(select(Publication).order_by(Publication.id))).scalars()
+        ]
+    assert states == ["discarded", "sending"]
+    assert "Post tirado da fila de envio" in (await client.get("/postar?aviso=removido")).text

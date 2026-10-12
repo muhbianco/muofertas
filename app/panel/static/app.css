@@ -126,6 +126,7 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .pix-aprovar label { display: flex; gap: 6px; align-items: center; }
 .pix-aprovar input[name=ultimas] { width: 64px; }
 .fila-envio .mudar { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1px solid var(--linha); border-radius: 8px; background: #fff; color: var(--esm-esc); text-decoration: none; font-size: 18px; flex: none; }
+.fila-envio .remover { width: 34px; height: 34px; padding: 0; border: 1px solid #f1c4c1; border-radius: 8px; background: #fff; color: var(--verm); font-size: 16px; cursor: pointer; }
 .modal { border: 1px solid var(--linha); border-radius: 14px; padding: 16px; width: min(92vw, 420px); background: #fff; color: var(--tinta); }
 .modal::backdrop { background: rgba(0, 0, 0, 0.35); }
 .modal h2 { margin: 0 0 6px; }
@@ -164,6 +165,11 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .fila-envio { list-style: none; padding: 0; margin: 0; }
 .fila-envio li { display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--linha); background: var(--creme); }
 .fila-envio li .item { flex: 1; border-top: 0; }
+@media (max-width: 600px) {
+  .fila-envio li { flex-wrap: wrap; padding-bottom: 8px; }
+  .fila-envio li .item { flex: 1 1 calc(100% - 34px); }
+  .fila-envio li .mudar { margin-left: 30px; }
+}
 .fila-envio .alca { cursor: grab; touch-action: none; user-select: none; font-size: 22px; padding: 10px 4px; color: var(--cinza); }
 .fila-envio .subir { display: flex; gap: 4px; }
 .fila-envio .subir button { min-width: 36px; min-height: 36px; border: 1px solid var(--linha); border-radius: 8px; background: #fff; }

@@ -69,6 +69,11 @@
         <button type="submit" title="Sair como o próximo">⤒</button>
       </form>
     </span>{% endif %}
+    <form method="post" action="/postar/{{ r.pub.id }}/descartar" data-confirmar="Tirar este post da fila de envio? O produto só volta para a aprovação quando o preço mudar.">
+      <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+      <input type="hidden" name="reason" value="tirado da fila de envio">
+      <button class="remover" type="submit" title="Tirar da fila de envio" aria-label="Tirar da fila de envio">✕</button>
+    </form>
   </li>
   {% endfor %}
   </ol>
