@@ -177,7 +177,7 @@ async def queue_page(
         tiers = [nivel] if nivel in queries.TIER_ORDER else queries.QUEUE_DEFAULT_TIERS
     niche_id = niche.id if niche else None
     cards = await queries.queue(db, tiers, niche_id, only_discount=only_discount, sent=sent)
-    by_niche = await queries.queue_by_niche(db, tiers, only_discount=only_discount, sent=sent)
+    ready = await queries.ready_to_post(db, utcnow())
     counts = await queries.tier_counts(db, niche_id)
     return templates.TemplateResponse(
         request,
@@ -191,8 +191,8 @@ async def queue_page(
             "nivel": nivel if nivel in queries.TIER_ORDER or only_discount else None,
             "discount_count": await queries.discount_count(db, niche_id),
             "enviados": sent,
-            "by_niche": by_niche,
-            "queue_total": sum(by_niche.values()),
+            "ready": ready,
+            "ready_total": sum(k.ready for k in ready.values()),
             "tier_order": queries.TIER_ORDER,
             "notice": NOTICES.get(aviso or ""),
             "open_alerts": await queries.open_alerts(db),

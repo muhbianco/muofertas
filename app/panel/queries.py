@@ -13,10 +13,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.collector.domains import SOURCE_PANEL, label
 from app.collector.marketplace import MARKETPLACE
 from app.core.clock import utcnow
-from app.domain.distribution import REPUTATION, offer_page_url, product_page_url
+from app.domain.distribution import (
+    REPUTATION,
+    local_day_start,
+    offer_page_url,
+    product_page_url,
+)
 from app.models import (
     Alert,
     CatalogProduct,
+    Channel,
     CollectionRun,
     IntegrationError,
     MarketplaceDomain,
@@ -209,24 +215,47 @@ def _queue_filters(
     return filters
 
 
-async def queue_by_niche(
-    db: AsyncSession,
-    tiers: list[str],
-    *,
-    only_discount: bool = False,
-    sent: str | None = None,
-    now: datetime | None = None,
-) -> dict[int, int]:
-    """Quantos produtos estão na fila em cada nicho, com os mesmos filtros da lista."""
+@dataclass(frozen=True, slots=True)
+class ReadyKpi:
+    ready: int  # aprovado, esperando o horário do grupo (ou o link, que sai em segundos)
+    sent_today: int
+    per_day: int  # soma do limite diário dos grupos do nicho
+
+
+READY_STATES = ("awaiting_link", "ready")
+
+
+async def ready_to_post(db: AsyncSession, now: datetime) -> dict[int, ReadyKpi]:
+    """O que já está pronto para postar em cada nicho, com os envios de hoje e o limite."""
+    today = local_day_start(now)
+    pending = Publication.state.in_(READY_STATES)
+    sent_today = (Publication.state == "sent") & (Publication.sent_at >= today)
     rows = await db.execute(
-        select(CatalogProduct.niche_id, func.count())
-        .where(
-            CatalogProduct.niche_id.is_not(None),
-            *_queue_filters(tiers, only_discount=only_discount, sent=sent, now=now),
+        select(
+            Channel.niche_id,
+            func.sum(case((pending, 1), else_=0)),
+            func.sum(case((sent_today, 1), else_=0)),
         )
-        .group_by(CatalogProduct.niche_id)
+        .select_from(Publication)
+        .join(Channel, Channel.id == Publication.channel_id)
+        .where(pending | sent_today)
+        .group_by(Channel.niche_id)
     )
-    return {niche_id: count for niche_id, count in rows.tuples() if niche_id is not None}
+    counts = {
+        niche_id: (int(ready or 0), int(sent or 0)) for niche_id, ready, sent in rows.tuples()
+    }
+    caps = await db.execute(
+        select(Channel.niche_id, func.sum(Channel.max_per_day))
+        .where(Channel.paused.is_(False))
+        .group_by(Channel.niche_id)
+    )
+    out = {}
+    for niche_id, per_day in caps.tuples():
+        ready, sent = counts.pop(niche_id, (0, 0))
+        out[niche_id] = ReadyKpi(ready, sent, int(per_day or 0))
+    for niche_id, (ready, sent) in counts.items():  # grupo pausado com fila antiga
+        out[niche_id] = ReadyKpi(ready, sent, 0)
+    return out
 
 
 async def queue(

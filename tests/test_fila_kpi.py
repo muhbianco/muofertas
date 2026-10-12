@@ -1,48 +1,65 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.clock import utcnow
-from app.models import CatalogProduct, Niche
+from app.models import CatalogProduct, Channel, Niche, Publication
 from tests.test_panel import login, seed_admin, seed_product
 
 
-async def test_queue_kpi_counts_each_niche_with_the_same_filters(
+async def test_side_panel_counts_what_is_ready_to_post_per_niche(
     client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
     secret = await seed_admin(sessions)
-    await seed_product(sessions)  # Ferramentas: 1 "boa", sem % OFF
+    product_id = await seed_product(sessions)  # nicho Ferramentas
     now = utcnow()
     async with sessions() as s, s.begin():
+        product = await s.get(CatalogProduct, product_id)
+        assert product is not None
         beauty = Niche(slug="beleza", name="Beleza: maquiagem", active=True, created_at=now)
         s.add(beauty)
         await s.flush()
-        for n, (tier, off) in enumerate([("boa", 30), ("boa", None), ("regular", 40)]):
+        tools = Channel(
+            niche_id=product.niche_id, name="F", transport="wuzapi", max_per_day=30, created_at=now
+        )
+        s.add_all(
+            [tools, Channel(niche_id=beauty.id, name="B", transport="wuzapi", created_at=now)]
+        )
+        await s.flush()
+        states = [
+            ("ready", None),
+            ("ready", None),
+            ("awaiting_link", None),  # o link sai em segundos: já conta como pronto
+            ("sent", now),  # hoje
+            ("sent", now - timedelta(days=2)),  # outro dia: não conta
+            ("discarded", None),
+            ("skipped", None),
+        ]
+        for n, (state, sent_at) in enumerate(states):
             s.add(
-                CatalogProduct(
-                    marketplace="mercadolivre",
-                    external_id=f"MLBB{n}",
-                    niche_id=beauty.id,
-                    name=f"Batom {n}",
-                    discovered_via="highlights",
-                    active=True,
-                    tier="warm",
-                    next_check_at=now,
-                    consecutive_failures=0,
-                    first_seen_at=now,
-                    last_tier=tier,
-                    last_score=60.0,
-                    listing_discount_pct=off,
+                Publication(
+                    channel_id=tools.id,
+                    product_id=product_id,
+                    idempotency_key=f"k{n}",
+                    dedup_key=f"d{n}",
+                    state=state,
+                    tier="boa",
+                    target_url="https://x",
+                    approved_price_cents=10000,
+                    created_at=now,
+                    sent_at=sent_at,
                 )
             )
     assert (await login(client, secret)).status_code == 303
 
-    page = (await client.get("/")).text  # padrão: excepcional a suspeita
-    assert "<b>3</b><span>na fila</span>" in page
-    assert "<b>1</b><span>Ferramentas</span>" in page and "<b>2</b><span>Beleza</span>" in page
-
-    off = (await client.get("/?nivel=off&nicho=beleza")).text  # todos os níveis, só % OFF
-    assert "<b>2</b><span>na fila</span>" in off
-    assert "<b>0</b><span>Ferramentas</span>" in off and "<b>2</b><span>Beleza</span>" in off
-    assert 'href="/?nicho=ferramentas&amp;nivel=off"' in off  # o clique mantém o filtro
+    page = (await client.get("/?nivel=off")).text
+    assert "Prontos pra postar <b>3</b>" in page
+    tools_row = page[page.index('<span class="nome">Ferramentas</span>') :][:200]
+    assert "<b>3</b>" in tools_row and "hoje 1/30" in tools_row
+    beauty_row = page[page.index('<span class="nome">Beleza</span>') :][:200]
+    assert "<b>0</b>" in beauty_row and "hoje 0/30" in beauty_row
+    assert 'href="/?nicho=beleza&amp;nivel=off"' in page  # o clique mantém o filtro
+    assert '<main class="com-lado">' in page
