@@ -18,7 +18,11 @@ from app.core.config import settings
 from app.core.database import get_sessionmaker
 from app.core.logging import get_logger
 from app.distribution import invites, service
-from app.distribution.move import PublicationNotFound, move_publication
+from app.distribution.move import (
+    PublicationNotFound,
+    copy_publication,
+    move_publication,
+)
 from app.distribution.sender import resend_now, send_now
 from app.distribution.service import DistributionError
 from app.domain.distribution import (
@@ -52,6 +56,15 @@ POST_NOTICES = {
     "para esse grupo nos últimos 7 dias.",
     "movido-sem-grupo": "O produto mudou de nicho, mas esse nicho não tem grupo ativo.",
     "mover-erro": "Não deu para mudar de grupo: o post já saiu ou está no grupo desse nicho.",
+    "copiado": "Pronto: o post entrou também no fim da fila dos grupos escolhidos; o link de "
+    "cada grupo sai em segundos.",
+    "copiado-parte": "Entrou em parte dos grupos: os outros já receberam este produto nos "
+    "últimos 7 dias.",
+    "copiado-repetido": "Não entrou em nenhum: os grupos escolhidos já receberam este produto "
+    "nos últimos 7 dias.",
+    "copiado-ja": "O post já estava na fila desses grupos; nada foi duplicado.",
+    "copiar-erro": "Não deu para enviar também: escolha pelo menos um outro grupo ativo (só "
+    "vale para post que ainda não saiu).",
     "removido": "Post tirado da fila de envio. O produto volta para a aprovação quando o preço "
     "mudar.",
 }
@@ -701,6 +714,45 @@ async def post_move(
         "movido" if moved.created else "movido-repetido" if moved.skipped else "movido-sem-grupo"
     )
     anchor = f"#grupo-{moved.channel_id}" if moved.channel_id else ""
+    return _see_other(f"/postar?aviso={notice}{anchor}")
+
+
+@router.post("/postar/{pub_id}/copiar")
+async def post_copy(
+    db: Db,
+    ctx: Admin,
+    pub_id: int,
+    channel_id: Annotated[list[int] | None, Form()] = None,
+    csrf: Annotated[str | None, Form()] = None,
+) -> Response:
+    """ "Enviar também em": o post fica neste grupo e ganha cópia nos grupos escolhidos."""
+    check_csrf(ctx, csrf)
+    pub = await db.get(Publication, pub_id)
+    anchor = f"#grupo-{pub.channel_id}" if pub else ""
+    try:
+        copied = await copy_publication(
+            db,
+            publication_id=pub_id,
+            channel_ids=channel_id or [],
+            actor=ctx.username,
+            now=utcnow(),
+            affiliate_tool_id=settings.ml_affiliate_tool_id,
+        )
+    except PublicationNotFound:
+        raise HTTPException(status_code=404) from None
+    except DistributionError as exc:
+        await db.rollback()
+        logger.info("enviar também recusado", extra={"publication_id": pub_id, "why": str(exc)})
+        return _see_other(f"/postar?aviso=copiar-erro{anchor}")
+    await db.commit()
+    if copied.created and copied.skipped:
+        notice = "copiado-parte"
+    elif copied.created:
+        notice = "copiado"
+    elif copied.skipped:
+        notice = "copiado-repetido"
+    else:
+        notice = "copiado-ja"  # já estava na fila desses grupos: nada duplicado
     return _see_other(f"/postar?aviso={notice}{anchor}")
 
 

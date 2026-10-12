@@ -50,6 +50,7 @@
       {% if r.image_url %}<img src="{{ r.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="sem-foto"></span>{% endif %}
       <span><b>{{ r.name }}</b><br><small>aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}</small></span>
     </a>
+    <a class="mudar" href="/postar/{{ r.pub.id }}#enviar-tambem" data-enviar-tambem data-pub="{{ r.pub.id }}" data-canal="{{ g.channel.id }}" data-nome="{{ r.name }}" title="Enviar também em outro grupo" aria-label="Enviar também em outro grupo">＋</a>
     <a class="mudar" href="/postar/{{ r.pub.id }}#mudar-grupo" data-mudar-grupo data-pub="{{ r.pub.id }}" data-nicho="{{ g.channel.niche_id }}" data-nome="{{ r.name }}" title="Mudar de grupo" aria-label="Mudar de grupo">⇄</a>
     {% if g.channel.transport == 'wuzapi' and g.channel.wa_jid %}
     <form method="post" action="/postar/{{ r.pub.id }}/enviar-agora" data-confirmar="Enviar agora para o grupo, sem esperar o intervalo?">
@@ -104,6 +105,25 @@
   </form>
 </dialog>
 {% endif %}
+{% if move_targets | length > 1 %}
+<dialog id="enviar-tambem" class="modal" aria-labelledby="tambem-titulo">
+  <form method="post" action="/postar">
+    <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+    <h2 id="tambem-titulo">Enviar também em</h2>
+    <p class="linha" data-produto></p>
+    <fieldset class="grupos-marcar">
+      <legend>Grupos (o post continua no grupo dele)</legend>
+      {% for c in move_targets %}<label data-canal="{{ c.id }}"><input type="checkbox" name="channel_id" value="{{ c.id }}"> {{ c.name }}</label>{% endfor %}
+    </fieldset>
+    <p class="erro" data-erro hidden>Escolha pelo menos um grupo.</p>
+    <p class="dica">Cada grupo marcado recebe uma cópia no fim da fila, com o link dele. O produto não muda de nicho. Grupo que já recebeu este produto nos últimos 7 dias fica de fora.</p>
+    <div class="acoes">
+      <button type="button" class="rejeitar" data-fechar>Cancelar</button>
+      <button type="submit" class="aprovar">Enviar também</button>
+    </div>
+  </form>
+</dialog>
+{% endif %}
 {% if recent %}
 <h2>Últimos 2 dias</h2>
 <table>
@@ -119,4 +139,4 @@
 </table>
 {% endif %}
 {% endblock %}
-{% block scripts %}<script src="/static/fila.js?v=4" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=5" defer></script>{% endblock %}

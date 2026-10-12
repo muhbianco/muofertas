@@ -150,6 +150,7 @@ async def publications_for_approval(
     last_units: int | None = None,
     seen_at: datetime | None = None,
     key_tag: str = "",
+    channels: list[Channel] | None = None,
 ) -> ApprovalResult:
     """Uma publicação por grupo do nicho. Repetida em 7 dias ou grupo pausado: `skipped`.
 
@@ -157,6 +158,7 @@ async def publications_for_approval(
     vale por 3 horas, as últimas unidades por 2). `seen_at`: quando viu (a troca de grupo
     mantém a hora da aprovação, para não esticar a validade). `key_tag`: separa a publicação de
     uma troca de grupo da aprovação original (a mesma avaliação pode voltar ao mesmo grupo).
+    `channels`: grupos escolhidos pelo operador ("enviar também em"); sem isso, os do nicho.
     """
     seen = seen_at or now
     result = ApprovalResult(skipped=[])
@@ -172,13 +174,14 @@ async def publications_for_approval(
             check_coupon(coupon_cents, evaluation.price_cents)
         except PixError as exc:
             raise PixRejectedError(str(exc), field="cupom") from exc
-    channels = list(
-        (
-            await db.execute(
-                select(Channel).where(Channel.niche_id == product.niche_id).order_by(Channel.id)
-            )
-        ).scalars()
-    )
+    if channels is None:
+        channels = list(
+            (
+                await db.execute(
+                    select(Channel).where(Channel.niche_id == product.niche_id).order_by(Channel.id)
+                )
+            ).scalars()
+        )
     if not channels:
         result.no_channel = True
         return result

@@ -133,6 +133,10 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .modal label { display: grid; gap: 4px; font-size: 14px; margin: 10px 0; }
 .modal select { font-size: 15px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--linha); background: #fff; }
 .modal .acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.grupos-marcar { border: 1px solid var(--linha); border-radius: 10px; padding: 8px 10px; margin: 10px 0; display: grid; gap: 6px; }
+.grupos-marcar legend { font-size: 13px; color: var(--cinza); padding: 0 4px; }
+.grupos-marcar label { display: flex; gap: 8px; align-items: center; font-size: 15px; }
+.grupos-marcar label[hidden], .erro[hidden] { display: none; }
 .formulario input.calculado { background: transparent; border-style: dashed; color: var(--cinza); }
 .formulario .dica { font-size: 12px; color: var(--cinza); margin: 0; }
 .selo.off { background: var(--verm); color: #fff; }
@@ -168,7 +172,7 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 @media (max-width: 600px) {
   .fila-envio li { flex-wrap: wrap; padding-bottom: 8px; }
   .fila-envio li .item { flex: 1 1 calc(100% - 34px); }
-  .fila-envio li .mudar { margin-left: 30px; }
+  .fila-envio li .item + .mudar { margin-left: 30px; }
 }
 .fila-envio .alca { cursor: grab; touch-action: none; user-select: none; font-size: 22px; padding: 10px 4px; color: var(--cinza); }
 .fila-envio .subir { display: flex; gap: 4px; }

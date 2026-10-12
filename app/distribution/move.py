@@ -1,4 +1,4 @@
-"""Mudar de grupo um post que ainda não saiu (tela Postar).
+"""Mudar de grupo, ou mandar também para outros grupos, um post que ainda não saiu (Postar).
 
 O operador aprovou no grupo errado. A troca vale só para este produto (sem "todos os do tipo"):
 ele passa para o nicho escolhido, como no "Trocar nicho", e o post sai da fila do grupo antigo e
@@ -27,6 +27,7 @@ from app.models import CatalogProduct, Channel, OfferEvaluation, OperatorDecisio
 
 logger = get_logger(__name__)
 MOVABLE = ("awaiting_link", "ready")
+MAX_COPY_GROUPS = 20
 
 
 class PublicationNotFound(Exception):
@@ -107,3 +108,74 @@ async def move_publication(
         },
     )
     return Moved(target, result.created, list(result.skipped or []))
+
+
+@dataclass
+class Copied:
+    created: int = 0
+    skipped: list[str] = field(default_factory=list)
+
+
+async def copy_publication(
+    db: AsyncSession,
+    *,
+    publication_id: int,
+    channel_ids: list[int],
+    actor: str,
+    now: datetime,
+    affiliate_tool_id: str = "",
+) -> Copied:
+    """ "Enviar também em": o post fica no grupo dele e ganha uma cópia no fim da fila de cada
+    grupo escolhido. O produto não muda de nicho. Grupo que já recebeu o produto nos últimos 7
+    dias é pulado, como na aprovação. Copiar de novo para o mesmo grupo não duplica.
+    """
+    pub = await db.get(Publication, publication_id, with_for_update=True)
+    if pub is None:
+        raise PublicationNotFound(publication_id)
+    if pub.state not in MOVABLE:
+        raise DistributionError("só dá para copiar o que ainda não saiu")
+    evaluation = await db.get(OfferEvaluation, pub.evaluation_id) if pub.evaluation_id else None
+    decision = await db.get(OperatorDecision, pub.decision_id) if pub.decision_id else None
+    if evaluation is None or decision is None:
+        raise DistributionError("esta publicação não tem a aprovação registrada; aprove de novo")
+    wanted = sorted({c for c in channel_ids if c != pub.channel_id})[:MAX_COPY_GROUPS]
+    channels = list(
+        (
+            await db.execute(
+                select(Channel)
+                .where(Channel.id.in_(wanted), Channel.paused.is_(False))
+                .order_by(Channel.id)
+            )
+        ).scalars()
+    )
+    if not channels:
+        raise DistributionError("escolha pelo menos um outro grupo ativo")
+    product = await db.get(CatalogProduct, pub.product_id)
+    assert product is not None
+    price = evaluation.price_cents
+    result = await publications_for_approval(
+        db,
+        product=product,
+        evaluation=evaluation,
+        decision=decision,
+        now=now,
+        pix_cents=pix_to_show(pub.pix_price_cents, pub.pix_at, price, now) if price else None,
+        coupon_cents=pix_to_show(pub.coupon_price_cents, pub.coupon_at, price, now)
+        if price
+        else None,
+        last_units=units_to_show(pub.last_units, pub.last_units_at, now),
+        seen_at=pub.pix_at or pub.coupon_at or pub.last_units_at or pub.created_at,
+        affiliate_tool_id=affiliate_tool_id,
+        key_tag=f":cp{pub.id}",
+        channels=channels,
+    )
+    logger.info(
+        "post copiado para outros grupos",
+        extra={
+            "publication_id": pub.id,
+            "channels": [c.id for c in channels],
+            "publications": result.created,
+            "user": actor,
+        },
+    )
+    return Copied(result.created, list(result.skipped or []))

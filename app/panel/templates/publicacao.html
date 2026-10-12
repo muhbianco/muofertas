@@ -42,6 +42,17 @@
   <p class="linha">{{ pub.note or '' }}</p>
 {% endif %}
 
+{% if pub.state in ("awaiting_link", "ready") and move_targets | length > 1 %}
+<h2 id="enviar-tambem">Enviar também em</h2>
+<form class="formulario" method="post" action="/postar/{{ pub.id }}/copiar">
+  <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+  <fieldset class="grupos-marcar">
+    <legend>Grupos (o post continua neste)</legend>
+    {% for c in move_targets if c.id != channel.id %}<label><input type="checkbox" name="channel_id" value="{{ c.id }}"> {{ c.name }}</label>{% endfor %}
+  </fieldset>
+  <button class="botao" type="submit">Enviar também</button>
+</form>
+{% endif %}
 {% if pub.state in ("awaiting_link", "ready") and move_targets %}
 <h2 id="mudar-grupo">Mudar de grupo</h2>
 <form class="formulario" method="post" action="/postar/{{ pub.id }}/grupo">

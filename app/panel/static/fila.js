@@ -191,3 +191,54 @@
     }
   });
 })();
+
+// "Enviar também em" (tela Postar): o ＋ abre a janela com caixinhas dos outros grupos. Sem
+// este arquivo, o ＋ leva à página do post, que tem o mesmo formulário.
+(function () {
+  "use strict";
+
+  var dialog = document.getElementById("enviar-tambem");
+  if (!dialog || typeof dialog.showModal !== "function") {
+    return;
+  }
+  var form = dialog.querySelector("form");
+  var product = dialog.querySelector("[data-produto]");
+  var error = dialog.querySelector("[data-erro]");
+  var labels = Array.prototype.slice.call(dialog.querySelectorAll("label[data-canal]"));
+
+  document.querySelectorAll("[data-enviar-tambem]").forEach(function (link) {
+    link.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      form.action = "/postar/" + link.getAttribute("data-pub") + "/copiar";
+      product.textContent = link.getAttribute("data-nome");
+      var current = link.getAttribute("data-canal");
+      labels.forEach(function (label) {
+        var box = label.querySelector("input");
+        var same = label.getAttribute("data-canal") === current;
+        label.hidden = same;
+        box.disabled = same;
+        box.checked = false;
+      });
+      error.hidden = true;
+      dialog.showModal();
+    });
+  });
+
+  form.addEventListener("change", function () {
+    error.hidden = true;
+  });
+  form.addEventListener("submit", function (ev) {
+    if (!form.querySelector("input[name=channel_id]:checked")) {
+      ev.preventDefault();
+      error.hidden = false;
+    }
+  });
+  dialog.querySelector("[data-fechar]").addEventListener("click", function () {
+    dialog.close();
+  });
+  dialog.addEventListener("click", function (ev) {
+    if (ev.target === dialog) {
+      dialog.close();
+    }
+  });
+})();
