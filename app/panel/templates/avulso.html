@@ -23,7 +23,7 @@
       <label class="campo">Acaba em <small>o relógio “Encerra em” da página, ex.: 07:10:38</small><input name="acaba_em" inputmode="numeric" maxlength="12" placeholder="07:10:38" value="{{ form.acaba_em }}"></label>
       <p class="dica">O post diz a hora em que ela acaba e não sai depois disso (nem nos últimos 10 minutos).</p>
     </fieldset>
-    <label>Foto (opcional) <small>endereço da imagem do anúncio (https://http2.mlstatic.com/…); sem foto, o post vai só com texto</small><input name="foto" type="url" maxlength="512" value="{{ form.foto }}"></label>
+    <label>Foto (opcional) <small>na página do ML, botão direito na foto → “Copiar endereço da imagem” (no celular, segure a foto); começa com https://http2.mlstatic.com. Sem foto, o post vai só com texto</small><input name="foto" type="url" maxlength="512" value="{{ form.foto }}"></label>
     <fieldset class="grupos-marcar">
       <legend>Grupos</legend>
       {% for t in targets %}<label><input type="checkbox" name="channel_id" value="{{ t.id }}"{% if t.id in marked %} checked{% endif %}> {{ t.label }}</label>{% endfor %}

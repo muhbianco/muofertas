@@ -20,7 +20,14 @@ from app.core.config import settings
 from app.core.database import get_sessionmaker
 from app.core.logging import get_logger
 from app.distribution import invites, service
-from app.distribution.manual import ManualError, ManualForm, post_from_form, queue_manual
+from app.distribution.manual import (
+    DISCOVERED_MANUAL,
+    ManualError,
+    ManualForm,
+    check_image_url,
+    post_from_form,
+    queue_manual,
+)
 from app.distribution.move import (
     PublicationNotFound,
     copy_publication,
@@ -86,6 +93,7 @@ ERRORS = {
     "pix": "Preço do Pix recusado: precisa ser menor que o anúncio e até 30% abaixo (ex.: 49,90).",
     "pix-velho": "A revalidação venceu: revalide o preço e informe o Pix de novo.",
     "sem-item": "Esta publicação não tem a oferta registrada; descarte e aprove de novo.",
+    "foto": "Foto recusada: use o endereço da imagem do anúncio (https://http2.mlstatic.com/…).",
 }
 
 
@@ -644,6 +652,34 @@ async def post_page(
             "move_targets": await _move_targets(db),
         },
     )
+
+
+@router.post("/postar/{pub_id}/foto")
+async def set_manual_photo(
+    db: Db,
+    ctx: Admin,
+    pub_id: int,
+    foto: Annotated[str, Form(max_length=600)] = "",
+    csrf: Annotated[str | None, Form()] = None,
+) -> Response:
+    """Foto do produto de um link avulso (vale para os posts dele que ainda não saíram)."""
+    check_csrf(ctx, csrf)
+    pub = await _publication(db, pub_id)
+    product = await db.get(CatalogProduct, pub.product_id)
+    if pub.tier != MANUAL_TIER or product is None or product.discovered_via != DISCOVERED_MANUAL:
+        raise HTTPException(status_code=404)
+    try:
+        url = check_image_url(foto)
+    except ManualError:
+        url = None
+    if url is None:
+        return _see_other(f"/postar/{pub_id}?erro=foto#foto")
+    product.image_url = url
+    logger.info(
+        "foto do link avulso",
+        extra={"publication_id": pub_id, "product_id": product.id, "user": ctx.username},
+    )
+    return _see_other(f"/postar/{pub_id}#foto")
 
 
 @router.post("/postar/{pub_id}/revalidar")

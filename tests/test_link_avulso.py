@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.distribution.links import resolve_links
-from app.distribution.manual import ManualPost, queue_manual
+from app.distribution.manual import ManualError, ManualPost, check_image_url, queue_manual
 from app.distribution.sender import send_due
 from app.domain.distribution import (
     FlashError,
@@ -229,3 +229,46 @@ async def test_manual_link_form(
     tools = postar[postar.index(f'id="grupo-{tools_ch}"') :]
     assert tools.index("Jogo De Panelas") < tools.index("Controle Redfin")  # em 1º na fila
     assert "relâmpago até" in tools and ">avulso</span>" in tools
+
+
+def test_photo_address_from_the_page_becomes_jpeg() -> None:
+    page = "https://http2.mlstatic.com/D_NQ_NP_2X_889169-MLA96868779849_102025-F.webp?x=1"
+    assert check_image_url(page) == (
+        "https://http2.mlstatic.com/D_NQ_NP_2X_889169-MLA96868779849_102025-F.jpg"
+    )
+    assert check_image_url("  ") is None
+    with pytest.raises(ManualError, match="mlstatic"):
+        check_image_url("https://golpe.com/foto.jpg")
+
+
+async def test_photo_can_be_set_on_a_queued_manual_post(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    secret = await seed_admin(sessions)
+    pub_id, _tech, _tools = await _approved_in_the_wrong_group(sessions)  # post comum
+    async with sessions() as s, s.begin():
+        channel = (await s.execute(select(Channel).order_by(Channel.id))).scalars().first()
+        assert channel is not None
+        await queue_manual(s, _post([channel.id]), actor="dono", now=NOW)
+        manual_id = (
+            await s.execute(select(Publication.id).where(Publication.tier == "avulso"))
+        ).scalar_one()
+    assert (await login(client, secret)).status_code == 303
+    page = (await client.get(f"/postar/{manual_id}")).text
+    assert f'action="/postar/{manual_id}/foto"' in page and "Sem foto" in page
+    csrf = re.search(r'name="csrf" value="([^"]+)"', page)
+    assert csrf is not None
+    url = f"/postar/{manual_id}/foto"
+    bad = await client.post(url, data={"csrf": csrf.group(1), "foto": "https://golpe.com/a.jpg"})
+    assert bad.headers["location"] == f"/postar/{manual_id}?erro=foto#foto"
+    webp = "https://http2.mlstatic.com/D_NQ_NP_2X_1-MLA1_1-F.webp"
+    ok = await client.post(url, data={"csrf": csrf.group(1), "foto": webp})
+    assert ok.headers["location"] == f"/postar/{manual_id}#foto"
+    async with sessions() as s:
+        product = (
+            await s.execute(select(CatalogProduct).where(CatalogProduct.discovered_via == "avulso"))
+        ).scalar_one()
+    assert product.image_url == "https://http2.mlstatic.com/D_NQ_NP_2X_1-MLA1_1-F.jpg"
+    # Só o produto do link avulso: a foto do catálogo vem da API e não se troca à mão.
+    other = await client.post(f"/postar/{pub_id}/foto", data={"csrf": csrf.group(1), "foto": webp})
+    assert other.status_code == 404

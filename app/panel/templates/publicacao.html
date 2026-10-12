@@ -41,6 +41,16 @@
 {% else %}
   <p class="linha">{{ pub.note or '' }}</p>
 {% endif %}
+{% if pub.tier == "avulso" and product.discovered_via == "avulso" and pub.state in ("awaiting_link", "ready") %}
+<h2 id="foto">Foto</h2>
+{% if product.image_url %}<p><img class="foto-avulso" src="{{ product.image_url }}" alt="" referrerpolicy="no-referrer"></p>{% else %}<p class="linha">Sem foto: o post sai só com texto.</p>{% endif %}
+<form class="formulario" method="post" action="/postar/{{ pub.id }}/foto">
+  <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
+  <label>Endereço da imagem do anúncio <small>na página do ML, botão direito na foto → “Copiar endereço da imagem” (no celular, segure a foto). Vale para este post em todos os grupos.</small>
+    <input name="foto" type="url" maxlength="512" required placeholder="https://http2.mlstatic.com/…"></label>
+  <button class="botao aprovar" type="submit">{{ 'Trocar a foto' if product.image_url else 'Pôr a foto' }}</button>
+</form>
+{% endif %}
 
 {% if pub.state in ("awaiting_link", "ready") and pub.tier != "avulso" and move_targets | length > 1 %}
 <h2 id="enviar-tambem">Enviar também em</h2>

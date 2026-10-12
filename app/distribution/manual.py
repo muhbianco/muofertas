@@ -43,6 +43,7 @@ from app.models import CatalogProduct, OperatorDecision, Publication
 
 logger = get_logger(__name__)
 NONCE_RE = re.compile(r"^[A-Za-z0-9_-]{8,32}$")
+WEB_IMAGE_EXT = re.compile(r"\.(webp|avif)$", re.IGNORECASE)
 NAME_MAX = 200
 DISCOVERED_MANUAL = "avulso"
 
@@ -129,15 +130,18 @@ class ManualResult:
     channel_ids: list[int] = field(default_factory=list)
 
 
-def _check_image(url: str | None) -> str | None:
-    if not url:
+def check_image_url(url: str | None) -> str | None:
+    """Endereço da foto copiado da página do anúncio. A página entrega WebP, que o envio não
+    aceita; o CDN do ML serve a mesma imagem em JPEG trocando a extensão (testado em 12/10)."""
+    if not url or not url.strip():
         return None
     parts = urlsplit(url.strip())
     if parts.scheme != "https" or parts.hostname not in IMAGE_HOSTS or len(url) > 512:
         raise ManualError(
             "foto: use o endereço da imagem do ML (começa com https://http2.mlstatic.com)"
         )
-    return url.strip()
+    path = WEB_IMAGE_EXT.sub(".jpg", parts.path)
+    return f"https://{parts.hostname}{path}"
 
 
 async def queue_manual(
@@ -160,7 +164,7 @@ async def queue_manual(
             check_coupon(post.coupon_cents, post.price_cents)
     except ValueError as exc:
         raise ManualError(str(exc)) from exc
-    image = _check_image(post.image_url)
+    image = check_image_url(post.image_url)
     channels = await chosen_channels(db, post.channel_ids)
     if not channels:
         raise ManualError("marque pelo menos um grupo ativo")
