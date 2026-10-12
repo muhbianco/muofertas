@@ -33,6 +33,7 @@ from app.models import (
 TIER_ORDER = ["excepcional", "excelente", "boa", "suspeita", "regular", "bloqueada"]
 QUEUE_DEFAULT_TIERS = ["excepcional", "excelente", "boa", "suspeita"]
 QUEUE_LIMIT = 50
+TOP_POSITIONS = 20  # a API de mais vendidos devolve 20 por categoria
 # Filtro "com % OFF no anúncio": todos os níveis menos bloqueada.
 DISCOUNT_FILTER = "off"
 DISCOUNT_TIERS = [t for t in TIER_ORDER if t != "bloqueada"]
@@ -123,6 +124,8 @@ class Card:
     niche_id: int | None = None
     # Último envio a um grupo nos últimos 7 dias (aprovar de novo sai como repetida).
     sent_at: datetime | None = None
+    # Melhor posição nos mais vendidos da categoria (1 a 20); vazio no produto vigiado.
+    highlight_position: int | None = None
     # Tipo de produto do ML ("Compressores de ar"): "Trocar nicho" pode valer para todos dele.
     domain_id: str | None = None
     domain_label: str | None = None
@@ -133,8 +136,8 @@ def reasons(snapshot: dict[str, Any]) -> list[str]:
         "G1_preco_velho": "preço desatualizado",
         "G2_sem_oferta": "sem oferta à venda",
         "G7_sem_loja_oficial": "sem loja oficial (o nicho exige)",
-        "G7_sem_oferta_confiavel": "marca de risco sem oferta confiável (loja oficial ou "
-        "MercadoLíder Gold/Platinum)",
+        "G7_sem_oferta_confiavel": "sem oferta confiável (loja oficial ou MercadoLíder "
+        "Gold/Platinum)",
         "G9_sem_vendedor_elegivel": "nenhum vendedor elegível (reputação amarela/verde, "
         "envio pelo ML e vendas mínimas)",
         "G8_titulo_de_copia": "título de cópia/réplica",
@@ -221,11 +224,17 @@ async def queue(
         q = q.where(~recently_sent)
     elif sent == SENT_ONLY:
         q = q.where(recently_sent)
-    # % OFF no anúncio primeiro (maior antes): enquanto não há histórico para comprovar desconto,
-    # é o melhor sinal de promoção que a fila tem. Depois o nível e a nota.
+    # % OFF no anúncio primeiro: enquanto não há histórico para comprovar desconto, é o melhor
+    # sinal de promoção que a fila tem. Pesa junto a posição nos mais vendidos da categoria (o 1º
+    # dobra o peso, o 20º quase não muda; sem posição, como o vigiado, fica o % puro): 44% OFF no
+    # mais vendido vem antes de 70% OFF de um produto que quase ninguém compra. Depois o nível e a
+    # nota.
+    position = func.coalesce(CatalogProduct.best_highlight_position, TOP_POSITIONS + 1)
+    capped = case((position > TOP_POSITIONS, TOP_POSITIONS + 1), else_=position)
+    popularity = 1.0 + (TOP_POSITIONS + 1 - capped) / float(TOP_POSITIONS)
     order = (
         CatalogProduct.listing_discount_pct.is_(None),
-        CatalogProduct.listing_discount_pct.desc(),
+        (CatalogProduct.listing_discount_pct * popularity).desc(),
         rank,
         CatalogProduct.last_score.desc(),
     )
@@ -268,6 +277,7 @@ async def queue(
                 sent_at=sent_at.get(product.id),
                 domain_id=product.domain_id,
                 domain_label=domains.get(product.domain_id or ""),
+                highlight_position=product.best_highlight_position,
             )
         )
     return cards

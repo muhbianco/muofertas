@@ -42,6 +42,7 @@ async def seed_niches(
     now = utcnow()
     domain_owners = config_rules(data)  # valida antes de gravar qualquer coisa
     niche_ids: dict[str, int] = {}
+    changed_rules: list[int] = []
     async with sessions() as session, session.begin():
         for item in data["nichos"]:
             niche = (
@@ -59,11 +60,18 @@ async def seed_niches(
             else:
                 niche.name = item["nome"]
                 niche.active = item.get("ativo", True)
+            before = _rule_fields(niche)
             niche.commission_rate_bp = int(item.get("comissao_bp", 1200))
             niche.require_official = bool(item.get("exigir_loja_oficial", False))
             niche.high_risk_brands = json.dumps(
                 item.get("marcas_alto_risco", []), ensure_ascii=False
             )
+            niche.accept_trusted = bool(item.get("aceitar_mercadolider", False))
+            niche.official_only_domains = json.dumps(
+                sorted(item.get("so_loja_oficial_tipos", [])), ensure_ascii=False
+            )
+            if niche.id is not None and before != _rule_fields(niche):
+                changed_rules.append(niche.id)
             wanted = {c["id"]: c["nome"] for c in item["categorias"]}
             current = {
                 c.external_category_id: c
@@ -108,6 +116,32 @@ async def seed_niches(
         print(f"produtos que mudaram de nicho junto com a categoria: {moved}")
         by_type = await follow_domain_rules(session, actor=CONFIG_ACTOR)
         print(f"produtos que mudaram de nicho pelo tipo: {by_type}")
+        if changed_rules:
+            # Regra da nota mudou (comissão, régua de vendedor): reavalia o nicho agora, não
+            # na reavaliação diária.
+            in_changed = (
+                CatalogProduct.niche_id.in_(changed_rules),
+                CatalogProduct.active.is_(True),
+            )
+            to_review = (
+                await session.execute(select(func.count()).where(*in_changed))
+            ).scalar_one()
+            await session.execute(
+                update(CatalogProduct).where(*in_changed).values(needs_evaluation=True)
+            )
+            print(
+                f"nichos com regra nova: {len(changed_rules)}; produtos para reavaliar: {to_review}"
+            )
+
+
+def _rule_fields(niche: Niche) -> tuple[object, ...]:
+    return (
+        niche.commission_rate_bp,
+        niche.require_official,
+        niche.high_risk_brands,
+        niche.accept_trusted,
+        niche.official_only_domains,
+    )
 
 
 async def _follow_moved_categories(

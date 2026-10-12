@@ -62,6 +62,10 @@ class Niche(Base):
     high_risk_brands: Mapped[str | None] = mapped_column(
         Text, nullable=True
     )  # JSON: lista de marcas
+    # 0022: no nicho que exige loja oficial, MercadoLíder Gold/Platinum (verde) também vale, menos
+    # nos tipos de produto listados (JSON de domain_id), que seguem só loja oficial.
+    accept_trusted: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    official_only_domains: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class NicheCategory(Base):

@@ -94,6 +94,13 @@ class Settings(BaseSettings):
     invites_enabled: bool = True
     # Confere a lista de vendas do painel de afiliado a cada 3 h e manda e-mail quando entra venda.
     sales_watch_enabled: bool = True
+    # Limpeza diária (12/10/2026): execuções do coletor e erros de integração somem com 30 dias;
+    # avaliações com 90 (ficam a última de cada produto e as ligadas a decisão ou envio). O
+    # histórico de preço nunca é apagado.
+    retention_enabled: bool = True
+    retention_hour: int = 4  # hora de Brasília
+    retention_runs_days: int = 30
+    retention_evaluations_days: int = 90
     # Aprovação automática (plano, semana 3): níveis separados por vírgula; vazio desliga.
     auto_approve_tiers: str = "excepcional,excelente"
     invite_hour: int = 19

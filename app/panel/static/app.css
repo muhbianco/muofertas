@@ -117,6 +117,7 @@ textarea { resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospa
 .formulario .dica { font-size: 12px; color: var(--cinza); margin: 0; }
 .selo.off { background: var(--verm); color: #fff; }
 .selo.enviado { background: #e3ecfb; color: #1f4396; }
+.selo.top { background: #fff1c2; color: #6b4e00; }
 .preco .de { font-size: 13px; font-weight: 400; color: var(--cinza); }
 .contagem .chip-off { background: #fff; border: 1px solid var(--verm); border-radius: 999px; padding: 2px 10px; font-weight: 700; color: var(--verm); text-decoration: none; }
 .convite { border-top: 1px solid var(--linha); padding: 8px 0; }

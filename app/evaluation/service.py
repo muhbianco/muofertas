@@ -38,16 +38,37 @@ class NicheRules:
     require_official: bool
     high_risk_brands: frozenset[str]
     slug: str = ""
+    accept_trusted: bool = False
+    official_only_domains: frozenset[str] = frozenset()
 
     @classmethod
     def from_model(cls, niche: Niche) -> NicheRules:
         brands: list[str] = json.loads(niche.high_risk_brands) if niche.high_risk_brands else []
+        domains: list[str] = (
+            json.loads(niche.official_only_domains) if niche.official_only_domains else []
+        )
         return cls(
             niche.commission_rate_bp / 10_000,
             niche.require_official,
             frozenset(b.lower() for b in brands),
             niche.slug,
+            bool(niche.accept_trusted),
+            frozenset(domains),
         )
+
+    def seller_rule(self, brand: str | None, domain_id: str | None) -> tuple[bool, bool]:
+        """(só loja oficial, oferta confiável) para este produto.
+
+        Nicho que exige loja oficial e aceita MercadoLíder Gold/Platinum pede oferta confiável,
+        menos nos tipos que seguem só loja oficial (celular, perfume). Marca de risco pede
+        confiável em qualquer nicho.
+        """
+        high_risk = bool(brand and brand.lower() in self.high_risk_brands)
+        if not self.require_official:
+            return False, high_risk
+        if self.accept_trusted and (domain_id or "") not in self.official_only_domains:
+            return False, True
+        return True, high_risk
 
 
 def listing_pct(ev: Evaluation) -> int | None:
@@ -193,8 +214,8 @@ class Evaluator:
                 continue
             # A série da nota é a da mesma régua que a nota usa. Linhas de antes da 0004 só têm o
             # menor preço oficial: entram na régua oficial e ficam fora das outras.
-            high_risk = bool(product.brand and product.brand.lower() in rule.high_risk_brands)
-            kind = required_kind(require_official=rule.require_official, high_risk_brand=high_risk)
+            official_only, trusted = rule.seller_rule(product.brand, product.domain_id)
+            kind = required_kind(require_official=official_only, high_risk_brand=trusted)
             points = [
                 PricePoint(r.observed_at, price)
                 for r in rows
@@ -205,8 +226,8 @@ class Evaluator:
                     title=product.name or "",
                     brand=product.brand,
                     commission_rate=rule.commission_rate,
-                    require_official=rule.require_official,
-                    high_risk_brand=high_risk,
+                    require_official=official_only,
+                    high_risk_brand=trusted,
                     snapshot=_snapshot(rows[-1]),
                     stats=compute_stats(
                         points,

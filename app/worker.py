@@ -39,6 +39,7 @@ from app.integrations.mercadolivre import (
 )
 from app.integrations.ml_affiliate import AffiliatePortal
 from app.integrations.wuzapi import WuzapiClient
+from app.maintenance.retention import Retention
 from app.measurement.sales import SalesWatch
 
 logger = get_logger(__name__)
@@ -120,6 +121,7 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
     portal = AffiliatePortal(cfg)
     mail_http = httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0))
     sales_watch = SalesWatch(SessionFactory, portal, cfg, mail_http)
+    retention = Retention(SessionFactory, cfg)
     collector = Collector(SessionFactory, client, cfg)
     logger.info(
         "worker iniciado", extra={"holder": holder, "collector_enabled": cfg.collector_enabled}
@@ -178,6 +180,8 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                         )
                         if sent:
                             logger.info("envio automático", extra={"sent": sent})
+                    if cfg.retention_enabled:
+                        await retention.run(utcnow())  # uma vez por dia, depois das 4h
             except Exception:
                 logger.exception("erro no ciclo do worker")
                 pause = 30
