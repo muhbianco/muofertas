@@ -196,7 +196,8 @@ class MercadoLivreClient:
                 )
             if status == 404:
                 raise NotFoundError("404", status=status, path=path)
-            if status >= 500 and attempt + 1 < MAX_ATTEMPTS:
+            # 206 (resposta parcial) é passageiro: a mesma rota volta 200 completa logo depois.
+            if (status >= 500 or status == 206) and attempt + 1 < MAX_ATTEMPTS:
                 await asyncio.sleep(_backoff(attempt))
                 continue
             raise MercadoLivreError(

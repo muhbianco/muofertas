@@ -84,6 +84,25 @@ async def test_5xx_is_retried_then_succeeds(settings: Settings) -> None:
         await client.aclose()
 
 
+async def test_partial_content_206_is_retried_then_succeeds(settings: Settings) -> None:
+    # O ML às vezes responde 206 em /products/{id}/items; a mesma chamada volta 200 em seguida.
+    state = {"n": 0}
+
+    def partial(request: httpx.Request) -> httpx.Response | None:
+        if request.url.path.endswith("/items") and state["n"] < 1:
+            state["n"] += 1
+            return httpx.Response(206, json={"results": [], "paging": {"total": 0}})
+        return None
+
+    fake = FakeML(offers={"MLB9": [{"item_id": "MLB1", "price": 10.0}]}, override=partial)
+    client = MercadoLivreClient(settings, transport=fake.transport())
+    try:
+        assert [o["item_id"] for o in await client.product_items("MLB9")] == ["MLB1"]
+    finally:
+        await client.aclose()
+    assert fake.calls.count("/products/MLB9/items") == 2
+
+
 async def test_product_items_paginates_with_cap(settings: Settings) -> None:
     offers = [{"item_id": f"MLB{i}", "price": 10.0 + i} for i in range(250)]
     fake = FakeML(offers={"MLB9": offers})

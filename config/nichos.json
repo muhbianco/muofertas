@@ -1,5 +1,5 @@
 {
-  "_comentario": "Nichos e categorias do ML que alimentam o coletor (descoberta pelos mais vendidos). Cada nicho com grupo vira um grupo no WhatsApp; 'observacao' só coleta para comparação (modo sombra). Fontes: docs/fase0/nichos/README.md (varredura de 10/10/2026) e docs/fase0/nichos/2026-10-11-novos-nichos.md (top 20 de cada categoria nova). Aplicar: python -m app.cli seed-niches config/nichos.json (categoria que muda de nicho leva os produtos junto).",
+  "_comentario": "Nichos e categorias do ML que alimentam o coletor (descoberta pelos mais vendidos). Cada nicho com grupo vira um grupo no WhatsApp; 'observacao' só coleta para comparação (modo sombra). Fontes: docs/fase0/nichos/README.md (varredura de 10/10/2026) e docs/fase0/nichos/2026-10-11-novos-nichos.md (top 20 de cada categoria nova) e docs/fase0/nichos/2026-10-12-subcategorias.md (um nível abaixo: a API só devolve os 20 mais vendidos de cada categoria). Aplicar: python -m app.cli seed-niches config/nichos.json (categoria que muda de nicho leva os produtos junto).",
   "_regras": "comissao_bp: comissão direta do afiliado ML em pontos-base (ajuda 27913: 1600 = beleza/calçados/esportes, 1200 = ferramentas/casa/brinquedos/games, 500 = celulares/eletrônicos). exigir_loja_oficial: só preço de loja oficial entra na nota. marcas_alto_risco: marca falsificada com frequência; exige loja oficial mesmo no nicho que não exige. dominios: tipo de produto do ML (domain_id) com nicho fixo, mais forte que a categoria da descoberta (Ciclismo traz compressor de pneu de carro); só para tipo que cai no nicho errado, porque o mesmo tipo pode ser de dois nichos (shampoo de bebê e de adulto). Regra criada no painel prevalece sobre a daqui.",
   "nichos": [
     {
@@ -99,6 +99,70 @@
         {
           "id": "MLB188783",
           "nome": "Elétricas: Sopradores Térmicos"
+        },
+        {
+          "id": "MLB188791",
+          "nome": "Elétricas: Marteletes"
+        },
+        {
+          "id": "MLB31518",
+          "nome": "Elétricas: Lixadeiras"
+        },
+        {
+          "id": "MLB443024",
+          "nome": "Elétricas: Serras"
+        },
+        {
+          "id": "MLB188784",
+          "nome": "Elétricas: Plainas"
+        },
+        {
+          "id": "MLB33402",
+          "nome": "Elétricas: Micro Retíficas"
+        },
+        {
+          "id": "MLB48611",
+          "nome": "Elétricas: Ferros de Solda"
+        },
+        {
+          "id": "MLB418395",
+          "nome": "Acessórios: Baterias"
+        },
+        {
+          "id": "MLB189213",
+          "nome": "Caixas: Carrinhos de Ferramentas"
+        },
+        {
+          "id": "MLB189217",
+          "nome": "Caixas: Caixas de Ferramentas"
+        },
+        {
+          "id": "MLB188547",
+          "nome": "Manuais: Martelos"
+        },
+        {
+          "id": "MLB33376",
+          "nome": "Manuais: Alicates"
+        },
+        {
+          "id": "MLB455212",
+          "nome": "Medição: Medidores de Distância (trena laser)"
+        },
+        {
+          "id": "MLB431216",
+          "nome": "Medição: Termômetros Infravermelhos"
+        },
+        {
+          "id": "MLB269945",
+          "nome": "Jardim: Motosserras"
+        },
+        {
+          "id": "MLB411907",
+          "nome": "Jardim: Sopradores"
+        },
+        {
+          "id": "MLB269952",
+          "nome": "Jardim: Roçadeiras a Combustão"
         }
       ]
     },
@@ -132,6 +196,62 @@
         {
           "id": "MLB264787",
           "nome": "Barbearia"
+        },
+        {
+          "id": "MLB437496",
+          "nome": "Maquiagem: Lábios"
+        },
+        {
+          "id": "MLB1257",
+          "nome": "Pele: Limpeza Facial"
+        },
+        {
+          "id": "MLB200340",
+          "nome": "Pele: Máscaras Faciais"
+        },
+        {
+          "id": "MLB264880",
+          "nome": "Pele: Kits de Cuidado"
+        },
+        {
+          "id": "MLB8133",
+          "nome": "Pele: Proteção Solar"
+        },
+        {
+          "id": "MLB1262",
+          "nome": "Pele: Cuidado do Corpo"
+        },
+        {
+          "id": "MLB264861",
+          "nome": "Cabelo: Coloração"
+        },
+        {
+          "id": "MLB388017",
+          "nome": "Cabelo: Cremes de Pentear"
+        },
+        {
+          "id": "MLB44085",
+          "nome": "Cabelo: Pranchas"
+        },
+        {
+          "id": "MLB5412",
+          "nome": "Cabelo: Secadores"
+        },
+        {
+          "id": "MLB264715",
+          "nome": "Cabelo: Escovas Elétricas"
+        },
+        {
+          "id": "MLB446228",
+          "nome": "Barbearia: Trimmers"
+        },
+        {
+          "id": "MLB264791",
+          "nome": "Barbearia: Espumas de Barbear"
+        },
+        {
+          "id": "MLB264789",
+          "nome": "Barbearia: Pós-barba"
         }
       ]
     },
@@ -157,6 +277,34 @@
         {
           "id": "MLB1338",
           "nome": "Fitness e Musculação"
+        },
+        {
+          "id": "MLB123067",
+          "nome": "Fitness: Aparelhos Cardiovasculares"
+        },
+        {
+          "id": "MLB12529",
+          "nome": "Fitness: Aparelhos de Musculação"
+        },
+        {
+          "id": "MLB438901",
+          "nome": "Fitness: Halteres, Discos e Anilhas"
+        },
+        {
+          "id": "MLB438174",
+          "nome": "Fitness: Proteção e Reabilitação"
+        },
+        {
+          "id": "MLB196856",
+          "nome": "Fitness: Funcional, Pilates e Yoga"
+        },
+        {
+          "id": "MLB6790",
+          "nome": "Ciclismo: Acessórios"
+        },
+        {
+          "id": "MLB23332",
+          "nome": "Calçados: Tênis (moda; quase tudo fora do catálogo)"
         }
       ]
     },
@@ -202,6 +350,30 @@
         {
           "id": "MLB1692",
           "nome": "Placas-Mãe"
+        },
+        {
+          "id": "MLB439527",
+          "nome": "Games: Acessórios para PC Gaming"
+        },
+        {
+          "id": "MLB186456",
+          "nome": "Games: Video Games"
+        },
+        {
+          "id": "MLB455266",
+          "nome": "Games: Controles de PS5"
+        },
+        {
+          "id": "MLB118902",
+          "nome": "Games: Controles de PS4"
+        },
+        {
+          "id": "MLB118889",
+          "nome": "Games: Controles de Xbox One"
+        },
+        {
+          "id": "MLB272187",
+          "nome": "Games: Controles de Nintendo Switch"
         }
       ]
     },
@@ -326,6 +498,54 @@
         {
           "id": "MLB436104",
           "nome": "Limpeza: Descartáveis"
+        },
+        {
+          "id": "MLB120373",
+          "nome": "Eletroportáteis: Panelas de Arroz"
+        },
+        {
+          "id": "MLB31683",
+          "nome": "Eletroportáteis: Sanduicheiras"
+        },
+        {
+          "id": "MLB31675",
+          "nome": "Eletroportáteis: Torradeiras"
+        },
+        {
+          "id": "MLB4339",
+          "nome": "Eletroportáteis: Batedeiras"
+        },
+        {
+          "id": "MLB436263",
+          "nome": "Cama: Cobertores"
+        },
+        {
+          "id": "MLB436268",
+          "nome": "Cama: Lençóis"
+        },
+        {
+          "id": "MLB193986",
+          "nome": "Cozinha: Recipientes Térmicos"
+        },
+        {
+          "id": "MLB194034",
+          "nome": "Cozinha: Escorredores de Louça"
+        },
+        {
+          "id": "MLB244658",
+          "nome": "Cozinha: Potes para Alimentos"
+        },
+        {
+          "id": "MLB191464",
+          "nome": "Lavanderia: Amaciantes"
+        },
+        {
+          "id": "MLB252555",
+          "nome": "Limpeza: Papel Higiênico"
+        },
+        {
+          "id": "MLB439122",
+          "nome": "Limpeza: Aromatizadores"
         }
       ]
     },
@@ -433,6 +653,50 @@
         {
           "id": "MLB455425",
           "nome": "Brinquedos: de Montar"
+        },
+        {
+          "id": "MLB437747",
+          "nome": "Brinquedos: Bicicletas Infantis"
+        },
+        {
+          "id": "MLB425077",
+          "nome": "Passeio: Bicicletas sem Pedais"
+        },
+        {
+          "id": "MLB455509",
+          "nome": "Brinquedos: Veículos a Bateria"
+        },
+        {
+          "id": "MLB39992",
+          "nome": "Alimentação: Pratos"
+        },
+        {
+          "id": "MLB74349",
+          "nome": "Quarto: Berços Simples"
+        },
+        {
+          "id": "MLB10589",
+          "nome": "Brinquedos: Quebra-cabeças"
+        },
+        {
+          "id": "MLB2097",
+          "nome": "Brinquedos: Veículos em Miniatura"
+        },
+        {
+          "id": "MLB271178",
+          "nome": "Brinquedos: Pistas e Lançadores"
+        },
+        {
+          "id": "MLB432887",
+          "nome": "Brinquedos: Veículos de Bonecos"
+        },
+        {
+          "id": "MLB432834",
+          "nome": "Brinquedos: Oficina de Ferramentas"
+        },
+        {
+          "id": "MLB429246",
+          "nome": "Brinquedos: Bichinhos Eletrônicos"
         }
       ]
     },
