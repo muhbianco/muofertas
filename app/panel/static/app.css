@@ -84,6 +84,17 @@ th { background: #faf5e8; font-weight: 600; }
 .nota-pix { font-size: 12px; color: var(--cinza); margin: 0 0 10px; }
 .bloco { background: #fff; border: 1px solid var(--linha); border-radius: 14px; padding: 12px; margin: 0 0 14px; }
 .bloco h2 { margin-top: 2px; }
+.grupos-topo { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 14px; }
+.grupos-topo button { font-size: 13px; padding: 4px 10px; }
+details.grupo { padding: 0; }
+details.grupo > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 12px 12px 12px 34px; position: relative; }
+details.grupo > summary::-webkit-details-marker { display: none; }
+details.grupo > summary::before { content: "▸"; position: absolute; left: 14px; top: 12px; color: var(--cinza); }
+details.grupo[open] > summary::before { content: "▾"; }
+details.grupo > summary .titulo { font-weight: 700; font-size: 16px; }
+details.grupo > summary .resumo { flex-basis: 100%; font-size: 13px; color: var(--cinza); }
+details.grupo > summary .resumo b { color: var(--esm-esc); }
+.grupo-corpo { padding: 0 12px 12px; }
 .formulario { display: grid; gap: 10px; }
 .formulario label, .bloco > label { display: grid; gap: 4px; font-size: 14px; }
 .formulario label small { color: var(--cinza); }

@@ -113,7 +113,7 @@ async def test_drag_form_and_buttons_on_the_post_page(
     assert (await login(client, secret)).status_code == 303
     page = await client.get("/postar")
     assert "script-src 'self'" in page.headers["Content-Security-Policy"]
-    assert '<script src="/static/fila.js?v=2" defer></script>' in page.text
+    assert '<script src="/static/fila.js?v=3" defer></script>' in page.text
     assert page.text.index("Air fryer") < page.text.index("Toalha")
     assert "/enviar-agora" not in page.text  # grupo manual: posta pelo celular
     csrf = page.text.split('name="csrf" value="', 1)[1].split('"', 1)[0]

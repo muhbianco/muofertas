@@ -88,3 +88,60 @@
     });
   });
 })();
+
+// Grupos recolhíveis (tela Postar): começam fechados; abre o grupo do endereço (#grupo-5, para
+// onde as ações voltam) e os que estavam abertos neste aparelho. O estado guardado é só
+// conveniência: sem ele (aba anônima, armazenamento bloqueado) a tela funciona igual.
+(function () {
+  "use strict";
+
+  var KEY = "postar-abertos";
+  var groups = Array.prototype.slice.call(document.querySelectorAll("details.grupo"));
+  if (!groups.length) {
+    return;
+  }
+
+  function load() {
+    try {
+      return JSON.parse(window.localStorage.getItem(KEY) || "[]");
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function save() {
+    try {
+      var open = groups.filter(function (g) { return g.open; }).map(function (g) { return g.id; });
+      window.localStorage.setItem(KEY, JSON.stringify(open));
+    } catch (e) {
+      /* sem armazenamento: segue sem lembrar */
+    }
+  }
+
+  var remembered = load();
+  groups.forEach(function (g) {
+    if (remembered.indexOf(g.id) !== -1 || "#" + g.id === window.location.hash) {
+      g.open = true;
+    }
+    g.addEventListener("toggle", save);
+  });
+  if (window.location.hash) {
+    var target = document.getElementById(window.location.hash.slice(1));
+    if (target) {
+      target.scrollIntoView();
+    }
+  }
+
+  function setAll(open) {
+    groups.forEach(function (g) { g.open = open; });
+    save();
+  }
+  var openAll = document.querySelector("[data-abrir-todos]");
+  var closeAll = document.querySelector("[data-fechar-todos]");
+  if (openAll) {
+    openAll.addEventListener("click", function () { setAll(true); });
+  }
+  if (closeAll) {
+    closeAll.addEventListener("click", function () { setAll(false); });
+  }
+})();

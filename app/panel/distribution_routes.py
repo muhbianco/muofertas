@@ -8,7 +8,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.collector import watchlist
@@ -24,6 +24,7 @@ from app.domain.distribution import (
     MIN_SPACING_MINUTES,
     ML_TAG_RE,
     is_fresh,
+    local_day_start,
     max_sends_in_window,
     share_url,
     spacing_minutes,
@@ -40,6 +41,7 @@ from app.whatsapp import service as wa
 logger = get_logger(__name__)
 router = APIRouter()
 LIST_LIMIT = 100
+PER_GROUP = 60  # itens por grupo na tela Postar (o resto aparece quando estes saírem)
 
 ERRORS = {
     "ml": "O Mercado Livre não respondeu. Tente revalidar de novo.",
@@ -336,6 +338,8 @@ class ReadyGroup:
     channel: Channel
     block: str | None
     rows: list[ReadyRow]
+    total: int = 0  # prontos no grupo (a lista mostra até PER_GROUP)
+    sent_today: int = 0
 
 
 @router.post("/postar/{publication_id}/subir")
@@ -361,31 +365,68 @@ async def post_move_up(
 @router.get("/postar", response_class=HTMLResponse)
 async def post_list(request: Request, db: Db, ctx: Admin) -> Response:
     now = utcnow()
+    # Teto por grupo, não global: com um teto só, os primeiros grupos enchiam a lista e os
+    # últimos (Tecnologia, Pais) sumiam da tela sem aviso.
+    position = (
+        func.row_number()
+        .over(partition_by=Publication.channel_id, order_by=service.READY_ORDER)
+        .label("pos")
+    )
+    ranked = select(Publication.id.label("pid"), position).where(Publication.state == "ready")
+    ranked_sq = ranked.subquery()
     rows = (
         await db.execute(
             select(Publication, CatalogProduct.name, CatalogProduct.image_url)
+            .join(ranked_sq, ranked_sq.c.pid == Publication.id)
             .join(CatalogProduct, CatalogProduct.id == Publication.product_id)
-            .where(Publication.state == "ready")
-            .order_by(Publication.channel_id, *service.READY_ORDER)
-            .limit(LIST_LIMIT)
+            .where(ranked_sq.c.pos <= PER_GROUP)
+            .order_by(Publication.channel_id, ranked_sq.c.pos)
         )
     ).all()
-    channels = {
-        c.id: c
-        for c in (
+    totals = dict(
+        (
             await db.execute(
-                select(Channel).where(Channel.id.in_({p.channel_id for p, _, _ in rows}))
+                select(Publication.channel_id, func.count())
+                .where(Publication.state == "ready")
+                .group_by(Publication.channel_id)
+            )
+        )
+        .tuples()
+        .all()
+    )
+    sent_today = dict(
+        (
+            await db.execute(
+                select(Publication.channel_id, func.count())
+                .where(Publication.state == "sent", Publication.sent_at >= local_day_start(now))
+                .group_by(Publication.channel_id)
+            )
+        )
+        .tuples()
+        .all()
+    )
+    channels = list(
+        (
+            await db.execute(
+                select(Channel)
+                .where(or_(Channel.paused.is_(False), Channel.id.in_(list(totals))))
+                .order_by(Channel.id)
+                .limit(LIST_LIMIT)
             )
         ).scalars()
-    }
+    )
     groups: dict[int, ReadyGroup] = {}
+    for channel in channels:
+        groups[channel.id] = ReadyGroup(
+            channel,
+            await service.channel_status(db, channel, now),
+            [],
+            totals.get(channel.id, 0),
+            sent_today.get(channel.id, 0),
+        )
     for pub, name, image in rows:
-        if pub.channel_id not in groups:
-            channel = channels[pub.channel_id]
-            groups[pub.channel_id] = ReadyGroup(
-                channel, await service.channel_status(db, channel, now), []
-            )
-        groups[pub.channel_id].rows.append(ReadyRow(pub, name or "", image))
+        if pub.channel_id in groups:
+            groups[pub.channel_id].rows.append(ReadyRow(pub, name or "", image))
     attention = list(
         (
             await db.execute(

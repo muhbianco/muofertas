@@ -23,11 +23,23 @@
   {% endfor %}
 </article>
 {% endif %}
-{% if not groups %}<p class="vazio">Nada esperando. Aprove na Fila: nos grupos automáticos o envio sai sozinho no próximo horário livre.</p>{% endif %}
+{% if groups %}
+<div class="grupos-topo">
+  <span><b>{{ groups | sum(attribute='total') }}</b> prontos em {{ groups | length }} grupos</span>
+  <span><button type="button" class="sair-claro" data-abrir-todos>Abrir todos</button>
+  <button type="button" class="sair-claro" data-fechar-todos>Fechar todos</button></span>
+</div>
+{% else %}<p class="vazio">Nenhum grupo cadastrado (Grupos).</p>{% endif %}
 {% for g in groups %}
-<article class="bloco" id="grupo-{{ g.channel.id }}">
-  <h2>{{ g.channel.name }}{% if g.channel.transport == 'wuzapi' %} <span class="selo oficial">automático</span>{% endif %}</h2>
+<details class="bloco grupo" id="grupo-{{ g.channel.id }}">
+  <summary>
+    <span class="titulo">{{ g.channel.name }}</span>
+    {% if g.channel.paused %}<span class="selo bloqueada">pausado</span>{% elif g.channel.transport == 'wuzapi' %}<span class="selo oficial">automático</span>{% endif %}
+    <span class="resumo"><b>{{ g.total }}</b> prontos · hoje {{ g.sent_today }}/{{ g.channel.max_per_day }}{% if g.block %} · {{ g.block }}{% endif %}</span>
+  </summary>
+  <div class="grupo-corpo">
   {% if g.block %}<p class="linha">Próximo envio: {{ g.block }}.</p>{% elif g.channel.transport == 'wuzapi' %}<p class="linha ok">Sai sozinho nos próximos minutos.</p>{% else %}<p class="linha ok">Pode enviar agora.</p>{% endif %}
+  {% if not g.rows %}<p class="vazio">Nada pronto para este grupo. Aprove na Fila, filtrando pelo nicho.</p>{% endif %}
   {% if g.rows | length > 1 %}<p class="dica">Ordem de saída: o primeiro é o próximo. Arraste pela alça ⠿ para cima, ou use ▲ (sobe uma) e ⤒ (vira o próximo).</p>{% endif %}
   <ol class="fila-envio">
   {% for r in g.rows %}
@@ -58,11 +70,13 @@
   </li>
   {% endfor %}
   </ol>
+  {% if g.total > g.rows | length %}<p class="dica">Mostrando os {{ g.rows | length }} primeiros de {{ g.total }}; os outros aparecem quando estes saírem.</p>{% endif %}
   <form class="mover" method="post" action="/postar">
     <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
     <input type="hidden" name="antes_de" value="">
   </form>
-</article>
+  </div>
+</details>
 {% endfor %}
 {% if recent %}
 <h2>Últimos 2 dias</h2>
@@ -79,4 +93,4 @@
 </table>
 {% endif %}
 {% endblock %}
-{% block scripts %}<script src="/static/fila.js?v=2" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=3" defer></script>{% endblock %}
