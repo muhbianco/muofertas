@@ -242,3 +242,64 @@
     }
   });
 })();
+
+// "Grupos ▾" do Aprovar (fila e produto): o resumo acompanha as caixinhas, aprovar sem nenhum
+// grupo marcado pede um, e a lista fecha ao clicar fora ou com Esc. Sem este arquivo, as
+// caixinhas funcionam igual e o servidor recusa a aprovação sem grupo.
+(function () {
+  "use strict";
+
+  var drops = Array.prototype.slice.call(document.querySelectorAll("details[data-grupos]"));
+  if (!drops.length) {
+    return;
+  }
+
+  drops.forEach(function (drop) {
+    var formId = drop.getAttribute("data-grupos");
+    var form = document.getElementById(formId);
+    var summary = drop.querySelector("[data-resumo]");
+    var error = drop.querySelector("[data-erro]");
+    var boxes = Array.prototype.slice.call(drop.querySelectorAll("input[name=channel_id]"));
+
+    function checked() {
+      return boxes.filter(function (b) { return b.checked; });
+    }
+
+    drop.addEventListener("change", function () {
+      var names = checked().map(function (b) { return b.parentNode.textContent.trim(); });
+      summary.textContent = names.length ? names.join(" + ") : "nenhum grupo";
+      error.hidden = names.length > 0;
+    });
+    drop.addEventListener("toggle", function () {
+      if (drop.open) {
+        drops.forEach(function (other) {
+          if (other !== drop) {
+            other.open = false;
+          }
+        });
+      }
+    });
+    if (form && form.querySelector("input[name=grupos]")) {
+      form.addEventListener("submit", function (ev) {
+        if (!checked().length) {
+          ev.preventDefault();
+          drop.open = true;
+          error.hidden = false;
+        }
+      });
+    }
+  });
+
+  document.addEventListener("click", function (ev) {
+    drops.forEach(function (drop) {
+      if (drop.open && !drop.contains(ev.target)) {
+        drop.open = false;
+      }
+    });
+  });
+  document.addEventListener("keydown", function (ev) {
+    if (ev.key === "Escape") {
+      drops.forEach(function (drop) { drop.open = false; });
+    }
+  });
+})();

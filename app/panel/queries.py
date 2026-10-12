@@ -155,6 +155,41 @@ async def niches(db: AsyncSession) -> list[Niche]:
     return list((await db.execute(select(Niche).order_by(Niche.id).limit(50))).scalars())
 
 
+GROUP_TARGETS_LIMIT = 20  # o mesmo teto do "enviar também em"
+
+
+@dataclass(frozen=True)
+class GroupTarget:
+    id: int
+    niche_id: int
+    label: str
+
+
+async def approval_targets(db: AsyncSession) -> list[GroupTarget]:
+    """Grupos que o "Aprovar" oferece: os ativos de nichos ativos. Nome curto do nicho; o nome do
+    grupo só quando o nicho tem mais de um."""
+    rows = (
+        await db.execute(
+            select(Channel.id, Channel.niche_id, Channel.name, Niche.name)
+            .join(Niche, Niche.id == Channel.niche_id)
+            .where(Niche.active.is_(True), Channel.paused.is_(False))
+            .order_by(Niche.id, Channel.id)
+            .limit(GROUP_TARGETS_LIMIT)
+        )
+    ).all()
+    per_niche: dict[int, int] = {}
+    for _id, niche_id, _name, _niche in rows:
+        per_niche[niche_id] = per_niche.get(niche_id, 0) + 1
+    return [
+        GroupTarget(
+            id=channel_id,
+            niche_id=niche_id,
+            label=channel_name if per_niche[niche_id] > 1 else niche_name.split(":")[0],
+        )
+        for channel_id, niche_id, channel_name, niche_name in rows
+    ]
+
+
 async def tier_counts(db: AsyncSession, niche_id: int | None) -> dict[str, int]:
     q = select(CatalogProduct.last_tier, func.count()).where(
         CatalogProduct.active.is_(True), CatalogProduct.operator_blocked.is_(False)

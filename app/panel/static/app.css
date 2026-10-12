@@ -46,6 +46,22 @@ h2 { font-size: 17px; margin: 18px 0 8px; }
 .trocar-nicho select, .trocar-nicho button { font-size: 13px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--linha); background: #fff; color: inherit; max-width: 100%; }
 .trocar-nicho button { cursor: pointer; }
 .trocar-nicho .todos-tipo { font-size: 13px; color: var(--cinza); display: inline-flex; gap: 4px; align-items: center; }
+.grupos-drop { position: relative; display: inline-block; max-width: 100%; margin: 4px 0 8px; }
+.grupos-drop > summary { list-style: none; cursor: pointer; font-size: 13px; padding: 4px 26px 4px 8px; border-radius: 8px; border: 1px solid var(--linha); background: #fff; color: var(--tinta); max-width: 100%; position: relative; }
+.grupos-drop > summary::-webkit-details-marker { display: none; }
+.grupos-drop > summary::after { content: "▾"; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: var(--cinza); }
+.grupos-drop > summary span { display: inline-block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.grupos-painel { position: absolute; left: 0; top: calc(100% + 4px); z-index: 5; width: 300px; max-width: calc(100vw - 48px); background: #fff; border: 1px solid var(--linha); border-radius: 12px; padding: 4px 12px 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14); }
+.grupos-painel .grupos-marcar { margin: 6px 0; }
+.grupos-painel .erro { margin: 4px 0; }
+.grupos-nicho { border-top: 1px solid var(--linha); margin-top: 8px; padding-top: 8px; }
+.grupos-nicho small { color: var(--cinza); font-size: 12px; }
+.grupos-nicho .trocar-nicho { margin: 4px 0 0; }
+.grupos-nicho .trocar-nicho select { flex: 1 1 100%; }
+@media (max-width: 600px) {
+  .grupos-drop[open] { display: block; }
+  .grupos-drop[open] .grupos-painel { position: static; width: auto; max-width: none; margin-top: 6px; box-shadow: none; }
+}
 .preco { font-size: 18px; font-weight: 800; color: var(--esm-esc); }
 .selo { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-right: 6px; }
 .selo.excepcional { background: var(--ouro); color: var(--esm-esc); }

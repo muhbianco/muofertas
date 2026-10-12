@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_nicho.html" import trocar_nicho %}
+{% from "_nicho.html" import grupos_aprovar, trocar_nicho %}
 {% block title %}Produto{% endblock %}
 {% block content %}
 {% set prod = p.product %}
@@ -45,6 +45,7 @@
 {% else %}<p class="vazio">Ainda não avaliado.</p>{% endif %}
 
 <h2>Decidir</h2>
+{% if targets %}<div class="linha nicho-linha">Grupos: {{ grupos_aprovar("aprovar-" ~ prod.id, prod.niche_id, targets) }}</div>{% endif %}
 <div class="pix-aprovar">
   <label>Pix (opcional)<input form="aprovar-{{ prod.id }}" name="pix" inputmode="decimal" maxlength="20" placeholder="49,90"></label>
   <label>Com cupom (opcional)<input form="aprovar-{{ prod.id }}" name="cupom" inputmode="decimal" maxlength="20" placeholder="51,75"></label>
@@ -58,6 +59,7 @@
     {% if p.evaluations %}<input type="hidden" name="evaluation_id" value="{{ p.evaluations[0].id }}">{% endif %}
     <input type="hidden" name="decision" value="{{ value }}">
     <input type="hidden" name="next" value="{{ next }}">
+    {% if value == 'approved' and targets %}<input type="hidden" name="grupos" value="1">{% endif %}
     <button class="{{ cls }}" type="submit">{{ label }}</button>
   </form>
   {% endfor %}
@@ -78,3 +80,4 @@
 </table>
 {% endif %}
 {% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=6" defer></script>{% endblock %}

@@ -31,7 +31,14 @@ from app.domain.distribution import (
     parse_brl,
     parse_last_units,
 )
-from app.models import AdminUser, CatalogProduct, OfferEvaluation, OperatorDecision
+from app.models import (
+    AdminUser,
+    CatalogProduct,
+    Channel,
+    Niche,
+    OfferEvaluation,
+    OperatorDecision,
+)
 from app.panel import queries, report
 from app.panel.auth import (
     SESSION_COOKIE,
@@ -58,6 +65,11 @@ NOTICES = {
     "cupom": "Não aprovada: o preço com cupom precisa ser menor que o preço e até 30% abaixo.",
     "unidades": "Não aprovada: últimas unidades é um número de 1 a 20 (o que a página mostra).",
     "sem-grupo": "Aprovada, mas o nicho não tem grupo cadastrado (Grupos).",
+    "grupos": "Não aprovada: marque pelo menos um grupo ativo em “Grupos”.",
+    "varios": "Aprovada para os grupos marcados. O link de cada grupo sai em instantes e o post "
+    "aparece na fila de cada um em Postar.",
+    "varios-parte": "Aprovada em parte dos grupos marcados: os outros já receberam este produto "
+    "nos últimos 7 dias.",
     "repetida": "Aprovada, mas não vai agora: já foi para o grupo nos últimos 7 dias.",
     "sem-preco": "Aprovada, mas esta avaliação não tem preço válido para publicar.",
     "nicho": "Nicho trocado. O robô reavalia com as regras do nicho novo em instantes.",
@@ -201,6 +213,7 @@ async def queue_page(
             "ready": ready,
             "ready_total": sum(k.ready for k in ready.values()),
             "tier_order": queries.TIER_ORDER,
+            "targets": await queries.approval_targets(db),
             "notice": NOTICES.get(aviso or ""),
             "open_alerts": await queries.open_alerts(db),
             "next": str(request.url.path) + (f"?{request.url.query}" if request.url.query else ""),
@@ -221,7 +234,11 @@ async def decide(
     pix: Annotated[str, Form(max_length=20)] = "",
     cupom: Annotated[str, Form(max_length=20)] = "",
     ultimas: Annotated[str, Form(max_length=4)] = "",
+    grupos: Annotated[str | None, Form(max_length=1)] = None,
+    channel_id: Annotated[list[int] | None, Form()] = None,
 ) -> Response:
+    """`grupos` marca o formulário com "Grupos ▾": aí vale o que foi marcado em `channel_id`
+    (nenhum marcado não aprova). Sem ele (formulário antigo), os grupos do nicho do produto."""
     check_csrf(ctx, csrf)
     target = _safe_next(next)
     sep = "&" if "?" in target else "?"
@@ -241,6 +258,13 @@ async def decide(
         return RedirectResponse(target + sep + "aviso=cupom", status_code=status.HTTP_303_SEE_OTHER)
     if decision not in DECISIONS:
         raise HTTPException(status_code=422, detail="decisão inválida")
+    channels: list[Channel] | None = None
+    if decision == "approved" and grupos:
+        channels = await _chosen_channels(db, channel_id or [])
+        if not channels:
+            return RedirectResponse(
+                target + sep + "aviso=grupos", status_code=status.HTTP_303_SEE_OTHER
+            )
     product = await db.get(CatalogProduct, product_id)
     if product is None:
         raise HTTPException(status_code=404)
@@ -275,6 +299,7 @@ async def decide(
                 affiliate_tool_id=settings.ml_affiliate_tool_id,
                 coupon_cents=coupon_cents,
                 last_units=last_units,
+                channels=channels,
             )
         except PixRejectedError as exc:
             await db.rollback()  # nem a decisão fica: o operador corrige e aprova de novo
@@ -286,6 +311,10 @@ async def decide(
         else:
             if result.no_channel:
                 notice = "sem-grupo"
+            elif channels and len(channels) > 1 and result.created and result.skipped:
+                notice = "varios-parte"
+            elif result.created > 1:
+                notice = "varios"
             elif result.automatic:
                 notice = "automatica"
             elif result.auto_link:
@@ -301,11 +330,27 @@ async def decide(
             "decision": decision,
             "user": ctx.username,
             "notice": notice,
+            "groups": [c.id for c in channels] if channels else None,
         },
     )
     if notice:
         target += ("&" if "?" in target else "?") + f"aviso={notice}"
     return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
+
+
+async def _chosen_channels(db: AsyncSession, ids: list[int]) -> list[Channel]:
+    """Os grupos marcados que ainda valem (ativos, de nicho ativo); id desconhecido some."""
+    wanted = sorted(set(ids))[: queries.GROUP_TARGETS_LIMIT]
+    if not wanted:
+        return []
+    rows = await db.execute(
+        select(Channel)
+        .join(Niche, Niche.id == Channel.niche_id)
+        .where(Channel.id.in_(wanted), Niche.active.is_(True), Channel.paused.is_(False))
+        .order_by(Channel.id)
+        .limit(queries.GROUP_TARGETS_LIMIT)
+    )
+    return list(rows.scalars())
 
 
 # --------------------------------------------------------------------------- páginas
@@ -376,6 +421,7 @@ async def product_detail(
             "decisions_label": DECISIONS,
             "next": f"/produto/{product_id}",
             "niches": await queries.niches(db),
+            "targets": await queries.approval_targets(db),
             "notice": NOTICES.get(aviso or ""),
         },
     )

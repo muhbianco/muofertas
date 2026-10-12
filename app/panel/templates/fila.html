@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block main_class %}com-lado{% endblock %}
-{% from "_nicho.html" import trocar_nicho %}
+{% from "_nicho.html" import grupos_aprovar, trocar_nicho %}
 {% block title %}Fila{% endblock %}
 {% block content %}
 <div class="fila-layout">
@@ -55,7 +55,7 @@
   <div>
     <div><span class="selo {{ c.tier }}">{{ c.tier }}</span>{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}{% if c.highlight_position %}<span class="selo top">{{ c.highlight_position }}º mais vendido</span>{% endif %}{% if c.sent_at %}<span class="selo enviado" title="Aprovar de novo antes de 7 dias sai como repetida">já foi pro grupo · {{ c.sent_at | local }}</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
     <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
-    <div class="linha nicho-linha">{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}</div>
+    <div class="linha nicho-linha">{% if targets %}{% call grupos_aprovar("aprovar-" ~ c.product_id, c.niche_id, targets) %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endcall %}{% else %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endif %}</div>
     <div class="preco">{% if c.listing_original_cents %}<s class="de">{{ c.listing_original_cents | brl }}</s> {% endif %}{{ c.price_cents | brl }}</div>
     {% if c.offer_kind %}<div class="oferta">
       {% if c.used_official %}loja oficial{% elif c.seller %}{{ c.seller.nickname or 'vendedor' }} · reputação {{ c.seller.reputation }}{% if c.seller.power %} · {{ c.seller.power }}{% endif %} · {{ c.seller.sales }} vendas{% else %}{{ c.offer_kind }}{% endif %}
@@ -80,6 +80,7 @@
       {% if c.evaluation_id %}<input type="hidden" name="evaluation_id" value="{{ c.evaluation_id }}">{% endif %}
       <input type="hidden" name="decision" value="{{ value }}">
       <input type="hidden" name="next" value="{{ next }}">
+      {% if value == 'approved' and targets %}<input type="hidden" name="grupos" value="1">{% endif %}
       <button class="{{ cls }}" type="submit">{{ label }}</button>
     </form>
     {% endfor %}
@@ -89,3 +90,4 @@
 </div>
 </div>
 {% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=6" defer></script>{% endblock %}
