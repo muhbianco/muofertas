@@ -256,6 +256,42 @@
         {
           "id": "MLB264789",
           "nome": "Barbearia: Pós-barba"
+        },
+        {
+          "id": "MLB44379",
+          "nome": "Higiene: Desodorantes"
+        },
+        {
+          "id": "MLB264755",
+          "nome": "Higiene: Higiene Feminina"
+        },
+        {
+          "id": "MLB199186",
+          "nome": "Higiene: Lâminas de Barbear"
+        },
+        {
+          "id": "MLB264765",
+          "nome": "Higiene: Barbeadores Descartáveis"
+        },
+        {
+          "id": "MLB204801",
+          "nome": "Higiene bucal: Creme Dental"
+        },
+        {
+          "id": "MLB269673",
+          "nome": "Higiene bucal: Enxaguante Bucal"
+        },
+        {
+          "id": "MLB447211",
+          "nome": "Higiene bucal: Escovas Elétricas"
+        },
+        {
+          "id": "MLB70646",
+          "nome": "Higiene bucal: Escovas de Dentes"
+        },
+        {
+          "id": "MLB264763",
+          "nome": "Higiene bucal: Fio Dental"
         }
       ]
     },
@@ -265,7 +301,7 @@
       "comissao_bp": 1600,
       "exigir_loja_oficial": true,
       "aceitar_mercadolider": true,
-      "so_loja_oficial_tipos": [],
+      "so_loja_oficial_tipos": ["MLB-SUPPLEMENTS"],
       "marcas_alto_risco": [],
       "categorias": [
         {
@@ -335,6 +371,14 @@
         {
           "id": "MLB432028",
           "nome": "Moda fitness: Bolsas Esportivas"
+        },
+        {
+          "id": "MLB122102",
+          "nome": "Suplementos (whey, creatina; só loja oficial)"
+        },
+        {
+          "id": "MLB264201",
+          "nome": "Saúde: Suplementos Alimentares (vitaminas; só loja oficial)"
         }
       ]
     },
