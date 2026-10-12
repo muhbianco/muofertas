@@ -163,6 +163,70 @@
         {
           "id": "MLB269952",
           "nome": "Jardim: Roçadeiras a Combustão"
+        },
+        {
+          "id": "MLB188664",
+          "nome": "Manuais: Chaves de Fenda"
+        },
+        {
+          "id": "MLB270879",
+          "nome": "Manuais: Kits de Chaves de Fenda"
+        },
+        {
+          "id": "MLB236055",
+          "nome": "Manuais: Kits de Chaves (jogos de chaves e soquetes)"
+        },
+        {
+          "id": "MLB31532",
+          "nome": "Manuais: Kits de Ferramentas Combinadas"
+        },
+        {
+          "id": "MLB277999",
+          "nome": "Manuais: Chaves de Aperto (inglesa, ajustável)"
+        },
+        {
+          "id": "MLB33364",
+          "nome": "Manuais: Estiletes"
+        },
+        {
+          "id": "MLB188428",
+          "nome": "Manuais: Alicate Universal"
+        },
+        {
+          "id": "MLB188433",
+          "nome": "Manuais: Alicate de Pressão"
+        },
+        {
+          "id": "MLB60657",
+          "nome": "Veículos: Chaves"
+        },
+        {
+          "id": "MLB115943",
+          "nome": "Veículos: Chaves de Roda"
+        },
+        {
+          "id": "MLB437802",
+          "nome": "Veículos: Chaves Ajustáveis"
+        },
+        {
+          "id": "MLB455303",
+          "nome": "Veículos: Elevação (macacos e cavaletes)"
+        },
+        {
+          "id": "MLB457298",
+          "nome": "Elétricas: Chaves de Impacto"
+        },
+        {
+          "id": "MLB277644",
+          "nome": "Camping: Facas e Canivetes"
+        },
+        {
+          "id": "MLB277645",
+          "nome": "Camping: Canivetes Multiuso"
+        },
+        {
+          "id": "MLB430264",
+          "nome": "Camping: Lanternas"
         }
       ]
     },
