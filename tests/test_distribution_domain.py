@@ -227,11 +227,22 @@ def test_message_header_of_the_new_niches() -> None:
 
 
 def test_spacing_spreads_the_daily_sends_over_the_window() -> None:
-    from app.domain.distribution import max_sends_in_window, min_gap, spacing_minutes
+    from app.domain.distribution import (
+        jitter,
+        jitter_cap,
+        max_sends_in_window,
+        min_gap,
+        spacing_minutes,
+    )
 
     assert spacing_minutes(20, 7, 22) == 45  # 900 min ÷ 20
     assert spacing_minutes(10, 0, 24) == 144
-    assert spacing_minutes(200, 7, 22) == 10  # piso: nunca menos de 10 min
-    assert max_sends_in_window(7, 22) == 90
+    assert spacing_minutes(200, 7, 22) == 4  # 900 ÷ 200 = 4,5 (piso de 4 min)
+    assert spacing_minutes(300, 7, 22) == 4
+    assert max_sends_in_window(7, 22) == 225
     # o envio automático soma de 0 a 10 min ao mínimo: a espera média fica nos 45 min
     assert min_gap(20, 7, 22) == timedelta(minutes=40)
+    # Com 200 por dia, a variação cabe no intervalo (até 4 min): espera de 2 a 6 min, média 4,
+    # e nunca dois posts colados.
+    assert min_gap(200, 7, 22) == timedelta(minutes=2)
+    assert all(jitter(pub_id, jitter_cap(4)) < timedelta(minutes=4) for pub_id in range(1, 500))

@@ -99,8 +99,9 @@ async def _due(sessions: async_sessionmaker[AsyncSession], now: datetime) -> lis
                     .limit(1)
                 )
             ).scalar_one_or_none()
+            policy = policy_of(channel)
             if last_sent is not None and now - last_sent < (
-                policy_of(channel).min_interval + jitter(pub.id)
+                policy.min_interval + jitter(pub.id, policy.jitter_cap_seconds)
             ):
                 continue
             last_invite = (

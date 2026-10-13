@@ -14,7 +14,7 @@
   <label>Link de convite <small>(https://chat.whatsapp.com/…)</small>
     <input name="invite_url" type="url" maxlength="255" value="{{ c.invite_url or '' if c else '' }}"></label>
   <div class="duas">
-    <label>Envios por dia<input name="max_per_day" type="number" min="1" max="50" required value="{{ c.max_per_day if c else 30 }}"></label>
+    <label>Envios por dia<input name="max_per_day" type="number" min="1" max="200" required value="{{ c.max_per_day if c else 30 }}"></label>
     <label>Intervalo médio <small>(calculado)</small>
       <input class="calculado" type="text" readonly tabindex="-1" aria-readonly="true" value="{{ spacing(c.max_per_day, c.window_start_hour, c.window_end_hour) if c else spacing(30, 7, 22) }} min"></label>
   </div>

@@ -38,6 +38,7 @@ from app.distribution.service import DistributionError
 from app.domain.distribution import (
     INVITE_PREFIX,
     MANUAL_TIER,
+    MAX_PER_DAY,
     MIN_SPACING_MINUTES,
     ML_TAG_RE,
     is_fresh,
@@ -149,8 +150,8 @@ def _validate(form: ChannelForm, niche_ids: set[int]) -> str | None:
         form.invite_url.startswith(INVITE_PREFIX) and len(form.invite_url) <= 255
     ):
         return f"link de convite precisa começar com {INVITE_PREFIX}"
-    if not 1 <= form.max_per_day <= 50:
-        return "envios por dia: de 1 a 50"
+    if not 1 <= form.max_per_day <= MAX_PER_DAY:
+        return f"envios por dia: de 1 a {MAX_PER_DAY}"
     if not (0 <= form.window_start_hour < form.window_end_hour <= 24):
         return "janela: início antes do fim, entre 0h e 24h"
     room = max_sends_in_window(form.window_start_hour, form.window_end_hour)

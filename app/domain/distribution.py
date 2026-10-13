@@ -57,7 +57,9 @@ MAX_LAST_UNITS = 20
 # Variação no intervalo do envio automático: grupos não recebem no mesmo minuto exato.
 MAX_JITTER_SECONDS = 600
 # Envio espalhado na janela: intervalo médio = janela ÷ envios do dia, nunca abaixo deste piso.
-MIN_SPACING_MINUTES = 10
+# 13/10/2026: até 200 por dia (decisão do dono); das 07h às 22h dá um a cada ~4,5 min.
+MIN_SPACING_MINUTES = 4
+MAX_PER_DAY = 200
 MIN_DISCOUNT_PCT = 5
 MAX_DISCOUNT_PCT = 70
 MIN_OFFICIAL_GAP_PCT = 10  # "mais barato que a loja oficial" só a partir disso
@@ -105,6 +107,13 @@ class ChannelPolicy:
     window_start_hour: int
     window_end_hour: int
     paused: bool = False
+    jitter_cap_seconds: int = MAX_JITTER_SECONDS
+
+
+def jitter_cap(spacing: int) -> int:
+    """Variação do envio: até 10 min, mas nunca maior que o próprio intervalo (com 200 por dia o
+    intervalo é de ~4 min, e 10 min de variação colavam dois posts no mesmo minuto)."""
+    return min(MAX_JITTER_SECONDS, spacing * 60)
 
 
 def spacing_minutes(max_per_day: int, window_start_hour: int, window_end_hour: int) -> int:
@@ -121,12 +130,11 @@ def max_sends_in_window(window_start_hour: int, window_end_hour: int) -> int:
 def min_gap(max_per_day: int, window_start_hour: int, window_end_hour: int) -> timedelta:
     """Menor espera entre dois envios: o intervalo médio menos metade da variação.
 
-    O envio automático soma de 0 a 10 min fixos por publicação (`jitter`), então a espera média
-    fica no intervalo médio e os envios do dia cabem na janela.
+    O envio automático soma uma variação fixa por publicação (`jitter`, até `jitter_cap`), então a
+    espera média fica no intervalo médio e os envios do dia cabem na janela.
     """
-    return timedelta(
-        minutes=spacing_minutes(max_per_day, window_start_hour, window_end_hour)
-    ) - timedelta(seconds=MAX_JITTER_SECONDS // 2)
+    spacing = spacing_minutes(max_per_day, window_start_hour, window_end_hour)
+    return timedelta(minutes=spacing) - timedelta(seconds=jitter_cap(spacing) // 2)
 
 
 def local_day_start(now: datetime) -> datetime:
@@ -302,9 +310,10 @@ def seller_line(level_id: str | None, sales: int | None) -> str | None:
     return f"Vendedor com reputação {color}"
 
 
-def jitter(publication_id: int) -> timedelta:
-    """De 0 a 10 minutos, fixo por publicação (o mesmo item não "anda" entre ciclos)."""
-    return timedelta(seconds=(publication_id * 7919) % MAX_JITTER_SECONDS)
+def jitter(publication_id: int, cap_seconds: int = MAX_JITTER_SECONDS) -> timedelta:
+    """De 0 ao teto (10 min, ou o intervalo do grupo se menor), fixo por publicação (o mesmo item
+    não "anda" entre ciclos)."""
+    return timedelta(seconds=(publication_id * 7919) % max(cap_seconds, 1))
 
 
 def label_of(niche_name: str) -> str:

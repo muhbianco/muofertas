@@ -30,6 +30,7 @@ from app.domain.distribution import (
     check_pix,
     flash_to_show,
     is_fresh,
+    jitter_cap,
     listing_discount,
     local_day_start,
     min_gap,
@@ -43,6 +44,7 @@ from app.domain.distribution import (
     repeat_block_reason,
     seller_line,
     send_block_reason,
+    spacing_minutes,
     units_to_show,
 )
 from app.integrations.mercadolivre import MercadoLivreClient, MercadoLivreError, NotFoundError
@@ -138,6 +140,9 @@ async def move_up(db: AsyncSession, *, publication_id: int, before_id: int | Non
 
 
 def policy_of(channel: Channel) -> ChannelPolicy:
+    spacing = spacing_minutes(
+        channel.max_per_day, channel.window_start_hour, channel.window_end_hour
+    )
     return ChannelPolicy(
         max_per_day=channel.max_per_day,
         min_interval=min_gap(
@@ -146,6 +151,7 @@ def policy_of(channel: Channel) -> ChannelPolicy:
         window_start_hour=channel.window_start_hour,
         window_end_hour=channel.window_end_hour,
         paused=channel.paused,
+        jitter_cap_seconds=jitter_cap(spacing),
     )
 
 

@@ -292,10 +292,14 @@ async def test_interval_is_computed_and_shown_read_only(
     assert 'name="min_interval_minutes"' not in page
 
     too_many = await client.post(
-        "/grupos", data=_group_form(csrf, niche_id, name="Outro", window_end_hour=8, max_per_day=7)
+        "/grupos", data=_group_form(csrf, niche_id, name="Outro", window_end_hour=8, max_per_day=16)
     )
     assert too_many.status_code == 422
-    assert "cabem no máximo 6 envios por dia" in too_many.text
+    assert "cabem no máximo 15 envios por dia" in too_many.text  # 60 min ÷ 4 min
+    over = await client.post(
+        "/grupos", data=_group_form(csrf, niche_id, name="Outro", max_per_day=201)
+    )
+    assert over.status_code == 422 and "de 1 a 200" in over.text
 
 
 async def test_new_group_with_auto_send_explains_instead_of_crashing(
