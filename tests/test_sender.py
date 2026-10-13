@@ -629,3 +629,38 @@ async def test_offer_without_listings_leaves_the_queue_instead_of_blocking_it(
     pub = await state(sessions)
     assert (pub.state, pub.note) == ("skipped", "a oferta saiu do ar")  # sai da frente da fila
     assert wa.sent == []
+
+
+async def test_post_header_is_the_product_niche_not_the_group(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """13/10/2026: produto de qualquer nicho vai a qualquer grupo; um processador no grupo Família
+    saía com "👶 PAIS, MÃES E FILHOS". O cabeçalho é do produto; a etiqueta do link, do grupo."""
+    await approve(sessions)  # grupo de Tênis e Esporte
+    async with sessions() as session, session.begin():
+        tech = Niche(
+            slug="tecnologia", name="Tecnologia: celulares, games e PC", active=True, created_at=NOW
+        )
+        session.add(tech)
+        await session.flush()
+        product = (await session.execute(select(CatalogProduct))).scalar_one()
+        product.niche_id = tech.id
+    wa = FakeWuzapi()
+    assert await run(sessions, wa) == 1
+    body = wa.sent[0]["Body"]
+    assert body.startswith("#publi · 💻 *TECNOLOGIA*")
+    assert "matt_word=megapromooz" in body  # o link segue com a etiqueta do grupo
+
+
+async def test_post_header_falls_back_to_the_group_when_the_product_niche_is_off(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await approve(sessions)
+    async with sessions() as session, session.begin():
+        old = Niche(slug="observacao", name="Observação (sem grupo)", active=False, created_at=NOW)
+        session.add(old)
+        await session.flush()
+        (await session.execute(select(CatalogProduct))).scalar_one().niche_id = old.id
+    wa = FakeWuzapi()
+    assert await run(sessions, wa) == 1
+    assert wa.sent[0]["Body"].startswith("#publi · 👟 *TÊNIS E ESPORTE*")

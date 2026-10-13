@@ -443,7 +443,12 @@ async def message_for(db: AsyncSession, pub: Publication, now: datetime | None =
         raise DistributionError("publicação incompleta")
     if pub.checked_at is None or pub.checked_price_cents is None:
         raise DistributionError("revalide o preço antes de montar a mensagem")
-    niche = await db.get(Niche, channel.niche_id)
+    # O cabeçalho ("#publi · 💻 TECNOLOGIA") é do produto, não do grupo (13/10/2026: produto de
+    # qualquer nicho vai a qualquer grupo; um processador no grupo Família saía com 👶). Nicho
+    # inativo (observação) ou sem nicho: o do grupo.
+    niche = await db.get(Niche, product.niche_id) if product.niche_id else None
+    if niche is None or not niche.active:
+        niche = await db.get(Niche, channel.niche_id)
     evaluation = await db.get(OfferEvaluation, pub.evaluation_id) if pub.evaluation_id else None
     # Link avulso: o preço é o digitado e a hora dele não muda; Pix e últimas unidades vencem
     # pela hora do envio (`now`), não pela hora em que foram digitados junto com o preço.
