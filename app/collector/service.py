@@ -610,6 +610,12 @@ def _snapshot(row: PriceObservation) -> CatalogSnapshot:
         trusted_original_cents=row.trusted_original_cents,
         official_original_cents=row.official_original_cents,
         originals_known=row.originals_known,
+        reputable_min_price_cents=row.reputable_min_price_cents,
+        reputable_item_id=row.reputable_item_id,
+        reputable_seller_id=row.reputable_seller_id,
+        reputable_official=row.reputable_official,
+        reputable_original_cents=row.reputable_original_cents,
+        reputable_known=row.reputable_known,
     )
 
 
@@ -646,4 +652,10 @@ def _observation(
         trusted_original_cents=snap.trusted_original_cents,
         official_original_cents=snap.official_original_cents,
         originals_known=True,
+        reputable_min_price_cents=snap.reputable_min_price_cents,
+        reputable_item_id=snap.reputable_item_id,
+        reputable_seller_id=snap.reputable_seller_id,
+        reputable_official=snap.reputable_official,
+        reputable_original_cents=snap.reputable_original_cents,
+        reputable_known=True,
     )

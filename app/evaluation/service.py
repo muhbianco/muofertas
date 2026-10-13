@@ -56,19 +56,20 @@ class NicheRules:
             frozenset(domains),
         )
 
-    def seller_rule(self, brand: str | None, domain_id: str | None) -> tuple[bool, bool]:
-        """(só loja oficial, oferta confiável) para este produto.
+    def seller_rule(self, brand: str | None, domain_id: str | None) -> tuple[bool, bool, bool]:
+        """(só loja oficial, oferta confiável, vendedor reputado) para este produto.
 
-        Nicho que exige loja oficial e aceita MercadoLíder Gold/Platinum pede oferta confiável,
-        menos nos tipos que seguem só loja oficial (celular, perfume). Marca de risco pede
-        confiável em qualquer nicho.
+        Nicho que exige loja oficial e aceita MercadoLíder (`aceitar_mercadolider`) pede vendedor
+        reputado: oficial, MercadoLíder Gold/Platinum ou verde com 500+ vendas (desde 13/10/2026),
+        menos nos tipos que seguem só loja oficial (celular, perfume, suplemento). Marca de risco
+        pede confiável em qualquer nicho, mesmo nesses.
         """
         high_risk = bool(brand and brand.lower() in self.high_risk_brands)
         if not self.require_official:
-            return False, high_risk
+            return False, high_risk, False
         if self.accept_trusted and (domain_id or "") not in self.official_only_domains:
-            return False, True
-        return True, high_risk
+            return False, True, not high_risk
+        return True, high_risk, False
 
 
 def listing_pct(ev: Evaluation) -> int | None:
@@ -106,6 +107,12 @@ def _snapshot(row: PriceObservation) -> CatalogSnapshot:
         trusted_original_cents=row.trusted_original_cents,
         official_original_cents=row.official_original_cents,
         originals_known=row.originals_known,
+        reputable_min_price_cents=row.reputable_min_price_cents,
+        reputable_item_id=row.reputable_item_id,
+        reputable_seller_id=row.reputable_seller_id,
+        reputable_official=row.reputable_official,
+        reputable_original_cents=row.reputable_original_cents,
+        reputable_known=row.reputable_known,
     )
 
 
@@ -214,12 +221,17 @@ class Evaluator:
                 continue
             # A série da nota é a da mesma régua que a nota usa. Linhas de antes da 0004 só têm o
             # menor preço oficial: entram na régua oficial e ficam fora das outras.
-            official_only, trusted = rule.seller_rule(product.brand, product.domain_id)
-            kind = required_kind(require_official=official_only, high_risk_brand=trusted)
+            official_only, trusted, reputable = rule.seller_rule(product.brand, product.domain_id)
+            kind = required_kind(
+                require_official=official_only, high_risk_brand=trusted, accept_reputable=reputable
+            )
+            # A régua "reputado" só tem série desde a 0026: a linha antiga traz o preço de outra
+            # régua, mais alto, e daria desconto falso (o vendedor verde sempre esteve lá).
             points = [
                 PricePoint(r.observed_at, price)
                 for r in rows
-                if (price := kind_price(_snapshot(r), kind)[0])
+                if (kind != "reputado" or r.reputable_known)
+                and (price := kind_price(_snapshot(r), kind)[0])
             ]
             ev = evaluate(
                 ScoringInput(
@@ -243,6 +255,7 @@ class Evaluator:
                     highlight_position=product.best_highlight_position,
                     niche_commission_p90_cents=p90.get(product.niche_id or -1),
                     now=now,
+                    accept_reputable=reputable,
                 )
             )
             trigger = "price_change" if product.needs_evaluation else "daily"

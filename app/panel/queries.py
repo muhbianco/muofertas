@@ -56,7 +56,12 @@ def product_url(product: CatalogProduct) -> str:
 
 LEVELS = REPUTATION
 POWER = {"platinum": "MercadoLíder Platinum", "gold": "MercadoLíder Gold", "silver": "MercadoLíder"}
-KIND = {"oficial": "loja oficial", "confiavel": "oferta confiável", "elegivel": "vendedor elegível"}
+KIND = {
+    "oficial": "loja oficial",
+    "reputado": "vendedor reputado",
+    "confiavel": "oferta confiável",
+    "elegivel": "vendedor elegível",
+}
 
 
 def offer_url(product: CatalogProduct, item_id: str | None) -> str:

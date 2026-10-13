@@ -20,7 +20,7 @@ from typing import Any
 from app.domain.catalog_offers import CatalogSnapshot
 from app.domain.price_history import PriceStats
 
-RULESET_VERSION = "v2-2026-10-10"
+RULESET_VERSION = "v3-2026-10-13"
 
 WEIGHTS = {"F": 0.35, "D": 0.20, "Q": 0.15, "U": 0.10, "R": 0.20}
 
@@ -54,6 +54,7 @@ class ScoringInput:
     highlight_position: int | None
     niche_commission_p90_cents: int | None
     now: datetime
+    accept_reputable: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -69,8 +70,9 @@ class Evaluation:
     reference_cents: int | None
     ruleset: str = RULESET_VERSION
     notes: list[str] = field(default_factory=list)
-    # Régua de onde saiu o preço: "oficial", "confiavel" (oficial ou MercadoLíder Gold/Platinum
-    # verde) ou "elegivel" (vendedor amarelo/verde com envio pelo ML).
+    # Régua de onde saiu o preço: "oficial", "reputado" (confiável ou verde com 500+ vendas),
+    # "confiavel" (oficial ou MercadoLíder Gold/Platinum verde) ou "elegivel" (vendedor
+    # amarelo/verde com envio pelo ML).
     offer_kind: str | None = None
     offer_item_id: str | None = None
     offer_seller_id: int | None = None
@@ -97,11 +99,17 @@ def _interpolate(x: float, points: list[tuple[float, float]]) -> float:
     return points[-1][1]
 
 
-def required_kind(*, require_official: bool, high_risk_brand: bool) -> str:
-    """Qual régua de preço vale: o nicho pode exigir loja oficial; a marca de risco pede oferta
-    confiável (oficial ou MercadoLíder Gold/Platinum verde); o resto, qualquer vendedor elegível."""
+def required_kind(
+    *, require_official: bool, high_risk_brand: bool, accept_reputable: bool = False
+) -> str:
+    """Qual régua de preço vale: o nicho pode exigir loja oficial; nicho de loja oficial que aceita
+    MercadoLíder pede vendedor reputado (confiável ou verde com 500+ vendas); a marca de risco
+    pede oferta confiável (oficial ou MercadoLíder Gold/Platinum verde); o resto, qualquer
+    vendedor elegível."""
     if require_official:
         return "oficial"
+    if accept_reputable:
+        return "reputado"
     if high_risk_brand:
         return "confiavel"
     return "elegivel"
@@ -111,7 +119,9 @@ def kind_price(snap: CatalogSnapshot, kind: str) -> tuple[int | None, str | None
     """(preço, anúncio, vendedor) da régua."""
     if kind == "oficial":
         return snap.min_official_price_cents, snap.official_item_id, snap.official_seller_id
-    if kind == "confiavel":
+    if kind == "reputado" and snap.reputable_known:
+        return snap.reputable_min_price_cents, snap.reputable_item_id, snap.reputable_seller_id
+    if kind in ("confiavel", "reputado"):  # linha de antes da 0026: a régua confiável de então
         return snap.trusted_min_price_cents, snap.trusted_item_id, snap.trusted_seller_id
     return snap.eligible_min_price_cents, snap.eligible_item_id, snap.eligible_seller_id
 
@@ -120,7 +130,9 @@ def kind_original(snap: CatalogSnapshot, kind: str) -> int | None:
     """O "de" (preço riscado) da oferta da régua."""
     if kind == "oficial":
         return snap.official_original_cents
-    if kind == "confiavel":
+    if kind == "reputado" and snap.reputable_known:
+        return snap.reputable_original_cents
+    if kind in ("confiavel", "reputado"):
         return snap.trusted_original_cents
     return snap.eligible_original_cents
 
@@ -131,6 +143,7 @@ OFFICIAL_TOLERANCE = 1.02
 MISSING_GATE = {
     "oficial": "G7_sem_loja_oficial",
     "confiavel": "G7_sem_oferta_confiavel",
+    "reputado": "G7_sem_vendedor_reputado",
     "elegivel": "G9_sem_vendedor_elegivel",
 }
 
@@ -151,7 +164,11 @@ def evaluate(inp: ScoringInput) -> Evaluation:
 
     # O preço que vale é de oferta que o programa paga (vendedor amarelo/verde, envio pelo ML),
     # na régua que o nicho e a marca pedem.
-    kind = required_kind(require_official=inp.require_official, high_risk_brand=inp.high_risk_brand)
+    kind = required_kind(
+        require_official=inp.require_official,
+        high_risk_brand=inp.high_risk_brand,
+        accept_reputable=inp.accept_reputable,
+    )
     price: int | None = None
     used_official = False
     offer_kind: str | None = None
@@ -177,6 +194,9 @@ def evaluate(inp: ScoringInput) -> Evaluation:
             used_official = {
                 "oficial": True,
                 "confiavel": snap.trusted_official,
+                "reputado": snap.reputable_official
+                if snap.reputable_known
+                else snap.trusted_official,
                 "elegivel": snap.eligible_official,
             }[kind]
             floor = snap.eligible_min_price_cents or price
@@ -241,7 +261,15 @@ def evaluate(inp: ScoringInput) -> Evaluation:
 
     q = (
         50.0
-        + (25.0 if used_official else 15.0 if offer_kind == "confiavel" else 0.0)
+        + (
+            25.0
+            if used_official
+            else 15.0
+            if offer_kind == "confiavel"
+            else 10.0
+            if offer_kind == "reputado"
+            else 0.0
+        )
         + (15.0 if inp.stats.has_reference else 0.0)
     )
     if inp.observed_at is not None and inp.now - inp.observed_at <= timedelta(hours=1):

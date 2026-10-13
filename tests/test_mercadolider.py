@@ -21,14 +21,19 @@ def _rules(**kw: object) -> NicheRules:
 
 
 def kind_of(rules: NicheRules, brand: str | None, domain: str | None) -> str:
-    official, trusted = rules.seller_rule(brand, domain)
-    return required_kind(require_official=official, high_risk_brand=trusted)
+    official, trusted, reputable = rules.seller_rule(brand, domain)
+    return required_kind(
+        require_official=official, high_risk_brand=trusted, accept_reputable=reputable
+    )
 
 
-def test_official_niche_accepts_gold_platinum_except_listed_types() -> None:
+def test_official_niche_accepts_reputable_sellers_except_listed_types() -> None:
     tech = _rules(accept_trusted=True, official_only_domains=frozenset({"MLB-CELLPHONES"}))
-    assert kind_of(tech, "Redfin", "MLB-GAMEPADS_AND_JOYSTICKS") == "confiavel"
+    # Desde 13/10/2026: oficial, MercadoLíder Gold/Platinum ou verde com 500+ vendas.
+    assert kind_of(tech, "Redfin", "MLB-GAMEPADS_AND_JOYSTICKS") == "reputado"
     assert kind_of(tech, "Samsung", "MLB-CELLPHONES") == "oficial"
+    # Marca de risco no nicho (LEGO no Pais) segue na régua confiável, mais estreita.
+    assert kind_of(tech, "LEGO", "MLB-BUILDING_BLOCKS") == "confiavel"
     # Sem a opção, o nicho continua só loja oficial; nicho sem exigência só pede confiável na
     # marca de risco.
     assert kind_of(_rules(), "Redfin", "MLB-GAMEPADS_AND_JOYSTICKS") == "oficial"

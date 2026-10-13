@@ -38,6 +38,9 @@ def to_cents(value: Any) -> int | None:
 # Regra do programa de afiliados do ML (ajuda 30088): só vendedor com reputação amarela ou verde.
 ELIGIBLE_LEVELS = frozenset({"3_yellow", "4_light_green", "5_green"})
 TRUSTED_POWER = frozenset({"gold", "platinum"})
+# Vendedor reputado (13/10/2026, nichos de loja oficial): verde com histórico grande também
+# entra, não só a loja oficial e o MercadoLíder Gold/Platinum.
+REPUTABLE_MIN_SALES = 500
 # Envio pelo Mercado Envios. "custom"/"not_specified" é "entrega a combinar com o vendedor".
 ML_SHIPPING_MODES = frozenset({"me1", "me2"})
 
@@ -119,6 +122,20 @@ def is_trusted(offer: Offer, seller: SellerInfo | None, policy: OfferPolicy) -> 
     )
 
 
+def is_reputable(offer: Offer, seller: SellerInfo | None, policy: OfferPolicy) -> bool:
+    """Para os nichos de loja oficial: a confiável (oficial ou MercadoLíder Gold/Platinum verde)
+    ou vendedor verde com 500+ vendas. Caso de 13/10: a máscara L'Oréal a R$ 249,99 na loja
+    oficial e a R$ 81,61 de vendedor verde com 1.733 vendas, que a régua anterior não via."""
+    if is_trusted(offer, seller, policy):
+        return True
+    return (
+        is_eligible(offer, seller, policy)
+        and seller is not None
+        and seller.level_id == "5_green"
+        and seller.transactions_total >= REPUTABLE_MIN_SALES
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class CatalogSnapshot:
     """O que vira uma linha de `price_observation`.
@@ -155,6 +172,14 @@ class CatalogSnapshot:
     trusted_original_cents: int | None = None
     official_original_cents: int | None = None
     originals_known: bool = True
+    # 0026: régua "reputado" (oficial, MercadoLíder Gold/Platinum ou verde com 500+ vendas).
+    # `reputable_known` é falso nas linhas de antes dela: fora da série dessa régua.
+    reputable_min_price_cents: int | None = None
+    reputable_item_id: str | None = None
+    reputable_seller_id: int | None = None
+    reputable_official: bool = False
+    reputable_original_cents: int | None = None
+    reputable_known: bool = True
 
     @property
     def tracking_price_cents(self) -> int:
@@ -173,6 +198,10 @@ class CatalogSnapshot:
             or self.trusted_min_price_cents != previous.trusted_min_price_cents
             or self.min_official_price_cents != previous.min_official_price_cents
             or self.eligible_item_id != previous.eligible_item_id
+            or (
+                previous.reputable_known
+                and self.reputable_min_price_cents != previous.reputable_min_price_cents
+            )
             or (self.deal_offers_count > 0) != (previous.deal_offers_count > 0)
         )
 
@@ -180,19 +209,23 @@ class CatalogSnapshot:
         """O "de" mudou sem o preço mudar (ou a linha anterior nem tinha o dado).
 
         Vira batimento, não mudança: não mexe na fila nem nas camadas, só atualiza o selo.
+        A linha anterior sem a régua "reputado" (antes da 0026) também: o dado novo entra como
+        batimento, sem fingir mudança de preço.
         """
         if previous is None:
             return False
-        if not previous.originals_known:
+        if not previous.originals_known or not previous.reputable_known:
             return True
         return (
             self.eligible_original_cents,
             self.trusted_original_cents,
             self.official_original_cents,
+            self.reputable_original_cents,
         ) != (
             previous.eligible_original_cents,
             previous.trusted_original_cents,
             previous.official_original_cents,
+            previous.reputable_original_cents,
         )
 
 
@@ -223,9 +256,11 @@ def summarize(
     best = min(offers, key=key)
     eligible = [o for o in offers if is_eligible(o, known.get(o.seller_id or -1), policy)]
     trusted = [o for o in eligible if is_trusted(o, known.get(o.seller_id or -1), policy)]
+    reputable = [o for o in eligible if is_reputable(o, known.get(o.seller_id or -1), policy)]
     official = [o for o in eligible if o.official_store_id is not None]
     best_eligible = min(eligible, key=key) if eligible else None
     best_trusted = min(trusted, key=key) if trusted else None
+    best_reputable = min(reputable, key=key) if reputable else None
     best_official = min(official, key=key) if official else None
     return CatalogSnapshot(
         min_price_cents=best.price_cents,
@@ -252,6 +287,11 @@ def summarize(
         eligible_original_cents=best_eligible.original_price_cents if best_eligible else None,
         trusted_original_cents=best_trusted.original_price_cents if best_trusted else None,
         official_original_cents=best_official.original_price_cents if best_official else None,
+        reputable_min_price_cents=best_reputable.price_cents if best_reputable else None,
+        reputable_item_id=best_reputable.item_id if best_reputable else None,
+        reputable_seller_id=best_reputable.seller_id if best_reputable else None,
+        reputable_official=bool(best_reputable and best_reputable.official_store_id is not None),
+        reputable_original_cents=best_reputable.original_price_cents if best_reputable else None,
     )
 
 

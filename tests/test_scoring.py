@@ -116,7 +116,7 @@ def test_stale_price_is_blocked() -> None:
 def test_snapshot_is_serializable_for_audit() -> None:
     data = evaluate(base()).as_snapshot()
     assert data["tier"] == "excepcional"
-    assert data["ruleset"].startswith("v2")
+    assert data["ruleset"].startswith("v3")
     assert set(data["components"]) == {"F", "D", "Q", "U", "R"}
 
 

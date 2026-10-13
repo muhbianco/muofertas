@@ -200,6 +200,14 @@ class PriceObservation(Base):
     trusted_original_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     official_original_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     originals_known: Mapped[bool] = mapped_column(Boolean, default=True, server_default=false())
+    # 0026: régua "reputado" (oficial, MercadoLíder Gold/Platinum ou verde com 500+ vendas).
+    # Linha antiga: reputable_known falso, fora da série dessa régua.
+    reputable_min_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    reputable_item_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    reputable_seller_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    reputable_official: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    reputable_original_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    reputable_known: Mapped[bool] = mapped_column(Boolean, default=True, server_default=false())
 
 
 class MarketplaceSeller(Base):

@@ -96,7 +96,7 @@ async def test_real_official_drop_is_recorded_and_flag_cleared(
     assert ev.used_official
     assert ev.real_discount_bp == 3333
     snapshot = json.loads(ev.snapshot)
-    assert snapshot["ruleset"].startswith("v2") and "components" in snapshot
+    assert snapshot["ruleset"].startswith("v3") and "components" in snapshot
     assert product.needs_evaluation is False
     assert product.last_tier == ev.tier
     # já avaliado e sem mudança: nada a fazer
