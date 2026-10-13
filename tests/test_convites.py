@@ -37,6 +37,19 @@ def real_config() -> InviteConfig:
     return parse_config(json.loads(Path("config/convites.json").read_text(encoding="utf-8")))
 
 
+# O arquivo real não indica mais outro grupo (13/10/2026); o rodízio continua no código e é
+# testado com uma indicação de exemplo.
+CROSS = {
+    "cruzados": ["✨ Conheça nosso grupo de {tema_outro}: {link_outro}"],
+    "cruzados_evento": ["🎯 Especial {evento_outro}: nosso grupo de {tema_outro}: {link_outro}"],
+}
+
+
+def cross_config() -> InviteConfig:
+    base = json.loads(Path("config/convites.json").read_text(encoding="utf-8"))
+    return parse_config({**base, **CROSS})
+
+
 # --------------------------------------------------------------------------- calendário
 
 
@@ -53,15 +66,15 @@ def test_text_follows_the_event_phase_of_each_niche() -> None:
     config = real_config()
     eve = plan_invite(date(2026, 10, 11), "pais-maes-filhos", LINK, config)
     assert (eve.kind, eve.event_slug) == ("vespera", "dia-das-criancas-2026")
-    assert "Amanhã é Dia das Crianças" in eve.message and eve.message.endswith(LINK)
-    # Ferramentas não está no Dia das Crianças: convite geral, com o tema do nicho.
+    assert "Amanhã é Dia das Crianças" in eve.message and LINK in eve.message
+    # Ferramentas não está no Dia das Crianças: convite geral (sem tema de nicho desde 13/10).
     tools = plan_invite(date(2026, 10, 11), "ferramentas", LINK, config)
-    assert tools.kind == "geral" and "ferramentas e jardinagem" in tools.message
+    assert tools.kind == "geral" and "ferramentas" not in tools.message
     assert plan_invite(date(2026, 10, 12), "tenis-esporte", LINK, config).kind == "auge"
     assert plan_invite(date(2026, 11, 10), "beleza", LINK, config).kind == "periodo"
     assert plan_invite(date(2026, 11, 26), "beleza", LINK, config).kind == "vespera"
     friday = plan_invite(date(2026, 11, 27), "casa-mimos", LINK, config)
-    assert "Black Friday" in friday.message and "casa, cozinha e mimos" in friday.message
+    assert "Black Friday" in friday.message
     assert plan_invite(date(2026, 11, 30), "beleza", LINK, config).kind == "reta_final"
 
 
@@ -240,7 +253,7 @@ async def test_agenda_shows_the_week_and_skips_a_day(
 def test_partner_is_never_the_group_itself_and_is_stable() -> None:
     from app.domain.invites import PartnerGroup, choose_partner
 
-    config = real_config()
+    config = cross_config()
     partners = [
         PartnerGroup(1, "ferramentas", "https://chat.whatsapp.com/F"),
         PartnerGroup(2, "beleza", "https://chat.whatsapp.com/B"),
@@ -259,7 +272,7 @@ def test_partner_is_never_the_group_itself_and_is_stable() -> None:
 def test_invite_carries_the_other_group_and_morning_differs_from_night() -> None:
     from app.domain.invites import PartnerGroup
 
-    config = real_config()
+    config = cross_config()
     family = PartnerGroup(3, "pais-maes-filhos", "https://chat.whatsapp.com/P")
     plan = plan_invite(
         date(2026, 10, 11), "ferramentas", LINK, config, partner=family, slot="manha"
@@ -291,7 +304,10 @@ async def test_morning_invite_goes_at_the_window_start_and_expires(
     assert await run(sessions, wa, seven) == 0
     family = next(m for m in wa.sent if m["Phone"] == "12036300@g.us")
     assert "Hoje é Dia das Crianças" in family["Body"]
-    assert "https://chat.whatsapp.com/G1" in family["Body"]  # indica o outro grupo
+    # Desde 13/10/2026 o convite só chama para compartilhar o próprio grupo.
+    assert "https://chat.whatsapp.com/G1" not in family["Body"]
+    assert "sem medo de cair em golpes" in family["Body"]
+    assert "instagram.com/megapromovipoz" in family["Body"]
     async with sessions() as session:
         slots = (
             await session.execute(
@@ -314,7 +330,7 @@ async def test_morning_invite_goes_at_the_window_start_and_expires(
 def test_every_group_is_recommended_once_per_slot() -> None:
     from app.domain.invites import PartnerGroup, choose_partner
 
-    config = real_config()
+    config = cross_config()
     slugs = [
         "ferramentas",
         "beleza",
@@ -339,3 +355,18 @@ def test_every_group_is_recommended_once_per_slot() -> None:
                 (g.channel_id, p.channel_id) for g, p in zip(partners, picks, strict=True) if p
             }
     assert len(seen_pairs) == 30  # em 40 dias, todo grupo indicou todos os outros
+
+
+def test_real_invite_only_asks_to_share_the_group_with_the_slogan_and_instagram() -> None:
+    from app.domain.invites import PartnerGroup, choose_partner
+
+    config = real_config()
+    partners = [PartnerGroup(i, "beleza", f"https://chat.whatsapp.com/{i}") for i in (1, 2, 3)]
+    assert choose_partner(date(2026, 10, 14), 1, partners, config) is None  # sem indicação
+    for day in (date(2026, 10, 14), date(2026, 10, 15), date(2026, 11, 27), date(2026, 12, 20)):
+        for slot in ("manha", "noite"):
+            text = plan_invite(day, "pais-maes-filhos", LINK, config, slot=slot).message
+            assert LINK in text
+            assert "Nós caçamos a promoção e você compra sem medo de cair em golpes." in text
+            assert text.endswith("https://www.instagram.com/megapromovipoz/")
+            assert "bebês" not in text  # nada de tema de nicho
