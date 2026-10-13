@@ -41,6 +41,7 @@ from app.domain.distribution import (
     MIN_SPACING_MINUTES,
     ML_TAG_RE,
     is_fresh,
+    is_urgent,
     local_day_start,
     manual_block_reason,
     max_sends_in_window,
@@ -377,6 +378,7 @@ class ReadyRow:
     pub: Publication
     name: str
     image_url: str | None
+    urgent: bool = False  # relâmpago ou últimas unidades ainda valendo: sai na frente
 
 
 @dataclass
@@ -415,7 +417,7 @@ async def post_list(request: Request, db: Db, ctx: Admin, aviso: str | None = No
     # últimos (Tecnologia, Pais) sumiam da tela sem aviso.
     position = (
         func.row_number()
-        .over(partition_by=Publication.channel_id, order_by=service.READY_ORDER)
+        .over(partition_by=Publication.channel_id, order_by=service.ready_order(now))
         .label("pos")
     )
     ranked = select(Publication.id.label("pid"), position).where(Publication.state == "ready")
@@ -472,7 +474,8 @@ async def post_list(request: Request, db: Db, ctx: Admin, aviso: str | None = No
         )
     for pub, name, image in rows:
         if pub.channel_id in groups:
-            groups[pub.channel_id].rows.append(ReadyRow(pub, name or "", image))
+            urgent = is_urgent(pub.flash_ends_at, pub.last_units, pub.last_units_at, now)
+            groups[pub.channel_id].rows.append(ReadyRow(pub, name or "", image, urgent))
     attention = list(
         (
             await db.execute(

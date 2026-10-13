@@ -21,13 +21,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.logging import get_logger
 from app.distribution.service import (
-    READY_ORDER,
     DistributionError,
     apply_recheck,
     channel_status,
     fetch_recheck,
     message_for,
     policy_of,
+    ready_order,
 )
 from app.domain.distribution import MANUAL_TIER, Recheck, jitter, manual_block_reason
 from app.integrations.images import fetch_product_image
@@ -85,7 +85,7 @@ async def _due(sessions: async_sessionmaker[AsyncSession], now: datetime) -> lis
                 await db.execute(
                     select(Publication)
                     .where(Publication.channel_id == channel.id, Publication.state == "ready")
-                    .order_by(*READY_ORDER)
+                    .order_by(*ready_order(now))
                     .limit(1)
                 )
             ).scalar_one_or_none()

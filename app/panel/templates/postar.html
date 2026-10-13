@@ -42,14 +42,14 @@
   <div class="grupo-corpo">
   {% if g.block %}<p class="linha">Próximo envio: {{ g.block }}.</p>{% elif g.channel.transport == 'wuzapi' %}<p class="linha ok">Sai sozinho nos próximos minutos.</p>{% else %}<p class="linha ok">Pode enviar agora.</p>{% endif %}
   {% if not g.rows %}<p class="vazio">Nada pronto para este grupo. Aprove na Fila, filtrando pelo nicho.</p>{% endif %}
-  {% if g.rows | length > 1 %}<p class="dica">Ordem de saída: o primeiro é o próximo. Arraste pela alça ⠿ para cima, ou use ▲ (sobe uma) e ⤒ (vira o próximo).</p>{% endif %}
+  {% if g.rows | length > 1 %}<p class="dica">Ordem de saída: o primeiro é o próximo. Relâmpago e últimas unidades ainda valendo saem na frente sozinhos (selo “prioridade”). No resto, arraste pela alça ⠿ para cima, ou use ▲ (sobe uma) e ⤒ (vira o próximo).</p>{% endif %}
   <ol class="fila-envio">
   {% for r in g.rows %}
   <li data-pub="{{ r.pub.id }}">
     {% if g.rows | length > 1 %}<span class="alca" title="Arraste para cima" aria-hidden="true">⠿</span>{% endif %}
     <a class="item" href="/postar/{{ r.pub.id }}">
       {% if r.image_url %}<img src="{{ r.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="sem-foto"></span>{% endif %}
-      <span><b>{{ r.name }}</b><br><small>{% if r.pub.tier == 'avulso' %}<span class="selo off">avulso</span>{{ r.pub.approved_price_cents | brl }} digitado {{ r.pub.created_at | local }}{% if not r.image_url %} · sem foto{% endif %}{% else %}aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}{% endif %}{% if r.pub.flash_ends_at %} · ⏰ relâmpago até {{ r.pub.flash_ends_at | local }}{% endif %}</small></span>
+      <span><b>{{ r.name }}</b><br><small>{% if r.pub.tier == 'avulso' %}<span class="selo off">avulso</span>{{ r.pub.approved_price_cents | brl }} digitado {{ r.pub.created_at | local }}{% if not r.image_url %} · sem foto{% endif %}{% else %}aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}{% endif %}{% if r.pub.flash_ends_at %} · ⏰ relâmpago até {{ r.pub.flash_ends_at | local }}{% endif %}{% if r.urgent and r.pub.last_units %} · ⏳ últimas {{ r.pub.last_units }}{% endif %}{% if r.urgent %} <span class="selo off">prioridade</span>{% endif %}</small></span>
     </a>
     {% if r.pub.tier != 'avulso' %}<a class="mudar" href="/postar/{{ r.pub.id }}#enviar-tambem" data-enviar-tambem data-pub="{{ r.pub.id }}" data-canal="{{ g.channel.id }}" data-nome="{{ r.name }}" title="Enviar também em outro grupo" aria-label="Enviar também em outro grupo">＋</a>
     <a class="mudar" href="/postar/{{ r.pub.id }}#mudar-grupo" data-mudar-grupo data-pub="{{ r.pub.id }}" data-nicho="{{ g.channel.niche_id }}" data-nome="{{ r.name }}" title="Mudar de grupo" aria-label="Mudar de grupo">⇄</a>{% endif %}

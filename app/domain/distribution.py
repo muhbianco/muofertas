@@ -539,6 +539,24 @@ def flash_to_show(flash_ends_at: datetime | None, at: datetime) -> datetime | No
     return flash_ends_at
 
 
+def is_urgent(
+    flash_ends_at: datetime | None,
+    last_units: int | None,
+    last_units_at: datetime | None,
+    now: datetime,
+) -> bool:
+    """Marcado pelo operador e ainda valendo: relâmpago que não acaba nos próximos 10 minutos, ou
+    últimas unidades vistas há menos de 2 horas (depois disso o post sai sem a linha e não há
+    pressa). Passa na frente da fila do grupo (`ready_order`)."""
+    if flash_ends_at is not None and flash_ends_at - FLASH_MIN_LEFT > now:
+        return True
+    return (
+        last_units is not None
+        and last_units_at is not None
+        and now - last_units_at < LAST_UNITS_VALID_FOR
+    )
+
+
 def manual_block_reason(
     created_at: datetime, flash_ends_at: datetime | None, now: datetime
 ) -> str | None:

@@ -11,12 +11,15 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.distribution import (
     DEDUP_WINDOW,
+    FLASH_MIN_LEFT,
+    LAST_UNITS_VALID_FOR,
     MANUAL_TIER,
     ChannelPolicy,
     LinkError,
@@ -72,8 +75,8 @@ class PixRejectedError(DistributionError):
         self.field = field
 
 
-# Ordem de saída das publicações prontas de um grupo: as que o operador posicionou primeiro, na
-# ordem dele; depois as outras, por ordem de aprovação.
+# Ordem do operador numa fila de grupo: as que ele posicionou primeiro, na ordem dele; depois as
+# outras, por ordem de aprovação. A ordem de saída (`ready_order`) põe as urgentes na frente.
 READY_ORDER = (
     Publication.queue_position.is_(None),
     Publication.queue_position,
@@ -81,6 +84,24 @@ READY_ORDER = (
     Publication.id,
 )
 QUEUE_STEP = 10
+
+
+def ready_order(now: datetime) -> tuple[Any, ...]:
+    """Ordem de saída de uma fila de grupo (pedido do dono em 13/10/2026): primeiro o que o
+    operador marcou como relâmpago ou últimas unidades e ainda vale (`is_urgent`), a relâmpago que
+    acaba antes na frente; depois a ordem do operador. Calculada na hora: vale para o que já está
+    na fila, e a marca que vence volta o post ao lugar dele."""
+    flash = Publication.flash_ends_at > now + FLASH_MIN_LEFT
+    units = and_(
+        Publication.last_units.is_not(None),
+        Publication.last_units_at > now - LAST_UNITS_VALID_FOR,
+    )
+    return (
+        case((or_(flash, units), 0), else_=1),
+        case((flash, 0), else_=1),
+        case((flash, Publication.flash_ends_at), else_=None),
+        *READY_ORDER,
+    )
 
 
 async def move_up(db: AsyncSession, *, publication_id: int, before_id: int | None) -> bool:
