@@ -609,3 +609,23 @@ async def test_offer_waits_a_few_minutes_after_an_invite(
     wa = FakeWuzapi()
     assert await run(sessions, wa) == 0  # o convite acabou de sair
     assert await run(sessions, wa, now=NOW + timedelta(minutes=5)) == 1
+
+
+async def test_offer_without_listings_leaves_the_queue_instead_of_blocking_it(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """13/10/2026: o produto ficou sem oferta e o ML passou a dar 404; o post ficava em 1º na fila,
+    "ML fora, tenta na próxima rodada", e o grupo Família parou de receber ofertas."""
+    await approve(sessions)
+    wa = FakeWuzapi()
+    fake_ml = FakeML(offers={})  # /products/MLBP1/items → 404
+    ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
+    wa_client = WuzapiClient(cfg(), transport=wa.transport())
+    try:
+        assert await send_due(sessions, ml_client, wa_client, NOW) == 0
+    finally:
+        await ml_client.aclose()
+        await wa_client.aclose()
+    pub = await state(sessions)
+    assert (pub.state, pub.note) == ("skipped", "a oferta saiu do ar")  # sai da frente da fila
+    assert wa.sent == []

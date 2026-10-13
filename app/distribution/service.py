@@ -42,7 +42,7 @@ from app.domain.distribution import (
     send_block_reason,
     units_to_show,
 )
-from app.integrations.mercadolivre import MercadoLivreClient, MercadoLivreError
+from app.integrations.mercadolivre import MercadoLivreClient, MercadoLivreError, NotFoundError
 from app.models import (
     CatalogProduct,
     Channel,
@@ -293,9 +293,15 @@ async def attach_links(
 async def fetch_recheck(
     client: MercadoLivreClient, *, external_id: str, item_id: str, approved_cents: int
 ) -> Recheck:
-    """Chamada ao ML (fora de transação)."""
+    """Chamada ao ML (fora de transação).
+
+    404 é o produto sem nenhuma oferta (o coletor também o desativa): a oferta saiu do ar. Tratar
+    como "ML fora" deixava o post em 1º na fila para sempre e travava o grupo (13/10/2026).
+    """
     try:
         offers = await client.product_items(external_id)
+    except NotFoundError:
+        return Recheck("gone", None)
     except MercadoLivreError as exc:
         raise DistributionError(
             f"o ML não respondeu ({exc.status or 'rede'}); tente de novo"
