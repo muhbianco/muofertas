@@ -131,6 +131,7 @@ class ChannelForm:
     window_end_hour: int
     paused: bool
     transport: str = "manual"
+    always_checked: bool = False
 
 
 NEEDS_WHATSAPP_LINK = (
@@ -241,6 +242,7 @@ async def save_group(
     invite_url: Annotated[str | None, Form(max_length=255)] = None,
     paused: Annotated[str | None, Form()] = None,
     transport: Annotated[str, Form(max_length=12)] = "manual",
+    sempre: Annotated[str | None, Form(max_length=1)] = None,
     channel_id: int | None = None,
 ) -> Response:
     check_csrf(ctx, csrf)
@@ -254,6 +256,7 @@ async def save_group(
         window_end_hour=window_end_hour,
         paused=paused == "1",
         transport=transport,
+        always_checked=sempre == "1",
     )
     niche_ids = set((await db.execute(select(Niche.id).limit(50))).scalars())
     error = _validate(form, niche_ids)
@@ -549,7 +552,10 @@ async def _render_manual(
     error: str | None = None,
     code: int = 200,
 ) -> Response:
-    form = form or ManualForm(nonce=secrets.token_urlsafe(12))
+    targets = await queries.approval_targets(db)
+    if form is None:  # formulário novo: o grupo "sempre marcado" já vem marcado
+        form = ManualForm(nonce=secrets.token_urlsafe(12))
+        marked = {t.id for t in targets if t.always_checked}
     return templates.TemplateResponse(
         request,
         "avulso.html",
@@ -557,7 +563,7 @@ async def _render_manual(
             "ctx": ctx,
             "form": form,
             "marked": marked or set(),
-            "targets": await queries.approval_targets(db),
+            "targets": targets,
             "error": error,
         },
         status_code=code,

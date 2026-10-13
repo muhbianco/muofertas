@@ -375,6 +375,9 @@ class Channel(Base):
     window_start_hour: Mapped[int] = mapped_column(Integer, default=7)
     window_end_hour: Mapped[int] = mapped_column(Integer, default=22)
     paused: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 0028: vem marcado no "Grupos ▾" da aprovação e no link avulso de todo produto, não só
+    # dos do nicho dele (o grupo Família, que mais rende, desde 13/10/2026).
+    always_checked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())
     # 0008: grupo de verdade no WhatsApp (JID `…@g.us`), ligado pela tela Grupos.
     wa_jid: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)

@@ -11,15 +11,16 @@
 {%- endmacro %}
 
 {# "Grupos ▾" do Aprovar: caixinhas ligadas ao formulário de aprovação pelo atributo form; vem
-   marcado o grupo do nicho do produto. O conteúdo do {% call %} (o "Trocar nicho") vai no fim. #}
+   marcado o grupo do nicho do produto e o grupo "sempre marcado". O conteúdo do {% call %} (o "Trocar nicho") vai no fim. #}
 {% macro grupos_aprovar(form_id, niche_id, targets) -%}
 {% set marked = targets | selectattr("niche_id", "equalto", niche_id) | list %}
+{% set marked = marked + (targets | selectattr("always_checked") | rejectattr("niche_id", "equalto", niche_id) | list) %}
 <details class="grupos-drop" data-grupos="{{ form_id }}">
   <summary title="Grupos que recebem o post ao aprovar"><span data-resumo>{% if marked %}{{ marked | map(attribute="label") | join(" + ") }}{% else %}escolher grupo{% endif %}</span></summary>
   <div class="grupos-painel">
     <fieldset class="grupos-marcar">
       <legend>Aprovar manda para</legend>
-      {% for t in targets %}<label><input type="checkbox" form="{{ form_id }}" name="channel_id" value="{{ t.id }}"{% if t.niche_id == niche_id %} checked{% endif %}> {{ t.label }}</label>{% endfor %}
+      {% for t in targets %}<label><input type="checkbox" form="{{ form_id }}" name="channel_id" value="{{ t.id }}"{% if t.niche_id == niche_id or t.always_checked %} checked{% endif %}> {{ t.label }}</label>{% endfor %}
     </fieldset>
     <p class="erro" data-erro hidden>Marque pelo menos um grupo.</p>
     {% if caller is defined %}<div class="grupos-nicho"><small>Nicho do produto (só a classificação, não aprova)</small>{{ caller() }}</div>{% endif %}

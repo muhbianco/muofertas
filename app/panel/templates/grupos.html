@@ -30,6 +30,7 @@
     </select>
   </label>
   <label class="marcar"><input type="checkbox" name="paused" value="1" {% if c and c.paused %}checked{% endif %}> Pausado (nada é publicado)</label>
+  <label class="marcar"><input type="checkbox" name="sempre" value="1" {% if c and c.always_checked %}checked{% endif %}> Sempre marcado ao aprovar e no link avulso (produto de qualquer nicho)</label>
   <button class="botao aprovar" type="submit">{{ label }}</button>
 </form>
 {% endmacro %}

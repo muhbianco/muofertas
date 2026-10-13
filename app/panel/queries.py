@@ -168,6 +168,7 @@ class GroupTarget:
     id: int
     niche_id: int
     label: str
+    always_checked: bool = False  # marcado para produto de qualquer nicho
 
 
 async def approval_targets(db: AsyncSession) -> list[GroupTarget]:
@@ -175,7 +176,7 @@ async def approval_targets(db: AsyncSession) -> list[GroupTarget]:
     grupo só quando o nicho tem mais de um."""
     rows = (
         await db.execute(
-            select(Channel.id, Channel.niche_id, Channel.name, Niche.name)
+            select(Channel.id, Channel.niche_id, Channel.name, Niche.name, Channel.always_checked)
             .join(Niche, Niche.id == Channel.niche_id)
             .where(Niche.active.is_(True), Channel.paused.is_(False))
             .order_by(Niche.id, Channel.id)
@@ -183,15 +184,16 @@ async def approval_targets(db: AsyncSession) -> list[GroupTarget]:
         )
     ).all()
     per_niche: dict[int, int] = {}
-    for _id, niche_id, _name, _niche in rows:
+    for _id, niche_id, _name, _niche, _always in rows:
         per_niche[niche_id] = per_niche.get(niche_id, 0) + 1
     return [
         GroupTarget(
             id=channel_id,
             niche_id=niche_id,
             label=channel_name if per_niche[niche_id] > 1 else niche_name.split(":")[0],
+            always_checked=bool(always),
         )
-        for channel_id, niche_id, channel_name, niche_name in rows
+        for channel_id, niche_id, channel_name, niche_name, always in rows
     ]
 
 

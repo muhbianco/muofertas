@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.clock import utcnow
 from app.models import CatalogProduct, Channel, Niche, OperatorDecision, Publication
-from tests.test_distribution_panel import csrf_of, evaluation
+from tests.test_distribution_panel import _group_form, csrf_of, evaluation
 from tests.test_panel import login, seed_admin
 
 
@@ -81,7 +81,12 @@ async def _whey(sessions: async_sessionmaker[AsyncSession]) -> dict[str, int]:
         s.add(ev)
         await s.flush()
         ids = {k: c.id for k, c in channels.items()}
-        return ids | {"product": product.id, "ev": ev.id, "sport_niche": sport.id}
+        return ids | {
+            "product": product.id,
+            "ev": ev.id,
+            "sport_niche": sport.id,
+            "family_niche": family.id,
+        }
 
 
 def _box(channel_id: int) -> str:
@@ -202,3 +207,27 @@ async def test_flash_deal_on_approval_goes_with_the_post_and_its_copies(
             p.channel_id: p.flash_ends_at for p in (await s.execute(select(Publication))).scalars()
         }
     assert flashes == {ids["sport"]: pub.flash_ends_at, ids["family"]: pub.flash_ends_at}
+
+
+async def test_always_checked_group_comes_marked_for_any_product(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """13/10/2026: o grupo Família, que mais rende, vem marcado para produto de qualquer nicho."""
+    secret = await seed_admin(sessions)
+    ids = await _whey(sessions)
+    assert (await login(client, secret)).status_code == 303
+    page = (await client.get("/grupos")).text
+    form = _group_form(csrf_of(page), ids["family_niche"], name="Grupo Família", sempre="1")
+    saved = await client.post(f"/grupos/{ids['family']}", data=form)
+    assert saved.status_code == 303
+    async with sessions() as s:
+        assert (await s.get(Channel, ids["family"])).always_checked  # type: ignore[union-attr]
+
+    queue = (await client.get("/")).text
+    box = f'form="aprovar-{ids["product"]}" '
+    assert box + _box(ids["sport"]) + " checked" in queue  # o do nicho do whey
+    assert box + _box(ids["family"]) + " checked" in queue  # e o Família, sempre
+    assert ">Moda Unissex e Esportes + Pais, mães e filhos<" in queue
+    manual = (await client.get("/postar/avulso")).text
+    assert _box(ids["family"]) + " checked" in manual
+    assert _box(ids["sport"]) + ">" in manual  # no avulso, só o "sempre marcado"
