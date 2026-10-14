@@ -126,3 +126,22 @@ async def test_hourly_cap_is_enforced(settings: Settings) -> None:
             await client.highlights("MLB1")
     finally:
         await client.aclose()
+
+
+async def test_error_keeps_what_the_ml_answered(settings: Settings) -> None:
+    """14/10/2026: o 400 ficou sem explicação porque o erro guardava só "http 400"."""
+    import httpx
+
+    fake = FakeML()
+    fake.override = lambda r: (
+        httpx.Response(400, text='{"message": "invalid limit"}')
+        if r.url.path.endswith("/items")
+        else None
+    )
+    client = MercadoLivreClient(settings, transport=fake.transport())
+    try:
+        with pytest.raises(ml.MercadoLivreError) as caught:
+            await client.product_items("MLBP1")
+    finally:
+        await client.aclose()
+    assert str(caught.value) == 'http 400: {"message": "invalid limit"}'

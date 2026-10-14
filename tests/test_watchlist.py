@@ -78,6 +78,7 @@ async def test_watch_creates_a_hot_product_and_stop_deactivates_it(
         "hot",
     )
     assert product.name == "Cebolinha 50 mL" and product.niche_id == niche_id
+    assert product.hot_since is not None  # as 12 h de quente contam do vigiar
     assert "Cebolinha 50 mL" in (await client.get("/vigiar")).text
 
     again = await client.post("/vigiar", data={"csrf": csrf, "url": PAGE, "niche_id": niche_id})

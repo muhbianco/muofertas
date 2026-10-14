@@ -623,12 +623,75 @@ async def test_offer_without_listings_leaves_the_queue_instead_of_blocking_it(
     wa_client = WuzapiClient(cfg(), transport=wa.transport())
     try:
         assert await send_due(sessions, ml_client, wa_client, NOW) == 0
+        pub = await state(sessions)
+        # 1º 404: pode ser o ML instável (14/10/2026). Fica pronto, adiado 30 min.
+        assert pub.state == "ready" and pub.retry_after is not None
+        calls = len(fake_ml.calls)
+        assert await send_due(sessions, ml_client, wa_client, NOW + timedelta(minutes=10)) == 0
+        assert len(fake_ml.calls) == calls  # adiado: nem tenta
+        # 2º 404, depois da espera: aí sim sai da fila.
+        assert await send_due(sessions, ml_client, wa_client, NOW + timedelta(minutes=31)) == 0
     finally:
         await ml_client.aclose()
         await wa_client.aclose()
     pub = await state(sessions)
-    assert (pub.state, pub.note) == ("skipped", "a oferta saiu do ar")  # sai da frente da fila
+    assert (pub.state, pub.note) == ("skipped", "a oferta saiu do ar")
     assert wa.sent == []
+
+
+async def test_a_deferred_post_lets_the_next_one_in_the_group_go(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """O post adiado pelo 1º 404 não trava o grupo: na rodada seguinte sai o próximo da fila."""
+    first = await approve(sessions)
+    async with sessions() as session, session.begin():
+        a = await session.get(Publication, first)
+        assert a is not None
+        b_product = CatalogProduct(
+            marketplace="mercadolivre",
+            external_id="MLBP2",
+            niche_id=(await session.get(CatalogProduct, a.product_id)).niche_id,  # type: ignore[union-attr]
+            name="Esteira Elétrica",
+            discovered_via="highlights",
+            active=True,
+            tier="warm",
+            next_check_at=NOW,
+            consecutive_failures=0,
+            first_seen_at=NOW,
+        )
+        session.add(b_product)
+        await session.flush()
+        session.add(
+            Publication(
+                channel_id=a.channel_id,
+                product_id=b_product.id,
+                idempotency_key="b",
+                dedup_key="mercadolivre:MLBP2",
+                state="ready",
+                tier=a.tier,
+                target_url=a.target_url,
+                affiliate_url=a.affiliate_url,
+                item_id=a.item_id,
+                approved_price_cents=a.approved_price_cents,
+                created_at=a.created_at + timedelta(minutes=1),
+            )
+        )
+    wa = FakeWuzapi()
+    fake_ml = FakeML(offers={"MLBP2": [{"item_id": ITEM, "price": 449.90, "currency_id": "BRL"}]})
+    ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
+    wa_client = WuzapiClient(cfg(), transport=wa.transport())
+    try:
+        assert await send_due(sessions, ml_client, wa_client, NOW) == 0  # MLBP1: 404, adiado
+        assert await send_due(sessions, ml_client, wa_client, NOW + timedelta(minutes=1)) == 1
+    finally:
+        await ml_client.aclose()
+        await wa_client.aclose()
+    async with sessions() as session:
+        states = dict(
+            (await session.execute(select(Publication.id, Publication.state))).tuples().all()
+        )
+    assert states[first] == "ready" and sorted(states.values()) == ["ready", "sent"]
+    assert len(wa.sent) == 1 and "Esteira" in json.dumps(wa.sent[0], ensure_ascii=False)
 
 
 async def test_post_header_is_the_product_niche_not_the_group(

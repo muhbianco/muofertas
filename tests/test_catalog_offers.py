@@ -262,3 +262,41 @@ def test_originals_differ_only_when_the_strikethrough_changes_or_was_unknown() -
     assert not new.originals_differ_from(new)
     assert new.originals_differ_from(replace(new, eligible_original_cents=16000))
     assert not new.originals_differ_from(None)
+
+
+def test_hot_lasts_12h_from_the_drop_even_if_the_price_keeps_moving() -> None:
+    """14/10/2026: quente durava 48 h desde qualquer mudança; com preço mudando todo dia, 579
+    produtos não esfriavam. Agora conta da última queda relevante."""
+    moved_recently = NOW - timedelta(hours=1)
+    still = next_tier(
+        Tier.HOT,
+        previous=snap(10_000),
+        new=snap(9_800),
+        last_changed_at=moved_recently,
+        now=NOW,
+        policy=POLICY,
+        hot_since=NOW - timedelta(hours=11),
+    )
+    cooled = next_tier(
+        Tier.HOT,
+        previous=snap(10_000),
+        new=snap(9_800),
+        last_changed_at=moved_recently,
+        now=NOW,
+        policy=POLICY,
+        hot_since=NOW - timedelta(hours=13),
+    )
+    assert (still, cooled) == (Tier.HOT, Tier.WARM)
+    # Nova queda relevante: volta (ou fica) quente.
+    assert (
+        next_tier(
+            Tier.HOT,
+            previous=snap(10_000),
+            new=snap(9_000),
+            last_changed_at=NOW,
+            now=NOW,
+            policy=POLICY,
+            hot_since=NOW - timedelta(hours=13),
+        )
+        is Tier.HOT
+    )

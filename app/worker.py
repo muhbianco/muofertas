@@ -36,6 +36,7 @@ from app.integrations.mercadolivre import (
     CallBudgetExceededError,
     MercadoLivreClient,
     RateLimitedError,
+    UnstableError,
 )
 from app.integrations.ml_affiliate import AffiliatePortal
 from app.integrations.wuzapi import WuzapiClient
@@ -45,6 +46,8 @@ from app.measurement.sales import SalesWatch
 logger = get_logger(__name__)
 RATE_LIMIT_FIRST_PAUSE_SECONDS = 120
 RATE_LIMIT_MAX_PAUSE_SECONDS = 15 * 60
+# ML instável (disjuntor do coletor): pausa fixa; a instabilidade de 14/10/2026 durou 51 min.
+UNSTABLE_PAUSE_SECONDS = 10 * 60
 
 
 @dataclass
@@ -65,6 +68,11 @@ class MlPause:
         )
         self.until = now + timedelta(seconds=seconds)
         return float(seconds)
+
+    def unstable(self, now: datetime) -> float:
+        """Muitos produtos falhando juntos: 10 min sem chamar o ML (nem coleta nem envio)."""
+        self.until = now + timedelta(seconds=UNSTABLE_PAUSE_SECONDS)
+        return float(UNSTABLE_PAUSE_SECONDS)
 
     def budget_exhausted(self, now: datetime) -> float:
         """Teto nosso por hora: volta 5 s depois da virada da hora."""
@@ -92,6 +100,13 @@ async def _collect_round(
         logger.warning(
             "ML respondeu 429; coleta e envio em pausa",
             extra={"pause_s": wait, "seguidos": ml_pause.streak},
+        )
+        return False
+    except UnstableError as exc:
+        wait = ml_pause.unstable(utcnow())
+        logger.warning(
+            "ML instável; coleta e envio em pausa",
+            extra={"pause_s": wait, "why": str(exc), "status": exc.status},
         )
         return False
     except CallBudgetExceededError:

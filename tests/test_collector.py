@@ -14,6 +14,7 @@ from app.integrations.mercadolivre import MercadoLivreClient
 from app.models import (
     CatalogProduct,
     CollectionRun,
+    IntegrationError,
     MarketplaceSeller,
     Niche,
     NicheCategory,
@@ -195,27 +196,41 @@ async def test_refresh_fills_the_strikethrough_price_without_faking_a_price_chan
     assert not product.needs_evaluation
 
 
-async def test_refresh_not_found_deactivates(
+async def test_refresh_not_found_deactivates_only_on_the_third_in_a_row(
     sessions: async_sessionmaker[AsyncSession], settings: Settings
 ) -> None:
+    """14/10/2026: o ML instável respondeu 404 para produto com oferta; desativar no 1º tirou
+    230 produtos da base. Agora só no 3º seguido."""
     await seed(sessions)
     fake = fake_ml()
     client = MercadoLivreClient(settings, transport=fake.transport())
     collector = Collector(sessions, client, settings)
+
+    async def due_now() -> None:
+        async with sessions() as session, session.begin():
+            (await session.execute(select(CatalogProduct))).scalar_one().next_check_at = utcnow()
+
     try:
         await collector.discover_due()
         del fake.offers["MLBP1"]
-        stats = await collector.refresh_due()
+        for expected_active in (True, True, False):
+            await due_now()
+            stats = await collector.refresh_due()
+            assert stats.errors == 1
+            async with sessions() as session:
+                product = (await session.execute(select(CatalogProduct))).scalar_one()
+            assert product.active is expected_active
     finally:
         await client.aclose()
-    assert stats.errors == 1
     async with sessions() as session:
-        product = (await session.execute(select(CatalogProduct))).scalar_one()
-        errors = (
-            await session.execute(select(func.count()).select_from(CollectionRun))
-        ).scalar_one()
-    assert product.active is False
-    assert errors == 2  # descoberta + atualização registradas
+        runs = (await session.execute(select(func.count()).select_from(CollectionRun))).scalar_one()
+        error = (
+            (await session.execute(select(IntegrationError).order_by(IntegrationError.id.desc())))
+            .scalars()
+            .first()
+        )
+    assert runs == 4  # descoberta + três atualizações
+    assert error is not None and error.message and error.message.startswith("404: ")
 
 
 async def test_rate_limit_stops_batch_and_keeps_partial_run(
@@ -304,3 +319,95 @@ async def test_refresh_prices_only_eligible_sellers_and_caches_reputation(
     )
     assert (row.min_official_price_cents, row.official_item_id) == (37990, "MLB4")
     assert sellers == 4
+
+
+async def _many_due(sessions: async_sessionmaker[AsyncSession], n: int) -> None:
+    now = utcnow()
+    async with sessions() as session, session.begin():
+        niche = Niche(slug="casa-mimos", name="Casa", active=True, created_at=now)
+        session.add(niche)
+        await session.flush()
+        for i in range(n):
+            session.add(
+                CatalogProduct(
+                    marketplace="mercadolivre",
+                    external_id=f"MLBX{i}",
+                    niche_id=niche.id,
+                    name=f"Produto {i}",
+                    discovered_via="highlights",
+                    active=True,
+                    tier="warm",
+                    next_check_at=now - timedelta(minutes=1),
+                    consecutive_failures=0,
+                    first_seen_at=now,
+                )
+            )
+
+
+async def test_unstable_ml_stops_the_batch_and_nobody_takes_the_blame(
+    sessions: async_sessionmaker[AsyncSession], settings: Settings
+) -> None:
+    """14/10/2026: 51 min de 400/404 em produtos com oferta. Muitos falhando juntos é o ML: o lote
+    para, nenhum produto leva falha nem é desativado, e o worker pausa."""
+    import httpx
+
+    await _many_due(sessions, 30)
+    fake = FakeML(offers={})
+    fake.override = lambda r: (
+        httpx.Response(400, text="bad request") if r.url.path.endswith("/items") else None
+    )
+    client = MercadoLivreClient(settings, transport=fake.transport())
+    collector = Collector(sessions, client, settings)
+    try:
+        with pytest.raises(ml.UnstableError):
+            await collector.refresh_due()
+    finally:
+        await client.aclose()
+    items_calls = [c for c in fake.calls if c.endswith("/items")]
+    assert len(items_calls) < 15  # parou cedo, não varreu o lote todo
+    async with sessions() as session:
+        products = (await session.execute(select(CatalogProduct))).scalars().all()
+        run = (await session.execute(select(CollectionRun))).scalar_one()
+        stored = (await session.execute(select(IntegrationError.message))).scalars().all()
+    assert all(p.active and p.consecutive_failures == 0 for p in products)
+    assert all(p.next_check_at <= utcnow() for p in products)  # continuam vencidos
+    assert run.status == "partial" and "ML instável" in (run.note or "")
+    assert stored and all("bad request" in m for m in stored)  # o que o ML respondeu
+
+
+async def test_batch_cut_by_rate_limit_writes_nothing(
+    sessions: async_sessionmaker[AsyncSession], settings: Settings
+) -> None:
+    """Lote cortado no meio (429/teto): sem a reputação dos vendedores o resumo sairia sem preço
+    elegível e viraria mudança falsa. Nada é gravado; o lote volta depois da pausa."""
+    import httpx
+
+    await _many_due(sessions, 5)
+    fake = FakeML(offers={f"MLBX{i}": [offer(f"MLB{i}", 100.0)] for i in range(5)})
+    seen = {"items": 0}
+
+    def third_is_429(request: httpx.Request) -> httpx.Response | None:
+        if request.url.path.endswith("/items"):
+            seen["items"] += 1
+            if seen["items"] == 3:
+                return httpx.Response(429)
+        return None
+
+    fake.override = third_is_429
+    client = MercadoLivreClient(settings, transport=fake.transport())
+    collector = Collector(sessions, client, settings)
+    try:
+        with pytest.raises(ml.RateLimitedError):
+            await collector.refresh_due()
+    finally:
+        await client.aclose()
+    async with sessions() as session:
+        observations = (
+            await session.execute(select(func.count()).select_from(PriceObservation))
+        ).scalar_one()
+        due = (
+            await session.execute(
+                select(func.count()).where(CatalogProduct.next_check_at <= utcnow())
+            )
+        ).scalar_one()
+    assert observations == 0 and due == 5

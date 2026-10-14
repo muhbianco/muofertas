@@ -322,13 +322,14 @@ async def fetch_recheck(
 ) -> Recheck:
     """Chamada ao ML (fora de transação).
 
-    404 é o produto sem nenhuma oferta (o coletor também o desativa): a oferta saiu do ar. Tratar
-    como "ML fora" deixava o post em 1º na fila para sempre e travava o grupo (13/10/2026).
+    404 é o produto sem nenhuma oferta, ou o ML instável respondendo 404 falso (14/10/2026): volta
+    `not_found`, e o envio confirma antes de tirar o post da fila. Tratar como "ML fora" deixava o
+    post em 1º na fila para sempre e travava o grupo (13/10/2026).
     """
     try:
         offers = await client.product_items(external_id)
     except NotFoundError:
-        return Recheck("gone", None)
+        return Recheck("not_found", None)
     except MercadoLivreError as exc:
         raise DistributionError(
             f"o ML não respondeu ({exc.status or 'rede'}); tente de novo"
@@ -344,7 +345,7 @@ def apply_recheck(pub: Publication, recheck: Recheck, now: datetime) -> None:
     pub.message = (
         None  # remontada com o preço e a hora novos (o Pix vale pela hora em que foi visto)
     )
-    if recheck.status == "gone":
+    if recheck.status in ("gone", "not_found"):
         pub.note = "a oferta saiu do ar"
     elif recheck.status == "price_up":
         pub.note = "o preço subiu mais de 3% desde a aprovação"

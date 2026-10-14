@@ -16,7 +16,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 import httpx
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.logging import get_logger
@@ -40,6 +40,8 @@ STUCK_AFTER = timedelta(minutes=10)
 # Folga entre o convite do grupo e a oferta seguinte.
 AFTER_INVITE = timedelta(minutes=5)
 ROBOT = "envio automático"
+# O 1º 404 na conferência adia o post (o próximo do grupo sai no lugar); o 2º tira da fila.
+NOT_FOUND_RETRY = timedelta(minutes=30)
 
 
 async def recover_stuck(sessions: async_sessionmaker[AsyncSession], now: datetime) -> int:
@@ -84,7 +86,12 @@ async def _due(sessions: async_sessionmaker[AsyncSession], now: datetime) -> lis
             pub = (
                 await db.execute(
                     select(Publication)
-                    .where(Publication.channel_id == channel.id, Publication.state == "ready")
+                    .where(
+                        Publication.channel_id == channel.id,
+                        Publication.state == "ready",
+                        # adiado pelo 1º 404: o próximo da fila sai no lugar (nada de travar)
+                        or_(Publication.retry_after.is_(None), Publication.retry_after <= now),
+                    )
                     .order_by(*ready_order(now))
                     .limit(1)
                 )
@@ -177,7 +184,21 @@ async def send_one(
         pub = await db.get(Publication, publication_id, with_for_update=True)
         if pub is None or pub.state != "ready":
             return False  # o operador mexeu enquanto o ML respondia
+        if result is not None and result.status == "not_found" and pub.retry_after is None:
+            # 1º 404: o ML instável também responde 404 para produto com oferta (14/10/2026,
+            # 6 posts tirados da fila por engano). Tenta de novo mais tarde; o 2º tira da fila.
+            pub.retry_after = now + NOT_FOUND_RETRY
+            logger.info(
+                "404 na conferência; envio adiado",
+                extra={
+                    "publication_id": publication_id,
+                    "retry_after": pub.retry_after.isoformat(),
+                },
+            )
+            return False
         if result is not None:
+            if result.status != "not_found":
+                pub.retry_after = None  # o 404 não se confirmou: um próximo volta a ter espera
             apply_recheck(pub, result, now)
             if result.status != "ok":
                 pub.state = "skipped"

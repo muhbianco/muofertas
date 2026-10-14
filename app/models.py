@@ -153,6 +153,8 @@ class CatalogProduct(Base):
     last_score: Mapped[float | None] = mapped_column(Numeric(5, 1, asdecimal=False), nullable=True)
     # Painel (0003): o operador tira o produto da fila de vez.
     operator_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 0029: quando entrou (ou voltou) na camada quente, pela última queda relevante.
+    hot_since: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     # 0013: % OFF do próprio anúncio na última avaliação (travas do post); ordena a fila.
     listing_discount_pct: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 0019: nicho escolhido pelo operador; o seed das categorias não move mais o produto.
@@ -440,6 +442,8 @@ class Publication(Base):
     # 0015: posição na fila de envio do grupo, quando o operador reordena (vazio = ordem de
     # aprovação, depois das posicionadas).
     queue_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # 0029: o 1º 404 na conferência adia o envio até aqui (pode ser instabilidade do ML).
+    retry_after: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     note: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())

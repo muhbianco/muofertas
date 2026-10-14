@@ -31,3 +31,10 @@ def test_hourly_budget_waits_for_the_next_hour() -> None:
     assert NOW + timedelta(seconds=seconds) == datetime(2026, 10, 11, 12, 0, 5)
     assert pause.active(datetime(2026, 10, 11, 11, 59, 59))
     assert not pause.active(datetime(2026, 10, 11, 12, 0, 5))
+
+
+def test_unstable_ml_pauses_ten_minutes() -> None:
+    pause = MlPause()
+    assert pause.unstable(NOW) == 600
+    assert pause.active(NOW + timedelta(minutes=9))
+    assert not pause.active(NOW + timedelta(minutes=10))

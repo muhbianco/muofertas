@@ -302,12 +302,26 @@ class TierPolicy:
     cold: timedelta
     # queda que promove para a camada quente
     hot_drop_ratio: float = 0.08
-    # sem mudança por este tempo, desce de camada
-    cool_down_hot: timedelta = timedelta(hours=48)
+    # quente dura isto desde a última queda relevante (`hot_since`); era 48 h desde qualquer
+    # mudança, e como o preço muda quase todo dia o produto não esfriava (14/10/2026: 579 quentes
+    # x 3 leituras/h, metade da demanda)
+    cool_down_hot: timedelta = timedelta(hours=12)
+    # sem mudança por este tempo, a morna desce para fria
     cool_down_warm: timedelta = timedelta(days=7)
 
     def interval(self, tier: Tier) -> timedelta:
         return {Tier.HOT: self.hot, Tier.WARM: self.warm, Tier.COLD: self.cold}[tier]
+
+
+def is_hot_drop(
+    previous: CatalogSnapshot | None, new: CatalogSnapshot | None, policy: TierPolicy
+) -> bool:
+    """Queda que põe (ou mantém) o produto na camada quente."""
+    return bool(
+        previous
+        and new
+        and new.tracking_price_cents <= previous.tracking_price_cents * (1 - policy.hot_drop_ratio)
+    )
 
 
 def next_tier(
@@ -318,18 +332,17 @@ def next_tier(
     last_changed_at: datetime | None,
     now: datetime,
     policy: TierPolicy,
+    hot_since: datetime | None = None,
 ) -> Tier:
-    """Sobe para quente numa queda relevante; desce devagar quando nada muda."""
-    if (
-        previous
-        and new
-        and new.tracking_price_cents <= previous.tracking_price_cents * (1 - policy.hot_drop_ratio)
-    ):
+    """Sobe para quente numa queda relevante e fica `cool_down_hot` desde ela (`hot_since`);
+    a morna desce para fria quando nada muda por `cool_down_warm`."""
+    if is_hot_drop(previous, new, policy):
         return Tier.HOT
     if new and previous is None:
         return current
     quiet_for = now - last_changed_at if last_changed_at else timedelta(0)
-    if current is Tier.HOT and quiet_for >= policy.cool_down_hot:
+    hot_for = now - hot_since if hot_since else quiet_for
+    if current is Tier.HOT and hot_for >= policy.cool_down_hot:
         return Tier.WARM
     if current is Tier.WARM and quiet_for >= policy.cool_down_warm:
         return Tier.COLD

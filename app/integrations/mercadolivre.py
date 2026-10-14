@@ -59,6 +59,11 @@ class ForbiddenError(MercadoLivreError):
     """403 de política: permissão do app ou rota fechada para afiliado."""
 
 
+class UnstableError(MercadoLivreError):
+    """Muitos produtos diferentes falhando juntos no mesmo lote: o ML instável, não os produtos
+    (14/10/2026, 51 min de 400 e 404 falsos). O lote para e a coleta e o envio pausam."""
+
+
 class NotFoundError(MercadoLivreError):
     pass
 
@@ -192,16 +197,22 @@ class MercadoLivreClient:
                 raise RateLimitedError("429 do ML", status=status, path=path)
             if status == 403:
                 raise ForbiddenError(
-                    "403 de política", status=status, path=path, code=_error_code(body)
+                    f"403 de política: {_snippet(resp)}",
+                    status=status,
+                    path=path,
+                    code=_error_code(body),
                 )
             if status == 404:
-                raise NotFoundError("404", status=status, path=path)
+                raise NotFoundError(f"404: {_snippet(resp)}", status=status, path=path)
             # 206 (resposta parcial) é passageiro: a mesma rota volta 200 completa logo depois.
             if (status >= 500 or status == 206) and attempt + 1 < MAX_ATTEMPTS:
                 await asyncio.sleep(_backoff(attempt))
                 continue
             raise MercadoLivreError(
-                f"http {status}", status=status, path=path, code=_error_code(body)
+                f"http {status}: {_snippet(resp)}",
+                status=status,
+                path=path,
+                code=_error_code(body),
             )
         raise MercadoLivreError("tentativas esgotadas", path=path)
 
@@ -264,6 +275,12 @@ def _json(resp: httpx.Response) -> Any:
         return resp.json()
     except ValueError:
         return None
+
+
+def _snippet(resp: httpx.Response) -> str:
+    """O começo do que o ML respondeu, numa linha: o 400 de 14/10 ficou sem explicação porque o
+    erro guardava só "http 400" (sem código no corpo)."""
+    return " ".join(resp.text.split())[:200] or "(corpo vazio)"
 
 
 def _error_code(body: Any) -> str | None:

@@ -26,6 +26,7 @@ from app.domain.catalog_offers import (
     SellerInfo,
     Tier,
     TierPolicy,
+    is_hot_drop,
     needs_heartbeat,
     next_tier,
     seller_ids,
@@ -38,6 +39,7 @@ from app.integrations.mercadolivre import (
     MercadoLivreError,
     NotFoundError,
     RateLimitedError,
+    UnstableError,
 )
 from app.models import (
     CatalogProduct,
@@ -51,6 +53,12 @@ from app.models import (
 
 logger = get_logger(__name__)
 MAX_FAILURES_BEFORE_COLD = 3
+# 404 só desativa o produto no 3º seguido: durante instabilidade o ML responde 404 para
+# produto com oferta (14/10/2026: 230 desativados em 51 min, 2 de cada 3 por engano).
+NOT_FOUND_STRIKES = 3
+# Disjuntor: tantos produtos falhando no lote, e pelo menos metade dos tentados, é o ML
+# instável. O lote para, ninguém leva falha, e o worker pausa coleta e envio.
+UNSTABLE_MIN_FAILURES = 10
 DOMAIN_NAMES_PER_ROUND = 5
 SELLER_TTL = timedelta(days=7)
 
@@ -460,7 +468,8 @@ class Collector:
         raw: dict[int, list[dict[str, Any]]] = {}
         results: dict[int, CatalogSnapshot | MercadoLivreError | None] = {}
         stop: MercadoLivreError | None = None
-        for product in due:
+        failures = 0
+        for attempts, product in enumerate(due, start=1):
             try:
                 raw[product.id] = await self._client.product_items(product.external_id)
             except (RateLimitedError, CallBudgetExceededError) as exc:
@@ -469,7 +478,15 @@ class Collector:
             except MercadoLivreError as exc:
                 results[product.id] = exc
                 stats.errors += 1
+                failures += 1
                 await self._record_error("ml_refresh", run_id, exc)
+                if failures >= UNSTABLE_MIN_FAILURES and failures * 2 >= attempts:
+                    stop = UnstableError(
+                        f"ML instável: {failures} de {attempts} produtos com erro no lote",
+                        status=exc.status,
+                        path=exc.path,
+                    )
+                    break
 
         # Reputação dos vendedores do lote inteiro (cache de 7 dias + /users/bulk para o resto).
         sellers: dict[int, SellerInfo] = {}
@@ -483,6 +500,11 @@ class Collector:
                 stop = exc
         for product_id, offers in raw.items():
             results[product_id] = summarize(offers, sellers, self._offer_policy)
+        if stop is not None:
+            # Lote interrompido (429, teto, ML instável): sem a reputação dos vendedores o resumo
+            # sai sem preço elegível e viraria "mudança" falsa; a falha de um ML instável não é do
+            # produto. Nada é gravado: o lote inteiro continua vencido e volta depois da pausa.
+            results = {}
 
         now = utcnow()
         async with self._sessions() as session, session.begin():
@@ -506,7 +528,10 @@ class Collector:
                 current.last_checked_at = now
                 if isinstance(outcome, MercadoLivreError):
                     current.consecutive_failures += 1
-                    if isinstance(outcome, NotFoundError):
+                    if (
+                        isinstance(outcome, NotFoundError)
+                        and current.consecutive_failures >= NOT_FOUND_STRIKES
+                    ):
                         current.active = False
                     tier = (
                         Tier.COLD
@@ -551,7 +576,12 @@ class Collector:
                     last_changed_at=current.last_changed_at or current.first_seen_at,
                     now=now,
                     policy=self._policy,
+                    hot_since=current.hot_since,
                 )
+                if is_hot_drop(prev, outcome, self._policy):
+                    current.hot_since = now  # queda nova: o tempo de quente recomeça
+                elif tier is not Tier.HOT:
+                    current.hot_since = None
                 current.tier = tier.value
                 current.next_check_at = now + _jitter(self._policy.interval(tier))
 

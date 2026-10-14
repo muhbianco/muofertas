@@ -209,7 +209,7 @@ def parse_affiliate_links(text: str, expected: int) -> list[str]:
 
 @dataclass(frozen=True, slots=True)
 class Recheck:
-    status: str  # ok | gone | price_up
+    status: str  # ok | gone | price_up | not_found (404: confirmar antes de tirar da fila)
     price_cents: int | None
     original_cents: int | None = None  # o "de" do próprio anúncio, se houver
     official_cents: int | None = None  # menor preço de loja oficial do produto, na mesma leitura

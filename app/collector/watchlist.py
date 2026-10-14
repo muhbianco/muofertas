@@ -102,6 +102,7 @@ async def watch(
         product.operator_blocked = False
         # Vigiado pelo operador: camada quente e leitura já no próximo ciclo.
         product.tier = Tier.HOT.value
+        product.hot_since = now  # as 12 h de quente contam daqui, não de uma queda antiga
         product.next_check_at = now
         product.needs_evaluation = True
         await db.flush()
