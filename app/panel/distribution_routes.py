@@ -41,6 +41,7 @@ from app.domain.distribution import (
     MAX_PER_DAY,
     MIN_SPACING_MINUTES,
     ML_TAG_RE,
+    format_brl,
     is_fresh,
     is_urgent,
     local_day_start,
@@ -88,7 +89,38 @@ POST_NOTICES = {
     "vale para post que ainda não saiu).",
     "removido": "Post tirado da fila de envio. O produto volta para a aprovação quando o preço "
     "mudar.",
+    "enviado": "Post enviado agora para o grupo.",
 }
+
+
+def send_now_notice(pub: Publication | None) -> str:
+    """Por que o "Enviar agora" não mandou. Antes o painel voltava para a fila calado e o post
+    sumia: a panela de 14/10/2026 tinha subido de R$ 159,00 para R$ 169,90 e pareceu defeito."""
+    if pub is None:
+        return "Não enviado: o post não existe mais."
+    if pub.state == "sent":
+        return POST_NOTICES["enviado"]
+    if pub.state == "skipped":
+        approved, now_price = pub.approved_price_cents, pub.checked_price_cents
+        if approved and now_price and now_price > approved:
+            return (
+                f"Não enviado: o preço subiu de {format_brl(approved)} para "
+                f"{format_brl(now_price)} desde a aprovação, e o post saiu da fila. Para postar "
+                "pelo preço novo, aprove o produto de novo."
+            )
+        return f"Não enviado: {pub.note or 'a revalidação recusou'}. O post saiu da fila."
+    if pub.state == "ready" and pub.retry_after is not None:
+        return (
+            "Não enviado: o Mercado Livre não achou a oferta agora (pode ser instabilidade). "
+            "O post continua na fila e tenta de novo em 30 minutos."
+        )
+    if pub.state == "ready":
+        return (
+            "Não enviado: o Mercado Livre não respondeu. O post continua na fila; tente de novo "
+            "em alguns minutos."
+        )
+    return f"Não enviado: {pub.note or 'veja o post na lista de enviados'}."
+
 
 ERRORS = {
     "ml": "O Mercado Livre não respondeu. Tente revalidar de novo.",
@@ -415,8 +447,13 @@ async def post_move_up(
 
 
 @router.get("/postar", response_class=HTMLResponse)
-async def post_list(request: Request, db: Db, ctx: Admin, aviso: str | None = None) -> Response:
+async def post_list(
+    request: Request, db: Db, ctx: Admin, aviso: str | None = None, envio: int | None = None
+) -> Response:
     now = utcnow()
+    notice = POST_NOTICES.get(aviso or "")
+    if aviso == "nao-enviado" and envio is not None:
+        notice = send_now_notice(await db.get(Publication, envio))
     # Teto por grupo, não global: com um teto só, os primeiros grupos enchiam a lista e os
     # últimos (Tecnologia, Pais) sumiam da tela sem aviso.
     position = (
@@ -513,7 +550,7 @@ async def post_list(request: Request, db: Db, ctx: Admin, aviso: str | None = No
             "ctx": ctx,
             "groups": list(groups.values()),
             "move_targets": await _move_targets(db),
-            "notice": POST_NOTICES.get(aviso or ""),
+            "notice": notice,
             "attention": attention,
             "recent": recent,
         },
@@ -837,7 +874,9 @@ async def post_send_now(
     except DistributionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     logger.info("envio agora", extra={"publication_id": pub_id, "sent": sent, "user": ctx.username})
-    return _see_other("/postar")
+    if sent:
+        return _see_other("/postar?aviso=enviado")
+    return _see_other(f"/postar?aviso=nao-enviado&envio={pub_id}")
 
 
 @router.post("/postar/{pub_id}/grupo")

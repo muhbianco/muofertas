@@ -123,3 +123,45 @@ async def test_drag_form_and_buttons_on_the_post_page(
     page = (await client.get("/postar")).text
     assert page.index("Toalha") < page.index("Air fryer") < page.index("Panela")
     assert (await client.get("/static/fila.js")).status_code == 200
+
+
+def test_send_now_explains_why_it_did_not_send() -> None:
+    """14/10/2026: o "Enviar agora" de uma panela voltava para a fila calado e o post sumia; o
+    preço tinha subido de R$ 159,00 para R$ 169,90 desde a aprovação."""
+    from app.panel.distribution_routes import send_now_notice
+
+    def pub(**values: object) -> Publication:
+        return Publication(approved_price_cents=15900, **values)
+
+    price_up = send_now_notice(
+        pub(state="skipped", checked_price_cents=16990, note="o preço subiu mais de 3%")
+    )
+    assert (
+        "subiu de R$ 159,00 para R$ 169,90" in price_up and "aprove o produto de novo" in price_up
+    )
+    gone = send_now_notice(pub(state="skipped", note="a oferta saiu do ar"))
+    assert gone == "Não enviado: a oferta saiu do ar. O post saiu da fila."
+    deferred = send_now_notice(pub(state="ready", retry_after=utcnow()))
+    assert "tenta de novo em 30 minutos" in deferred
+    assert "não respondeu" in send_now_notice(pub(state="ready"))
+    assert "confira no grupo" in send_now_notice(
+        pub(state="unknown", note="o WhatsApp não confirmou o envio: confira no grupo se saiu")
+    )
+    assert send_now_notice(pub(state="sent")) == "Post enviado agora para o grupo."
+    assert send_now_notice(None) == "Não enviado: o post não existe mais."
+
+
+async def test_queue_page_shows_the_send_now_reason(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    secret = await seed_admin(sessions)
+    _fryer, pan, _towel = await seed(sessions)
+    async with sessions() as session, session.begin():
+        row = await session.get(Publication, pan)
+        assert row is not None
+        row.state, row.checked_price_cents = "skipped", 10990
+        row.note = "o preço subiu mais de 3% desde a aprovação"
+    assert (await login(client, secret)).status_code == 303
+    page = await client.get(f"/postar?aviso=nao-enviado&envio={pan}")
+    assert "o preço subiu de R$ 100,00 para R$ 109,90" in page.text
+    assert "não respondeu" not in (await client.get("/postar?aviso=nao-enviado")).text
