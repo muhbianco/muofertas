@@ -345,6 +345,25 @@ class OperatorDecision(Base):
     decided_at: Mapped[datetime] = mapped_column(UTCDateTime())
 
 
+class ApprovalClaim(Base):
+    """Quem marcou ✓/✕ o produto na fila de aprovação (0030): uma linha por produto.
+
+    Trava leve entre operadores: os outros veem "em aprovação por X" enquanto alguma aba de X
+    está aberta (`seen_at` recente) e não conseguem marcar o mesmo produto. A marca dura algumas
+    horas e acompanha o operador em outro aparelho. Não impede decidir: quem aprova mesmo assim
+    confirma na tela; a garantia de não aprovar duas vezes é do /decisao."""
+
+    __tablename__ = "approval_claim"
+
+    product_id: Mapped[int] = mapped_column(
+        ForeignKey("catalog_product.id", ondelete="CASCADE"), primary_key=True
+    )
+    actor: Mapped[str] = mapped_column(String(40))
+    mark: Mapped[str] = mapped_column(String(12))  # approved | rejected
+    claimed_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    seen_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
 class WorkerLease(Base):
     """Garante um agendador só, mesmo durante deploy (se curar sozinho: lição do Mu Tower)."""
 

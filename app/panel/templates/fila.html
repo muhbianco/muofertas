@@ -16,7 +16,7 @@
     {% endfor %}
   </ul>
 </aside>
-<div class="fila-main">
+<div class="fila-main" data-agora="{{ now_iso }}">
 <h1>Fila de aprovação</h1>
 {% if notice %}<p class="aviso">{{ notice }}</p>{% endif %}
 {% if open_alerts %}<p class="erro">⚠ {{ open_alerts }} alerta{{ 's' if open_alerts > 1 }} aberto{{ 's' if open_alerts > 1 }}: <a href="/saude">ver Saúde</a></p>{% endif %}
@@ -59,6 +59,7 @@
       <button type="button" class="m-sim" data-marca="approved" aria-pressed="false" title="Marcar para aprovar (V)" aria-label="Marcar para aprovar">✓</button>
       <button type="button" class="m-nao" data-marca="rejected" aria-pressed="false" title="Marcar para rejeitar (X)" aria-label="Marcar para rejeitar">✕</button>
     </div>
+    <p class="trava" data-trava role="status"></p>
     <div><span class="selo {{ c.tier }}">{{ c.tier }}</span>{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}{% if c.highlight_position %}<span class="selo top">{{ c.highlight_position }}º mais vendido</span>{% endif %}{% if c.sent_at %}<span class="selo enviado" title="Aprovar de novo antes de 7 dias sai como repetida">já foi pro grupo · {{ c.sent_at | local }}</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
     <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
     <div class="linha nicho-linha">{% if targets %}{% call grupos_aprovar("aprovar-" ~ c.product_id, c.niche_id, targets) %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endcall %}{% else %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endif %}</div>
@@ -87,6 +88,7 @@
       {% if c.evaluation_id %}<input type="hidden" name="evaluation_id" value="{{ c.evaluation_id }}">{% endif %}
       <input type="hidden" name="decision" value="{{ value }}">
       <input type="hidden" name="next" value="{{ next }}">
+      <input type="hidden" name="vista_em" value="{{ now_iso }}">
       {% if seguinte %}<input type="hidden" name="seguinte" value="{{ seguinte }}">{% endif %}
       {% if value == 'approved' and targets %}<input type="hidden" name="grupos" value="1">{% endif %}
       <button class="{{ cls }}" type="submit">{{ label }}</button>
@@ -113,4 +115,4 @@
 </div>
 </div>
 {% endblock %}
-{% block scripts %}<script src="/static/fila.js?v=7" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=8" defer></script>{% endblock %}

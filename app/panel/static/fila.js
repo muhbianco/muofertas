@@ -308,23 +308,32 @@
 // e aprovar vários de uma vez. Cada card tem ✓ (aprovar) e ✕ (rejeitar); a barra que acompanha a
 // rolagem aplica os marcados um por vez, na ordem da tela (que vira a ordem da fila de envio),
 // pelo mesmo /decisao do botão do card, com o Pix, o cupom e os grupos do próprio card. Problema
-// num card não para os outros: ele fica marcado com a mensagem. As marcas sobrevivem a recarregar
-// a aba (6 h). Sem este arquivo, os botões de cada card funcionam e o servidor volta para o card
-// seguinte.
+// num card não para os outros: ele fica marcado com a mensagem.
+//
+// Dois operadores: a marca vai para o servidor (/fila/marca) e a página consulta /fila/estado a
+// cada 15 s (1 min com a aba escondida). Card marcado por outro mostra "em aprovação por X" e não
+// aceita marca; card que outro decidiu sai da fila com quem decidiu. As marcas acompanham o
+// operador em outro aparelho. Sem este arquivo, os botões de cada card funcionam e o servidor
+// volta para o card seguinte.
 (function () {
   "use strict";
 
   var cards = Array.prototype.slice.call(document.querySelectorAll("article.card[data-card]"));
   var bar = document.querySelector("[data-lote]");
-  if (!cards.length || !bar || !window.fetch || !window.FormData || !window.Promise) {
+  var main = document.querySelector(".fila-main[data-agora]");
+  var csrfInput = document.querySelector("input[name=csrf]");
+  if (!cards.length || !bar || !main || !csrfInput || !window.fetch || !window.FormData ||
+      !window.Promise) {
     return;
   }
   document.documentElement.classList.add("js");
 
-  var KEY = "fila-marcas";
-  var KEEP_MS = 6 * 60 * 60 * 1000;
   var TIMEOUT_MS = 20000;
+  var POLL_VISIBLE_MS = 15000;
+  var POLL_HIDDEN_MS = 60000;
   var FIELDS = ["pix", "cupom", "ultimas", "acaba_em"];
+  var openedAt = main.getAttribute("data-agora");
+  var csrf = csrfInput.value;
   var title = bar.querySelector("[data-lote-titulo]");
   var hint = bar.querySelector("[data-lote-dica]");
   var apply = bar.querySelector("[data-lote-aplicar]");
@@ -335,14 +344,25 @@
   var running = false;
   var current = null;
   var refreshTimer = null;
+  var pollTimer = null;
+  var polling = false;
+  var stopped = false; // sessão venceu: para de consultar
+  var pollSeq = 0;
+  var touched = {}; // id -> pollSeq da última mudança local (o servidor não desfaz o que é novo)
 
   function live() {
-    // fora os que já foram decididos e estão saindo (a animação ainda os deixa na página)
-    return cards.filter(function (c) { return c.isConnected && !c.hasAttribute("data-saindo"); });
+    // fora os decididos (por mim, saindo, ou por outro operador)
+    return cards.filter(function (c) {
+      return c.isConnected && !c.hasAttribute("data-saindo") && !c.hasAttribute("data-decidido");
+    });
   }
 
   function cardOf(el) {
     return el && el.closest ? el.closest("article.card[data-card]") : null;
+  }
+
+  function idOf(card) {
+    return card.getAttribute("data-card");
   }
 
   function nameOf(card) {
@@ -351,52 +371,230 @@
     return text.length > 48 ? text.slice(0, 47) + "…" : text;
   }
 
+  function ago(minutes) {
+    if (!minutes) {
+      return "agora há pouco";
+    }
+    return minutes < 60 ? "há " + minutes + " min" : "há " + Math.floor(minutes / 60) + " h";
+  }
+
+  // ------------------------------------------------------------------ servidor
+
+  function post(url, data, accept) {
+    var body = new window.FormData();
+    Object.keys(data).forEach(function (k) { body.append(k, data[k]); });
+    return request(url, body, accept);
+  }
+
+  function request(url, body, accept) {
+    var controller = window.AbortController ? new window.AbortController() : null;
+    var timer = controller ? window.setTimeout(function () { controller.abort(); }, TIMEOUT_MS) : null;
+    return window.fetch(url, {
+      method: "POST",
+      body: body,
+      headers: { Accept: accept || "application/json" },
+      credentials: "same-origin",
+      signal: controller ? controller.signal : undefined
+    }).then(function (res) {
+      var type = res.headers.get("content-type") || "";
+      if (type.indexOf("application/json") === -1) {
+        // a sessão venceu: o servidor mandou para a tela de login
+        return {
+          ok: false,
+          stop: true,
+          relogin: true,
+          data: {},
+          mensagem: "A sessão venceu: entre de novo (as marcas ficam guardadas)."
+        };
+      }
+      return res.json().then(function (data) {
+        var detail = typeof data.detail === "string" ? data.detail : null;
+        var relogin = res.status === 401 || res.status === 403;
+        return {
+          ok: res.ok && data.ok !== false,
+          status: res.status,
+          stop: relogin,
+          relogin: relogin,
+          data: data,
+          mensagem: data.mensagem || detail || "Não deu certo (erro " + res.status + ")."
+        };
+      });
+    }, function () {
+      return {
+        ok: false,
+        stop: true,
+        data: {},
+        mensagem: "Sem resposta do servidor. Confira a conexão e tente de novo."
+      };
+    }).then(function (result) {
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+      return result;
+    });
+  }
+
   // ------------------------------------------------------------------ marcas
 
-  function loadMarks() {
-    try {
-      var raw = JSON.parse(window.sessionStorage.getItem(KEY) || "{}") || {};
-      var now = Date.now();
-      Object.keys(raw).forEach(function (id) {
-        if (!raw[id] || now - raw[id][1] > KEEP_MS) {
-          delete raw[id];
-        }
-      });
-      return raw;
-    } catch (e) {
-      return {};
-    }
-  }
-
-  var marks = loadMarks();
-
-  function saveMarks() {
-    try {
-      window.sessionStorage.setItem(KEY, JSON.stringify(marks));
-    } catch (e) {
-      /* sem armazenamento: as marcas valem só enquanto a página está aberta */
-    }
-  }
-
-  function setMark(card, value) {
-    var id = card.getAttribute("data-card");
+  function paintMark(card, value) {
     if (value) {
       card.setAttribute("data-marca", value);
-      marks[id] = [value, Date.now()];
     } else {
       card.removeAttribute("data-marca");
-      delete marks[id];
     }
     Array.prototype.forEach.call(card.querySelectorAll(".marcar button"), function (b) {
       b.setAttribute("aria-pressed", String(b.getAttribute("data-marca") === value));
     });
+  }
+
+  // Marca na tela na hora e grava no servidor; se outro operador já está com o produto, volta
+  // atrás e mostra quem.
+  function setMark(card, value) {
+    var before = card.getAttribute("data-marca");
+    if (before === value || card.hasAttribute("data-trava-por")) {
+      return;
+    }
+    touched[idOf(card)] = pollSeq;
+    paintMark(card, value);
     showMsg(card, "");
-    saveMarks();
     render();
+    post("/fila/marca", { csrf: csrf, product_id: idOf(card), marca: value || "" }).then(function (r) {
+      if (r.ok) {
+        return;
+      }
+      touched[idOf(card)] = pollSeq;
+      paintMark(card, before);
+      render();
+      if (r.status === 409 && r.data.por) {
+        lock(card, r.data);
+        toast(nameOf(card) + ": " + r.mensagem, "info");
+      } else {
+        toast(nameOf(card) + ": a marca não foi gravada. " + r.mensagem, "falha");
+        if (r.relogin) {
+          stopPolling();
+        }
+      }
+    });
   }
 
   function toggle(card, value) {
     setMark(card, card.getAttribute("data-marca") === value ? null : value);
+  }
+
+  function lock(card, info) {
+    card.setAttribute("data-trava-por", info.por);
+    card.setAttribute("data-trava-min", String(info.ha_min || 0));
+    setTrava(card, "🔒 Em aprovação por " + info.por + " · " + ago(info.ha_min));
+    Array.prototype.forEach.call(card.querySelectorAll(".marcar button"), function (b) {
+      b.disabled = true;
+      b.title = "Em aprovação por " + info.por;
+    });
+  }
+
+  function unlock(card) {
+    if (!card.hasAttribute("data-trava-por")) {
+      return;
+    }
+    card.removeAttribute("data-trava-por");
+    card.removeAttribute("data-trava-min");
+    setTrava(card, "");
+    Array.prototype.forEach.call(card.querySelectorAll(".marcar button"), function (b) {
+      b.disabled = false;
+      b.title = b.getAttribute("data-marca") === "approved"
+        ? "Marcar para aprovar (V)"
+        : "Marcar para rejeitar (X)";
+    });
+  }
+
+  // Outro operador (ou eu, noutro aparelho) decidiu: mostra quem e tira da fila em seguida.
+  function decided(card, text) {
+    if (card.hasAttribute("data-decidido") || card.hasAttribute("data-saindo")) {
+      return;
+    }
+    card.setAttribute("data-decidido", "");
+    paintMark(card, null);
+    setTrava(card, "✔ " + text + ". Saindo da fila.");
+    Array.prototype.forEach.call(card.querySelectorAll("button"), function (b) { b.disabled = true; });
+    if (current === card) {
+      current = null;
+    }
+    render();
+    window.setTimeout(function () { removeCard(card); }, 4000);
+  }
+
+  function setTrava(card, text) {
+    var box = card.querySelector("[data-trava]");
+    if (box) {
+      box.textContent = text;
+    }
+  }
+
+  // ------------------------------------------------------------------ estado dos outros
+
+  function schedulePoll(ms) {
+    window.clearTimeout(pollTimer);
+    if (!stopped) {
+      pollTimer = window.setTimeout(poll, ms);
+    }
+  }
+
+  function stopPolling() {
+    stopped = true;
+    window.clearTimeout(pollTimer);
+  }
+
+  function poll() {
+    if (stopped || polling) {
+      return;
+    }
+    var ids = live().map(idOf);
+    if (!ids.length) {
+      return;
+    }
+    polling = true;
+    var started = ++pollSeq;
+    post("/fila/estado", { csrf: csrf, ids: ids.join(","), desde: openedAt }).then(function (r) {
+      polling = false;
+      if (r.relogin) {
+        stopPolling();
+        toast("A sessão venceu: recarregue a página para continuar.", "falha");
+        return;
+      }
+      if (r.ok) {
+        applyBoard(r.data, started);
+      }
+      schedulePoll(document.hidden ? POLL_HIDDEN_MS : POLL_VISIBLE_MS);
+    });
+  }
+
+  function applyBoard(data, started) {
+    var mine = data.meus || {};
+    var others = data.outros || {};
+    var done = data.decididos || {};
+    live().forEach(function (card) {
+      var id = idOf(card);
+      if (card.classList.contains("ocupado")) {
+        return; // a decisão deste card está a caminho
+      }
+      if (done[id]) {
+        decided(card, done[id].mensagem);
+        return;
+      }
+      var fresh = touched[id] === undefined || touched[id] < started;
+      if (others[id]) {
+        if (card.getAttribute("data-marca") && fresh) {
+          paintMark(card, null);
+          toast(nameOf(card) + ": " + others[id].por + " assumiu este produto.", "info");
+        }
+        lock(card, others[id]);
+        return;
+      }
+      unlock(card);
+      if (fresh) {
+        paintMark(card, mine[id] || null); // a marca é a do servidor (vale noutro aparelho)
+      }
+    });
+    render();
   }
 
   // ------------------------------------------------------------------ barra e avisos
@@ -457,7 +655,7 @@
     while (toasts.children.length > 3) {
       toasts.removeChild(toasts.firstChild);
     }
-    window.setTimeout(function () { p.remove(); }, kind === "falha" ? 9000 : 4500);
+    window.setTimeout(function () { p.remove(); }, kind === "ok" ? 4500 : 9000);
   }
 
   function showMsg(card, text) {
@@ -467,55 +665,9 @@
     }
   }
 
-  // ------------------------------------------------------------------ envio
-
-  function send(form) {
-    var controller = window.AbortController ? new window.AbortController() : null;
-    var timer = controller ? window.setTimeout(function () { controller.abort(); }, TIMEOUT_MS) : null;
-    return window.fetch(form.action, {
-      method: "POST",
-      body: new window.FormData(form),
-      headers: { Accept: "application/json" },
-      credentials: "same-origin",
-      signal: controller ? controller.signal : undefined
-    }).then(function (res) {
-      var type = res.headers.get("content-type") || "";
-      if (type.indexOf("application/json") === -1) {
-        // a sessão venceu: o servidor mandou para a tela de login
-        return {
-          ok: false,
-          stop: true,
-          relogin: true,
-          mensagem: "A sessão venceu: entre de novo (as marcas ficam guardadas)."
-        };
-      }
-      return res.json().then(function (data) {
-        var detail = typeof data.detail === "string" ? data.detail : null;
-        var relogin = res.status === 401 || res.status === 403;
-        return {
-          ok: res.ok && data.ok !== false,
-          stop: relogin,
-          relogin: relogin,
-          mensagem: data.mensagem || detail || "Não deu certo (erro " + res.status + ")."
-        };
-      });
-    }, function () {
-      return {
-        ok: false,
-        stop: true,
-        mensagem: "Sem resposta do servidor. Confira a conexão e tente de novo."
-      };
-    }).then(function (result) {
-      if (timer) {
-        window.clearTimeout(timer);
-      }
-      return result;
-    });
-  }
+  // ------------------------------------------------------------------ decisão
 
   function removeCard(card) {
-    delete marks[card.getAttribute("data-card")];
-    saveMarks();
     card.setAttribute("data-saindo", "");
     if (current === card) {
       current = null;
@@ -544,7 +696,7 @@
   function afterRemove() {
     render();
     scheduleRefresh();
-    if (live().length || !bar.isConnected) {
+    if (cards.some(function (c) { return c.isConnected; }) || !bar.isConnected) {
       return;
     }
     var empty = document.createElement("p");
@@ -556,18 +708,25 @@
     empty.appendChild(more);
     bar.parentNode.insertBefore(empty, bar);
     bar.remove();
+    stopPolling();
   }
 
   function decide(card, form, quiet) {
     card.classList.add("ocupado");
     showMsg(card, "");
-    return send(form).then(function (r) {
+    return request(form.action, new window.FormData(form)).then(function (r) {
       card.classList.remove("ocupado");
       if (r.ok) {
         if (!quiet) {
           toast(nameOf(card) + ": " + r.mensagem, "ok");
         }
         removeCard(card);
+      } else if (r.data.decidido) {
+        r.late = true;
+        if (!quiet) {
+          toast(nameOf(card) + ": " + r.mensagem, "info");
+        }
+        decided(card, r.mensagem.replace(/\.$/, ""));
       } else {
         showMsg(card, r.mensagem);
         if (!quiet) {
@@ -575,6 +734,7 @@
         }
       }
       if (r.relogin) {
+        stopPolling();
         window.setTimeout(function () { window.location.reload(); }, 2500);
       }
       return r;
@@ -598,7 +758,9 @@
     if (running) {
       return;
     }
-    var queue = live().filter(function (c) { return c.getAttribute("data-marca"); });
+    var queue = live().filter(function (c) {
+      return c.getAttribute("data-marca") && !c.hasAttribute("data-trava-por");
+    });
     if (!queue.length) {
       return;
     }
@@ -608,6 +770,7 @@
     clear.hidden = true;
     var done = { approved: 0, rejected: 0 };
     var failed = 0;
+    var late = 0;
     var i = 0;
 
     function finish(stopMessage) {
@@ -623,6 +786,10 @@
       }
       if (parts.length) {
         toast(parts.join(" · ") + ".", "ok");
+      }
+      if (late) {
+        toast(plural(late, "já tinha sido decidido", "já tinham sido decididos") +
+          " por outro operador: veja no card.", "info");
       }
       if (stopMessage) {
         toast(stopMessage, "falha");
@@ -649,11 +816,11 @@
       title.textContent = "Aplicando " + i + " de " + queue.length + "…";
       progress.style.width = Math.round(((i - 1) / queue.length) * 100) + "%";
       var value = card.getAttribute("data-marca");
-      var form = value && card.isConnected
-        ? card.querySelector('form[data-decisao="' + value + '"]')
-        : null;
+      var usable = value && card.isConnected && !card.hasAttribute("data-decidido") &&
+        !card.hasAttribute("data-trava-por");
+      var form = usable ? card.querySelector('form[data-decisao="' + value + '"]') : null;
       if (!form) {
-        return step(); // desmarcado ou decidido no meio do caminho
+        return step(); // desmarcado, travado ou decidido no meio do caminho
       }
       if (value === "approved" && !groupsOk(card, form)) {
         failed++;
@@ -662,6 +829,8 @@
       return decide(card, form, true).then(function (r) {
         if (r.ok) {
           done[value]++;
+        } else if (r.late) {
+          late++;
         } else {
           failed++;
         }
@@ -727,7 +896,7 @@
     if (!all.length) {
       return;
     }
-    if (!current || !current.isConnected) {
+    if (!current || all.indexOf(current) === -1) {
       for (var i = 0; i < all.length; i++) {
         if (all[i].getBoundingClientRect().bottom > 90) {
           focusCard(all[i], true);
@@ -760,7 +929,8 @@
   });
 
   // Botões do card (Aprovar, Rejeitar, Bloquear) sem recarregar a página. A checagem de grupos
-  // do "Grupos ▾" roda antes, no próprio formulário, e pode cancelar o envio.
+  // do "Grupos ▾" roda antes, no próprio formulário, e pode cancelar o envio. Card marcado por
+  // outro operador pede confirmação.
   document.addEventListener("submit", function (ev) {
     var form = ev.target;
     if (ev.defaultPrevented || !form.matches || !form.matches("form[data-decisao]")) {
@@ -771,10 +941,18 @@
       return;
     }
     ev.preventDefault();
-    if (!running && !card.classList.contains("ocupado")) {
-      focusCard(card, false);
-      decide(card, form, false);
+    if (running || card.classList.contains("ocupado") || card.hasAttribute("data-decidido")) {
+      return;
     }
+    var holder = card.getAttribute("data-trava-por");
+    if (holder) {
+      var when = ago(Number(card.getAttribute("data-trava-min")) || 0);
+      if (!window.confirm(holder + " marcou este produto (" + when + "). Decidir mesmo assim?")) {
+        return;
+      }
+    }
+    focusCard(card, false);
+    decide(card, form, false);
   });
 
   // Preencher Pix, cupom, unidades ou relâmpago é intenção de aprovar: marca ✓ sozinho.
@@ -809,19 +987,25 @@
     if (key === "j" || key === "k") {
       ev.preventDefault();
       move(key === "j" ? 1 : -1);
-    } else if ((key === "v" || key === "x") && current && current.isConnected) {
+    } else if ((key === "v" || key === "x") && current && live().indexOf(current) !== -1) {
       ev.preventDefault();
       toggle(current, key === "v" ? "approved" : "rejected");
     }
   });
 
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) {
+      schedulePoll(300); // voltou para a aba: atualiza já
+    }
+  });
+
   apply.addEventListener("click", applyMarked);
   clear.addEventListener("click", function () {
-    live().forEach(function (c) {
-      if (c.getAttribute("data-marca")) {
-        setMark(c, null);
-      }
-    });
+    // uma por vez: desmarcar 40 cards não vira 40 requisições simultâneas
+    var marked = live().filter(function (c) { return c.getAttribute("data-marca"); });
+    marked.reduce(function (chain, c) {
+      return chain.then(function () { setMark(c, null); });
+    }, window.Promise.resolve());
   });
   window.addEventListener("beforeunload", function (ev) {
     if (running) {
@@ -830,11 +1014,6 @@
     }
   });
 
-  cards.forEach(function (card) {
-    var mark = marks[card.getAttribute("data-card")];
-    if (mark && (mark[0] === "approved" || mark[0] === "rejected")) {
-      setMark(card, mark[0]);
-    }
-  });
   render();
+  poll(); // marcas deste operador (de outro aparelho) e as dos outros
 })();

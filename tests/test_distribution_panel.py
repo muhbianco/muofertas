@@ -141,9 +141,9 @@ async def test_manual_flow_from_approval_to_posted_once(
     assert bad.status_code == 422 and "etiqueta do ML" in bad.text
     assert (await create_group(client, csrf, niche_id)).status_code == 303
 
-    # aprovar: vira publicação esperando link; aprovar de novo não duplica; some da fila
+    # aprovar: vira publicação esperando link; aprovar de novo não duplica e avisa; some da fila
     assert (await approve(client, csrf, product_id, ev_id)).endswith("aviso=links")
-    assert "aviso" not in await approve(client, csrf, product_id, ev_id)
+    assert (await approve(client, csrf, product_id, ev_id)).endswith("aviso=ja-decidido")
     assert "Galaxy A17" not in (await client.get("/")).text
     async with sessions() as session:
         pub = (await session.execute(select(Publication))).scalar_one()

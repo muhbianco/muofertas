@@ -62,7 +62,7 @@ async def test_queue_cards_have_marks_floating_bar_and_next_card(
     # Cada card aponta o seguinte; o último aponta o anterior.
     assert f'name="seguinte" value="{other}"' in page
     assert f'name="seguinte" value="{ids["product"]}"' in page
-    assert '<script src="/static/fila.js?v=7" defer></script>' in page
+    assert '<script src="/static/fila.js?v=8" defer></script>' in page
 
 
 async def test_queue_without_cards_has_no_floating_bar(

@@ -60,6 +60,7 @@
     {% if p.evaluations %}<input type="hidden" name="evaluation_id" value="{{ p.evaluations[0].id }}">{% endif %}
     <input type="hidden" name="decision" value="{{ value }}">
     <input type="hidden" name="next" value="{{ next }}">
+    <input type="hidden" name="vista_em" value="{{ now_iso }}">
     {% if value == 'approved' and targets %}<input type="hidden" name="grupos" value="1">{% endif %}
     <button class="{{ cls }}" type="submit">{{ label }}</button>
   </form>
@@ -81,4 +82,4 @@
 </table>
 {% endif %}
 {% endblock %}
-{% block scripts %}<script src="/static/fila.js?v=7" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=8" defer></script>{% endblock %}

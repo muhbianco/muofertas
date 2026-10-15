@@ -11,11 +11,12 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.collector.domains import DomainRuleError, apply_panel_rule
 from app.collector.recategorize import ProductNotFound, RecategorizeError, recategorize
-from app.core.clock import utcnow
+from app.core.clock import ensure_utc, utcnow
 from app.core.config import settings
 from app.core.database import get_session
 from app.core.logging import get_logger
@@ -41,7 +42,7 @@ from app.models import (
     OfferEvaluation,
     OperatorDecision,
 )
-from app.panel import queries, report
+from app.panel import coordination, queries, report
 from app.panel.auth import (
     SESSION_COOKIE,
     SESSION_TTL,
@@ -82,7 +83,9 @@ NOTICES = {
     "nicho-tipo": "Nicho trocado para este produto e para todos do mesmo tipo. Os novos desse "
     "tipo já entram nesse nicho (regra na tela Nichos).",
     "nicho-invalido": "Escolha um nicho ativo.",
+    "ja-decidido": "Outro operador já decidiu este produto; a fila foi atualizada.",
 }
+VERB = {"approved": "aprovou", "rejected": "rejeitou", "blocked": "bloqueou"}
 # Resposta da decisão pedida pela fila sem recarregar (fetch), quando não há aviso específico.
 DONE = {
     "approved": "Aprovada.",
@@ -227,8 +230,42 @@ async def queue_page(
             "notice": NOTICES.get(aviso or ""),
             "open_alerts": await queries.open_alerts(db),
             "next": str(request.url.path) + (f"?{request.url.query}" if request.url.query else ""),
+            "now_iso": utcnow().isoformat(),
         },
     )
+
+
+def _seen(value: str | None, now: datetime) -> datetime | None:
+    """Quando a página foi aberta (o servidor escreve no formulário). Inválido ou futuro: None."""
+    if not value:
+        return None
+    try:
+        seen = ensure_utc(datetime.fromisoformat(value))
+    except ValueError:
+        return None
+    return seen if seen <= now else None
+
+
+def _minutes(now: datetime, since: datetime) -> int:
+    return max(0, int((now - since).total_seconds() // 60))
+
+
+def _late_message(late: coordination.Conflict, actor: str, decision: str) -> str:
+    who = "Você já" if late.actor == actor else f"{late.actor} já"
+    when = _local(late.at)
+    if late.decision == "approved" and decision == "approved":
+        return (
+            f"{who} aprovou este produto ({when}). Para mandar a outro grupo, use o \uff0b "
+            "“Enviar também em”, no Postar."
+        )
+    if late.decision == "approved":
+        return f"{who} aprovou este produto ({when}). Para tirar da fila de envio, use ✕ no Postar."
+    return f"{who} {VERB.get(late.decision, 'decidiu')} este produto ({when})."
+
+
+def _decided_label(late: coordination.Conflict, actor: str) -> str:
+    who = "Você" if late.actor == actor else late.actor
+    return f"{who} {VERB.get(late.decision, 'decidiu')} ({_local(late.at)})"
 
 
 @router.post("/decisao")
@@ -249,24 +286,33 @@ async def decide(
     grupos: Annotated[str | None, Form(max_length=1)] = None,
     channel_id: Annotated[list[int] | None, Form()] = None,
     seguinte: Annotated[int | None, Form()] = None,
+    vista_em: Annotated[str | None, Form(max_length=40)] = None,
 ) -> Response:
     """`grupos` marca o formulário com "Grupos ▾": aí vale o que foi marcado em `channel_id`
     (nenhum marcado não aprova). Sem ele (formulário antigo), os grupos do nicho do produto.
 
     A fila decide sem recarregar (fetch com `Accept: application/json`) e recebe o aviso em
     JSON. Sem JavaScript, o redirect volta para o card `seguinte` (`#p-<id>`): antes cada
-    aprovação jogava o operador para o topo da página (15/10/2026)."""
+    aprovação jogava o operador para o topo da página (15/10/2026).
+
+    Dois operadores: a linha do produto fica travada até o commit, e a decisão que chega tarde
+    (já aprovado e valendo, ou decidido por outro depois de `vista_em`) é recusada com 409 e
+    quem decidiu. O commit acontece antes da resposta: falha no banco não vira "Aprovada."."""
     check_csrf(ctx, csrf)
     wants_json = "application/json" in request.headers.get("accept", "")
     target = _safe_next(next)
 
-    def reply(aviso: str | None, *, ok: bool = True) -> Response:
+    def reply(aviso: str | None, *, ok: bool = True, message: str | None = None) -> Response:
         if wants_json:
-            message = NOTICES.get(aviso or "") or DONE.get(decision, "Feito.")
-            return JSONResponse(
-                {"ok": ok, "aviso": aviso, "mensagem": message},
-                status_code=200 if ok else 422,
-            )
+            late = aviso == "ja-decidido"
+            body: dict[str, object] = {
+                "ok": ok,
+                "aviso": aviso,
+                "mensagem": message or NOTICES.get(aviso or "") or DONE.get(decision, "Feito."),
+            }
+            if late:
+                body["decidido"] = True
+            return JSONResponse(body, status_code=200 if ok else 409 if late else 422)
         url = target
         if aviso:
             url += ("&" if "?" in url else "?") + f"aviso={aviso}"
@@ -299,15 +345,37 @@ async def decide(
         channels = await chosen_channels(db, channel_id or [])
         if not channels:
             return reply("grupos", ok=False)
-    product = await db.get(CatalogProduct, product_id)
+    now = utcnow()
+    product = (
+        await db.execute(
+            select(CatalogProduct).where(CatalogProduct.id == product_id).with_for_update()
+        )
+    ).scalar_one_or_none()
     if product is None:
         raise HTTPException(status_code=404)
+    if decision in ("approved", "rejected"):
+        late = await coordination.conflict(
+            db, product, actor=ctx.username, seen_at=_seen(vista_em, now), now=now
+        )
+        if late is not None:
+            await db.rollback()
+            logger.info(
+                "decisão recusada: já decidido",
+                extra={
+                    "product_id": product_id,
+                    "decision": decision,
+                    "user": ctx.username,
+                    "by": late.actor,
+                },
+            )
+            return reply(
+                "ja-decidido", ok=False, message=_late_message(late, ctx.username, decision)
+            )
     ev: OfferEvaluation | None = None
     if evaluation_id is not None:
         ev = await db.get(OfferEvaluation, evaluation_id)
         if ev is None or ev.product_id != product_id:
             raise HTTPException(status_code=422, detail="avaliação não confere")
-    now = utcnow()
     record = OperatorDecision(
         product_id=product_id,
         evaluation_id=evaluation_id,
@@ -356,6 +424,19 @@ async def decide(
                 notice = "links"
             elif result.skipped:
                 notice = "repetida"
+    await coordination.settle(db, product_id)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        logger.warning(
+            "decisão recusada no commit", extra={"product_id": product_id, "user": ctx.username}
+        )
+        return reply(
+            "ja-decidido",
+            ok=False,
+            message="Outro operador decidiu este produto agora mesmo; a fila foi atualizada.",
+        )
     logger.info(
         "decisão",
         extra={
@@ -367,6 +448,91 @@ async def decide(
         },
     )
     return reply(notice)
+
+
+def _ids(raw: str) -> list[int]:
+    out: list[int] = []
+    for part in raw.split(",")[: coordination.BOARD_LIMIT]:
+        part = part.strip()
+        if part.isdigit():
+            out.append(int(part))
+    return out
+
+
+@router.post("/fila/marca")
+async def queue_mark(
+    db: Db,
+    ctx: Admin,
+    product_id: Annotated[int, Form()],
+    marca: Annotated[str, Form(max_length=12)] = "",
+    csrf: Annotated[str | None, Form()] = None,
+) -> JSONResponse:
+    """✓/✕ de um card vai para o banco: os outros operadores veem "em aprovação por X" e não
+    marcam o mesmo produto. `marca` vazia desmarca."""
+    check_csrf(ctx, csrf)
+    if marca and marca not in coordination.MARKS:
+        raise HTTPException(status_code=422, detail="marca inválida")
+    now = utcnow()
+    if marca:
+        if await db.get(CatalogProduct, product_id) is None:
+            raise HTTPException(status_code=404)
+        holder = await coordination.claim(
+            db, product_id=product_id, actor=ctx.username, mark=marca, now=now
+        )
+        if holder is not None:
+            await db.rollback()
+            minutes = _minutes(now, holder.since)
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "por": holder.actor,
+                    "ha_min": minutes,
+                    "mensagem": f"Em aprovação por {holder.actor} (marcou há {minutes} min).",
+                },
+                status_code=409,
+            )
+    else:
+        await coordination.release(db, product_id=product_id, actor=ctx.username)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        return JSONResponse(
+            {"ok": False, "mensagem": "Outro operador marcou este produto agora mesmo."},
+            status_code=409,
+        )
+    return JSONResponse({"ok": True})
+
+
+@router.post("/fila/estado")
+async def queue_board(
+    db: Db,
+    ctx: Admin,
+    ids: Annotated[str, Form(max_length=1000)] = "",
+    desde: Annotated[str | None, Form(max_length=40)] = None,
+    csrf: Annotated[str | None, Form()] = None,
+) -> JSONResponse:
+    """O que a página aberta precisa saber dos outros operadores (a fila consulta a cada 15 s):
+    marcas deles, as minhas (de outro aparelho) e o que foi decidido depois que ela abriu."""
+    check_csrf(ctx, csrf)
+    now = utcnow()
+    state = await coordination.board(
+        db, product_ids=_ids(ids), actor=ctx.username, since=_seen(desde, now), now=now
+    )
+    await db.commit()
+    return JSONResponse(
+        {
+            "meus": {str(k): v for k, v in state.mine.items()},
+            "outros": {
+                str(k): {"por": h.actor, "marca": h.mark, "ha_min": _minutes(now, h.since)}
+                for k, h in state.others.items()
+            },
+            "decididos": {
+                str(k): {"mensagem": _decided_label(c, ctx.username)}
+                for k, c in state.decided.items()
+            },
+        }
+    )
 
 
 # --------------------------------------------------------------------------- páginas
@@ -429,6 +595,7 @@ async def product_detail(
         request,
         "produto.html",
         {
+            "now_iso": utcnow().isoformat(),
             "ctx": ctx,
             "p": page,
             "url": queries.product_url(page.product),

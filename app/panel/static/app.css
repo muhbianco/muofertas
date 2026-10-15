@@ -272,3 +272,11 @@ form.mover { display: none; }
 }
 /* Exemplo do campo opcional não pode parecer valor digitado (o 49,90 do Pix parecia preenchido). */
 .pix-aprovar input::placeholder { color: #b8ae99; opacity: 1; }
+/* Dois operadores: card marcado por outro (trava) e decidido por outro (sai da fila em seguida). */
+.trava { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: #6b4e00; }
+.trava:empty { display: none; }
+.card[data-trava-por] { border-color: var(--ouro); background: #fffaf0; }
+.card[data-trava-por] .marcar button { opacity: .45; cursor: not-allowed; }
+.card[data-decidido] { opacity: .7; border-style: dashed; }
+.card[data-decidido] .trava { color: var(--esm-esc); }
+.avisos-flutuantes p.info { border-left: 5px solid var(--ouro); }
