@@ -356,7 +356,10 @@ class ApprovalClaim(Base):
     __tablename__ = "approval_claim"
 
     product_id: Mapped[int] = mapped_column(
-        ForeignKey("catalog_product.id", ondelete="CASCADE"), primary_key=True
+        BigInteger().with_variant(Integer, "sqlite"),
+        ForeignKey("catalog_product.id", ondelete="CASCADE"),
+        primary_key=True,
+        autoincrement=False,
     )
     actor: Mapped[str] = mapped_column(String(40))
     mark: Mapped[str] = mapped_column(String(12))  # approved | rejected
