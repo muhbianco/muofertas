@@ -280,3 +280,9 @@ form.mover { display: none; }
 .card[data-decidido] { opacity: .7; border-style: dashed; }
 .card[data-decidido] .trava { color: var(--esm-esc); }
 .avisos-flutuantes p.info { border-left: 5px solid var(--ouro); }
+/* Vigiados: selo no card, chip do filtro e a situação de cada um na tela Vigiar. */
+.selo.vigiado { background: #ece6ff; color: #4b2a9b; }
+.contagem .chip-vigiado { background: #fff; border: 1px solid #7a5cd6; border-radius: 999px; padding: 2px 10px; font-weight: 700; color: #4b2a9b; text-decoration: none; }
+.linha.vigia { color: #4b2a9b; font-weight: 600; }
+.situacao { margin: 6px 0 8px; font-size: 14px; color: var(--cinza); }
+.situacao.na-fila { color: #4b2a9b; font-weight: 700; }

@@ -1060,7 +1060,8 @@ async def undo_invite_skip(
 # --------------------------------------------------------------------------- lista vigiada
 
 WATCH_NOTICES = {
-    "novo": "Produto na lista: o robô lê o preço nos próximos minutos e ele aparece na fila.",
+    "novo": "Produto vigiado: ele já está na fila, no filtro “Só os vigiados”; o preço chega nos "
+    "próximos minutos.",
     "atualizado": "Esse produto já era acompanhado: agora está vigiado, no nicho escolhido.",
     "parado": "O robô parou de acompanhar esse produto.",
 }
@@ -1076,6 +1077,7 @@ async def _render_watch(
 ) -> Response:
     async with sessions() as db:
         rows = await watchlist.watched(db)
+        statuses = await queries.watch_statuses(db, [p.id for p, _ in rows])
         niches = list(
             (
                 await db.execute(select(Niche).where(Niche.active.is_(True)).order_by(Niche.id))
@@ -1084,7 +1086,7 @@ async def _render_watch(
     return templates.TemplateResponse(
         request,
         "vigiar.html",
-        {"ctx": ctx, "rows": rows, "niches": niches, **extra},
+        {"ctx": ctx, "rows": rows, "statuses": statuses, "niches": niches, **extra},
         status_code=code,
     )
 

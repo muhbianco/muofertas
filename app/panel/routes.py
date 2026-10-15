@@ -197,18 +197,26 @@ async def queue_page(
     nicho: str | None = None,
     nivel: str | None = None,
     enviados: str | None = None,
+    origem: str | None = None,
     aviso: str | None = None,
 ) -> Response:
     niches = await queries.niches(db)
     sent = enviados if enviados in queries.SENT_FILTERS else None
     niche = next((n for n in niches if n.slug == nicho), None)
     only_discount = nivel == queries.DISCOUNT_FILTER
+    # Só os vigiados: qualquer nível, até sem nota (entra assim que é vigiado).
+    watched_only = origem == queries.ORIGIN_WATCHED
+    tiers: list[str] | None
     if only_discount:
         tiers = queries.DISCOUNT_TIERS
+    elif nivel in queries.TIER_ORDER:
+        tiers = [nivel]
     else:
-        tiers = [nivel] if nivel in queries.TIER_ORDER else queries.QUEUE_DEFAULT_TIERS
+        tiers = None if watched_only else queries.QUEUE_DEFAULT_TIERS
     niche_id = niche.id if niche else None
-    cards = await queries.queue(db, tiers, niche_id, only_discount=only_discount, sent=sent)
+    cards = await queries.queue(
+        db, tiers, niche_id, only_discount=only_discount, sent=sent, watched_only=watched_only
+    )
     ready = await queries.ready_to_post(db, utcnow())
     counts = await queries.tier_counts(db, niche_id)
     return templates.TemplateResponse(
@@ -223,6 +231,8 @@ async def queue_page(
             "nivel": nivel if nivel in queries.TIER_ORDER or only_discount else None,
             "discount_count": await queries.discount_count(db, niche_id),
             "enviados": sent,
+            "origem": queries.ORIGIN_WATCHED if watched_only else None,
+            "watched_count": await queries.watched_count(db, niche_id),
             "ready": ready,
             "ready_total": sum(k.ready for k in ready.values()),
             "tier_order": queries.TIER_ORDER,

@@ -8,7 +8,7 @@
   <h2>Prontos pra postar <b>{{ ready_total }}</b></h2>
   <ul>
     {% for n in niches if n.active %}{% set k = ready.get(n.id) %}
-    <li><a href="/?nicho={{ n.slug }}{% if nivel %}&amp;nivel={{ nivel }}{% endif %}{% if enviados %}&amp;enviados={{ enviados }}{% endif %}"{% if n.slug == nicho %} class="atual"{% endif %}>
+    <li><a href="/?nicho={{ n.slug }}{% if nivel %}&amp;nivel={{ nivel }}{% endif %}{% if enviados %}&amp;enviados={{ enviados }}{% endif %}{% if origem %}&amp;origem={{ origem }}{% endif %}"{% if n.slug == nicho %} class="atual"{% endif %}>
       <span class="nome">{{ n.name.split(':')[0] }}</span>
       <b>{{ k.ready if k else 0 }}</b>
       {% if k and k.per_day %}<small>hoje {{ k.sent_today }}/{{ k.per_day }}</small>{% endif %}
@@ -17,7 +17,7 @@
   </ul>
 </aside>
 <div class="fila-main" data-agora="{{ now_iso }}">
-<h1>Fila de aprovação</h1>
+<h1>{% if origem %}Vigiados na fila{% else %}Fila de aprovação{% endif %}</h1>
 {% if notice %}<p class="aviso">{{ notice }}</p>{% endif %}
 {% if open_alerts %}<p class="erro">⚠ {{ open_alerts }} alerta{{ 's' if open_alerts > 1 }} aberto{{ 's' if open_alerts > 1 }}: <a href="/saude">ver Saúde</a></p>{% endif %}
 <form class="filtros" method="get" action="/">
@@ -25,8 +25,12 @@
     <option value="">Todos os nichos</option>
     {% for n in niches %}<option value="{{ n.slug }}" {% if n.slug == nicho %}selected{% endif %}>{{ n.name }}</option>{% endfor %}
   </select>
+  <select name="origem" aria-label="Origem">
+    <option value="">Todos os produtos</option>
+    <option value="vigiados" {% if origem %}selected{% endif %}>Só os vigiados</option>
+  </select>
   <select name="nivel" aria-label="Nível">
-    <option value="">Excepcional a suspeita</option>
+    <option value="">{% if origem %}Todos os níveis{% else %}Excepcional a suspeita{% endif %}</option>
     <option value="off" {% if nivel == 'off' %}selected{% endif %}>com % OFF no anúncio</option>
     {% for t in tier_order %}<option value="{{ t }}" {% if t == nivel %}selected{% endif %}>{{ t }}</option>{% endfor %}
   </select>
@@ -41,12 +45,15 @@
   {% for t in tier_order %}{% if counts.get(t) %}<span>{{ t }}: {{ counts[t] }}</span>{% endif %}{% endfor %}
   {% if counts.get('sem nota') %}<span>sem nota: {{ counts['sem nota'] }}</span>{% endif %}
   {% if discount_count %}<a class="chip-off" href="/?nivel=off{% if nicho %}&amp;nicho={{ nicho }}{% endif %}{% if enviados %}&amp;enviados={{ enviados }}{% endif %}">com % OFF: {{ discount_count }}</a>{% endif %}
+  {% if watched_count %}<a class="chip-vigiado" href="/?origem=vigiados{% if nicho %}&amp;nicho={{ nicho }}{% endif %}">👁 vigiados: {{ watched_count }}</a>{% endif %}
 </div>
+{% if origem %}<p class="nota-pix">Vigiado entra aqui assim que você manda vigiar. Depois de aprovado (ou rejeitado), só volta quando o preço cair abaixo do daquela decisão. Todos os vigiados, com o que aconteceu com cada um, em <a href="/vigiar">Vigiar</a>.</p>{% endif %}
 
 <p class="nota-pix">Preço do anúncio. O desconto no Pix que a página do ML às vezes mostra não vem pela API.</p>
 
 {% if not cards %}
-<p class="vazio">Nada na fila agora. Nas primeiras semanas isso é esperado: sem ~10 dias de histórico nenhum desconto está comprovado.</p>
+{% if origem %}<p class="vazio">Nenhum vigiado esperando agora: eles voltam quando o preço cair abaixo da última aprovação. Veja todos em <a href="/vigiar">Vigiar</a>.</p>
+{% else %}<p class="vazio">Nada na fila agora. Nas primeiras semanas isso é esperado: sem ~10 dias de histórico nenhum desconto está comprovado.</p>{% endif %}
 {% endif %}
 
 {% for c in cards %}
@@ -60,10 +67,11 @@
       <button type="button" class="m-nao" data-marca="rejected" aria-pressed="false" title="Marcar para rejeitar (X)" aria-label="Marcar para rejeitar">✕</button>
     </div>
     <p class="trava" data-trava role="status"></p>
-    <div><span class="selo {{ c.tier }}">{{ c.tier }}</span>{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}{% if c.highlight_position %}<span class="selo top">{{ c.highlight_position }}º mais vendido</span>{% endif %}{% if c.sent_at %}<span class="selo enviado" title="Aprovar de novo antes de 7 dias sai como repetida">já foi pro grupo · {{ c.sent_at | local }}</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
+    <div>{% if c.watched %}<span class="selo vigiado">👁 vigiado</span>{% endif %}{% if c.tier %}<span class="selo {{ c.tier }}">{{ c.tier }}</span>{% endif %}{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}{% if c.highlight_position %}<span class="selo top">{{ c.highlight_position }}º mais vendido</span>{% endif %}{% if c.sent_at %}<span class="selo enviado" title="Aprovar de novo antes de 7 dias sai como repetida">já foi pro grupo · {{ c.sent_at | local }}</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
     <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
     <div class="linha nicho-linha">{% if targets %}{% call grupos_aprovar("aprovar-" ~ c.product_id, c.niche_id, targets) %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endcall %}{% else %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endif %}</div>
     <div class="preco">{% if c.listing_original_cents %}<s class="de">{{ c.listing_original_cents | brl }}</s> {% endif %}{{ c.price_cents | brl }}</div>
+    {% if c.watched %}<div class="linha vigia">{% if c.price_cents is none %}Aguardando a primeira leitura do preço (o robô lê em instantes).{% elif c.baseline_cents %}Caiu abaixo da última {{ 'aprovação' if c.baseline_decision == 'approved' else 'rejeição' }}: era {{ c.baseline_cents | brl }}.{% else %}Vigiado, ainda sem decisão.{% endif %}</div>{% endif %}
     {% if c.offer_kind %}<div class="oferta">
       {% if c.used_official %}loja oficial{% elif c.seller %}{{ c.seller.nickname or 'vendedor' }} · reputação {{ c.seller.reputation }}{% if c.seller.power %} · {{ c.seller.power }}{% endif %} · {{ c.seller.sales }} vendas{% else %}{{ c.offer_kind }}{% endif %}
       · <a href="{{ c.offer_url }}" target="_blank" rel="noopener noreferrer">ver esta oferta</a>
@@ -91,7 +99,7 @@
       <input type="hidden" name="vista_em" value="{{ now_iso }}">
       {% if seguinte %}<input type="hidden" name="seguinte" value="{{ seguinte }}">{% endif %}
       {% if value == 'approved' and targets %}<input type="hidden" name="grupos" value="1">{% endif %}
-      <button class="{{ cls }}" type="submit">{{ label }}</button>
+      <button class="{{ cls }}" type="submit"{% if value != 'blocked' and not c.evaluation_id %} disabled title="Aguardando a primeira leitura do preço"{% endif %}>{{ label }}</button>
     </form>
     {% endfor %}
   </div>

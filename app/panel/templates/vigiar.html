@@ -19,11 +19,21 @@
   </form>
 </article>
 <h2>Vigiados ({{ rows | length }})</h2>
+<p class="nota-pix">Vigiado entra na fila assim que você manda vigiar. Depois de aprovado (ou rejeitado), só volta quando o preço cair abaixo do daquela decisão: promoção de verdade. <a href="/?origem=vigiados">Ver os vigiados na fila</a>.</p>
 {% if not rows %}<p class="vazio">Nenhum produto vigiado ainda.</p>{% endif %}
 {% for p, niche in rows %}
 <article class="bloco">
   <p><a href="/produto/{{ p.id }}">{{ p.name or p.external_id }}</a></p>
   <p class="linha">{{ niche }} · nota {{ p.last_tier or 'sem nota ainda' }}{% if p.listing_discount_pct %} · {{ p.listing_discount_pct }}% OFF no anúncio{% endif %} · lido {{ p.last_checked_at | local if p.last_checked_at else 'ainda não' }}</p>
+  {% set st = statuses.get(p.id) %}
+  <p class="situacao{% if st and st.in_queue and not p.operator_blocked %} na-fila{% endif %}">
+    {%- if p.operator_blocked %}Bloqueado: não volta para a fila.
+    {%- elif not st or st.current_cents is none %}Aguardando a primeira leitura do preço.
+    {%- elif not st.last %}Na fila, esperando decisão · agora {{ st.current_cents | brl }}.
+    {%- elif st.in_queue %}Voltou para a fila: {{ 'aprovado' if st.last.decision == 'approved' else 'rejeitado' }} a {{ st.last.price_cents | brl }} ({{ st.last.at | local }}, {{ st.last.actor }}) e agora está {{ st.current_cents | brl }}.
+    {%- elif st.last.price_cents is none %}{{ 'Aprovado' if st.last.decision == 'approved' else 'Rejeitado' }} ({{ st.last.at | local }}, {{ st.last.actor }}) sem preço lido: segue na fila.
+    {%- else %}{{ 'Aprovado' if st.last.decision == 'approved' else 'Rejeitado' }} a {{ st.last.price_cents | brl }} ({{ st.last.at | local }}, {{ st.last.actor }}) · agora {{ st.current_cents | brl }}. Volta para a fila abaixo de {{ st.last.price_cents | brl }}.
+    {%- endif %}</p>
   <form method="post" action="/vigiar/{{ p.id }}/parar">
     <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
     <button class="botao rejeitar" type="submit">Parar de vigiar</button>

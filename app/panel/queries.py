@@ -7,11 +7,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import ColumnElement, case, exists, func, select
+from sqlalchemy import ColumnElement, and_, case, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.collector.domains import SOURCE_PANEL, label
 from app.collector.marketplace import MARKETPLACE
+from app.collector.watchlist import WATCHLIST
 from app.core.clock import utcnow
 from app.domain.distribution import (
     REPUTATION,
@@ -48,6 +49,9 @@ SENT_WINDOW = timedelta(days=7)
 SENT_HIDE = "ocultar"
 SENT_ONLY = "so"
 SENT_FILTERS = (SENT_HIDE, SENT_ONLY)
+# Filtro "só os vigiados" (pedido do dono em 15/10/2026).
+ORIGIN_WATCHED = "vigiados"
+DECIDED = ("approved", "rejected")
 
 
 def product_url(product: CatalogProduct) -> str:
@@ -134,6 +138,10 @@ class Card:
     # Tipo de produto do ML ("Compressores de ar"): "Trocar nicho" pode valer para todos dele.
     domain_id: str | None = None
     domain_label: str | None = None
+    # Vigiado: o preço da última decisão (aprovar/rejeitar). Ele só volta à fila mais barato.
+    watched: bool = False
+    baseline_cents: int | None = None
+    baseline_decision: str | None = None
 
 
 def reasons(snapshot: dict[str, Any]) -> list[str]:
@@ -220,19 +228,58 @@ async def discount_count(db: AsyncSession, niche_id: int | None) -> int:
     return int((await db.execute(q)).scalar_one())
 
 
+def _decided_price() -> ColumnElement[int | None]:
+    """Preço da avaliação da última decisão (aprovar ou rejeitar) do produto."""
+    return (
+        select(OfferEvaluation.price_cents)
+        .join(OperatorDecision, OperatorDecision.evaluation_id == OfferEvaluation.id)
+        .where(
+            OperatorDecision.product_id == CatalogProduct.id,
+            OperatorDecision.decision.in_(DECIDED),
+        )
+        .order_by(OperatorDecision.id.desc())  # só insert: o maior id é a última
+        .limit(1)
+        .correlate(CatalogProduct)
+        .scalar_subquery()
+    )
+
+
+def _current_price() -> ColumnElement[int | None]:
+    """Preço da avaliação mais recente do produto (o que a fila mostra)."""
+    return (
+        select(OfferEvaluation.price_cents)
+        .where(OfferEvaluation.product_id == CatalogProduct.id)
+        .order_by(OfferEvaluation.evaluated_at.desc(), OfferEvaluation.id.desc())
+        .limit(1)
+        .correlate(CatalogProduct)
+        .scalar_subquery()
+    )
+
+
+def _watched_due() -> ColumnElement[bool]:
+    """Vigiado na fila: ainda não decidido, ou mais barato que na última decisão. Em nenhuma outra
+    condição (preço que sobe, mudança qualquer): ele está sendo vigiado justamente para a queda."""
+    decided = _decided_price()
+    return or_(decided.is_(None), _current_price() < decided)
+
+
 def _queue_filters(
-    tiers: list[str], *, only_discount: bool, sent: str | None, now: datetime | None
+    tiers: list[str] | None,
+    *,
+    only_discount: bool,
+    sent: str | None,
+    now: datetime | None,
+    watched_only: bool = False,
 ) -> list[ColumnElement[bool]]:
-    """O que está na fila de aprovação (a lista e o KPI por nicho usam o mesmo critério)."""
+    """O que está na fila de aprovação (a lista e as contagens usam o mesmo critério).
+
+    `tiers` None: qualquer nível, até sem nota (o vigiado entra assim que é vigiado)."""
     sent_since = (now or utcnow()) - SENT_WINDOW
     since_change = func.coalesce(CatalogProduct.last_changed_at, CatalogProduct.first_seen_at)
-    filters: list[ColumnElement[bool]] = [
-        CatalogProduct.active.is_(True),
-        CatalogProduct.operator_blocked.is_(False),
-        CatalogProduct.last_tier.in_(tiers),
-        # Resolvido desde a última mudança de preço sai da fila até o preço mudar:
-        # rejeitado, ou aprovado que virou publicação. Aprovado sem grupo no nicho continua
-        # na fila (a aprovação não levou a lugar nenhum).
+    # Resolvido desde a última mudança de preço sai da fila até o preço mudar: rejeitado, ou
+    # aprovado que virou publicação. Aprovado sem grupo no nicho continua na fila (a aprovação
+    # não levou a lugar nenhum).
+    unresolved = and_(
         ~exists().where(
             OperatorDecision.product_id == CatalogProduct.id,
             OperatorDecision.decision == "rejected",
@@ -242,7 +289,18 @@ def _queue_filters(
             Publication.product_id == CatalogProduct.id,
             Publication.created_at >= since_change,
         ),
+    )
+    is_watched = CatalogProduct.discovered_via == WATCHLIST
+    filters: list[ColumnElement[bool]] = [
+        CatalogProduct.active.is_(True),
+        CatalogProduct.operator_blocked.is_(False),
     ]
+    if tiers is not None:
+        filters.append(CatalogProduct.last_tier.in_(tiers))
+    if watched_only:
+        filters += [is_watched, _watched_due()]
+    else:
+        filters.append(or_(and_(~is_watched, unresolved), and_(is_watched, _watched_due())))
     if only_discount:
         filters.append(CatalogProduct.listing_discount_pct.is_not(None))
     recently_sent = exists().where(
@@ -302,19 +360,24 @@ async def ready_to_post(db: AsyncSession, now: datetime) -> dict[int, ReadyKpi]:
 
 async def queue(
     db: AsyncSession,
-    tiers: list[str],
+    tiers: list[str] | None,
     niche_id: int | None,
     *,
     only_discount: bool = False,
     sent: str | None = None,
     now: datetime | None = None,
+    watched_only: bool = False,
 ) -> list[Card]:
     sent_since = (now or utcnow()) - SENT_WINDOW
     rank = case({t: i for i, t in enumerate(TIER_ORDER)}, value=CatalogProduct.last_tier, else_=99)
     q = (
         select(CatalogProduct, Niche.name)
         .join(Niche, Niche.id == CatalogProduct.niche_id)
-        .where(*_queue_filters(tiers, only_discount=only_discount, sent=sent, now=now))
+        .where(
+            *_queue_filters(
+                tiers, only_discount=only_discount, sent=sent, now=now, watched_only=watched_only
+            )
+        )
     )
     if niche_id is not None:
         q = q.where(CatalogProduct.niche_id == niche_id)
@@ -339,6 +402,7 @@ async def queue(
     sellers = await _sellers(db, {s for s in map(_seller_id, snaps.values()) if s is not None})
     sent_at = await _recently_sent(db, ids, sent_since)
     domains = await domain_labels(db, {p.domain_id for p, _ in rows if p.domain_id})
+    baselines = await last_decisions(db, [p.id for p, _ in rows if p.discovered_via == WATCHLIST])
     cards = []
     for product, niche_name in rows:
         ev = latest.get(product.id)
@@ -372,9 +436,90 @@ async def queue(
                 domain_id=product.domain_id,
                 domain_label=domains.get(product.domain_id or ""),
                 highlight_position=product.best_highlight_position,
+                watched=product.discovered_via == WATCHLIST,
+                baseline_cents=baselines[product.id].price_cents
+                if product.id in baselines
+                else None,
+                baseline_decision=baselines[product.id].decision
+                if product.id in baselines
+                else None,
             )
         )
     return cards
+
+
+@dataclass(frozen=True, slots=True)
+class LastDecision:
+    decision: str  # approved | rejected
+    price_cents: int | None
+    at: datetime
+    actor: str
+
+
+async def last_decisions(db: AsyncSession, product_ids: list[int]) -> dict[int, LastDecision]:
+    """Última decisão (aprovar ou rejeitar) de cada produto, com o preço da avaliação dela."""
+    if not product_ids:
+        return {}
+    latest = (
+        select(func.max(OperatorDecision.id))
+        .where(
+            OperatorDecision.product_id.in_(product_ids),
+            OperatorDecision.decision.in_(DECIDED),
+        )
+        .group_by(OperatorDecision.product_id)
+    )
+    rows = (
+        await db.execute(
+            select(
+                OperatorDecision.product_id,
+                OperatorDecision.decision,
+                OfferEvaluation.price_cents,
+                OperatorDecision.decided_at,
+                OperatorDecision.actor,
+            )
+            .outerjoin(OfferEvaluation, OfferEvaluation.id == OperatorDecision.evaluation_id)
+            .where(OperatorDecision.id.in_(latest))
+        )
+    ).all()
+    return {
+        product_id: LastDecision(decision, price, at, actor)
+        for product_id, decision, price, at, actor in rows
+    }
+
+
+async def watched_count(db: AsyncSession, niche_id: int | None) -> int:
+    """Vigiados na fila agora (o chip do filtro)."""
+    q = select(func.count()).where(
+        *_queue_filters(None, only_discount=False, sent=None, now=None, watched_only=True)
+    )
+    if niche_id is not None:
+        q = q.where(CatalogProduct.niche_id == niche_id)
+    return int((await db.execute(q)).scalar_one())
+
+
+@dataclass(frozen=True, slots=True)
+class WatchStatus:
+    """O que está acontecendo com um vigiado (tela Vigiar)."""
+
+    current_cents: int | None
+    last: LastDecision | None
+    in_queue: bool
+
+
+async def watch_statuses(db: AsyncSession, product_ids: list[int]) -> dict[int, WatchStatus]:
+    if not product_ids:
+        return {}
+    latest = await _latest_evaluations(db, product_ids)
+    last = await last_decisions(db, product_ids)
+    out: dict[int, WatchStatus] = {}
+    for pid in product_ids:
+        ev = latest.get(pid)
+        current = ev.price_cents if ev else None
+        decided = last.get(pid)
+        baseline = decided.price_cents if decided else None
+        due = baseline is None or (current is not None and current < baseline)
+        out[pid] = WatchStatus(current_cents=current, last=decided, in_queue=due)
+    return out
 
 
 async def domain_labels(db: AsyncSession, domain_ids: set[str]) -> dict[str, str]:
