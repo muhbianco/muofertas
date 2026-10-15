@@ -208,3 +208,67 @@ form.mover { display: none; }
 .kpis dt { font-size: 12px; color: var(--cinza); }
 .kpis dd { margin: 0; font-weight: 700; font-size: 16px; }
 @media (min-width: 720px) { .relatorio { grid-template-columns: 1fr 1fr; } }
+/* Fila de aprovação: marcar ✓/✕ e aplicar de uma vez pela barra que acompanha a rolagem.
+   Tudo isto só aparece com JavaScript (classe .js no <html>); sem ele, os botões de cada card. */
+.card { position: relative; transition: border-color .15s, background-color .15s, box-shadow .15s; scroll-margin-top: 72px; scroll-margin-bottom: 120px; }
+.card:focus { outline: none; }
+.card:focus-visible, .card.atual { outline: 3px solid rgba(14, 138, 98, .35); outline-offset: 2px; }
+.marcar { display: none; }
+.js .marcar { display: flex; float: right; gap: 6px; margin: 0 0 6px 10px; }
+.marcar button { width: 44px; height: 40px; border-radius: 10px; border: 2px solid var(--linha); background: #fff; color: var(--cinza); font-size: 20px; font-weight: 800; line-height: 1; cursor: pointer; padding: 0; transition: background-color .12s, border-color .12s, color .12s, transform .08s; }
+.marcar button:active { transform: scale(.94); }
+.marcar .m-sim[aria-pressed="true"] { background: var(--esm); border-color: var(--esm); color: #fff; }
+.marcar .m-nao[aria-pressed="true"] { background: var(--verm); border-color: var(--verm); color: #fff; }
+@media (hover: hover) {
+  .marcar .m-sim:hover { border-color: var(--esm); color: var(--esm); }
+  .marcar .m-nao:hover { border-color: var(--verm); color: var(--verm); }
+  .marcar .m-sim[aria-pressed="true"]:hover, .marcar .m-nao[aria-pressed="true"]:hover { color: #fff; }
+}
+.card[data-marca="approved"] { border-color: var(--esm); background: #f1faf6; box-shadow: inset 5px 0 0 var(--esm); }
+.card[data-marca="rejected"] { border-color: var(--verm); background: #fdf3f2; box-shadow: inset 5px 0 0 var(--verm); }
+.card[data-marca="rejected"] > img, .card[data-marca="rejected"] .preco { opacity: .55; }
+.card.ocupado { opacity: .6; pointer-events: none; }
+.card.saindo { overflow: hidden; opacity: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; border-width: 0; transition: height .22s ease, opacity .18s ease, margin .22s ease, padding .22s ease; }
+.card-msg { grid-column: 1 / -1; margin: 0; font-size: 14px; color: var(--verm); }
+.card-msg:empty { display: none; }
+.lote { display: none; }
+.js .lote { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); bottom: calc(12px + env(safe-area-inset-bottom)); width: min(688px, calc(100vw - 24px)); display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; background: var(--esm-esc); color: var(--creme); border-radius: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, .28); overflow: hidden; }
+.lote-texto { flex: 1; min-width: 0; display: grid; }
+.lote-texto b { font-size: 15px; }
+.lote-texto small { font-size: 12px; opacity: .85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lote .atalhos { display: none; }
+@media (hover: hover) and (pointer: fine) { .lote .atalhos { display: block; } }
+.lote button { min-height: 44px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; padding: 0 14px; white-space: nowrap; }
+.lote-limpar { background: transparent; color: var(--creme); border: 1px solid rgba(255, 255, 255, .35); }
+.lote-aplicar { background: var(--ouro); color: var(--esm-esc); border: 0; min-width: 120px; }
+.lote-aplicar:disabled { background: rgba(255, 255, 255, .14); color: rgba(255, 248, 231, .6); cursor: default; }
+.lote-limpar[hidden], .lote [hidden] { display: none !important; }
+.lote-progresso { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--ouro); transition: width .2s; }
+.lote.marcado { background: #063a2d; }
+.js main.com-lado { padding-bottom: 120px; }
+.avisos-flutuantes { position: fixed; z-index: 5; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom)); width: min(560px, calc(100vw - 24px)); display: grid; gap: 6px; pointer-events: none; }
+.avisos-flutuantes p { margin: 0; padding: 10px 14px; border-radius: 12px; background: #fff; color: var(--tinta); border: 1px solid var(--linha); box-shadow: 0 6px 18px rgba(0, 0, 0, .14); font-size: 14px; pointer-events: auto; animation: aviso-entra .18s ease-out; }
+.avisos-flutuantes p.ok { border-left: 5px solid var(--esm); }
+.avisos-flutuantes p.falha { border-left: 5px solid var(--verm); }
+@keyframes aviso-entra { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .card, .card.saindo, .marcar button, .lote-progresso { transition: none; }
+  .avisos-flutuantes p { animation: none; }
+}
+@media (max-width: 600px) {
+  .js .lote { padding: 8px 8px 8px 12px; gap: 6px; }
+  .lote-texto small[data-lote-dica] { white-space: normal; }
+  .lote button { padding: 0 10px; }
+  .lote-aplicar { min-width: 0; }
+}
+/* Celular: o menu do topo numa linha que rola de lado. Quebrado em três linhas, o topo fixo
+   comia um quinto da tela da fila. */
+@media (max-width: 600px) {
+  header.topo { gap: 6px 12px; padding: 8px 12px; }
+  header.topo nav { order: 3; flex: 1 1 100%; flex-wrap: nowrap; overflow-x: auto; gap: 18px; padding-bottom: 2px; scrollbar-width: none; }
+  header.topo nav::-webkit-scrollbar { display: none; }
+  header.topo nav a { white-space: nowrap; }
+  .card { scroll-margin-top: 96px; }
+}
+/* Exemplo do campo opcional não pode parecer valor digitado (o 49,90 do Pix parecia preenchido). */
+.pix-aprovar input::placeholder { color: #b8ae99; opacity: 1; }

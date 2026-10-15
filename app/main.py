@@ -30,9 +30,10 @@ from app.panel.whatsapp_routes import router as whatsapp_router
 
 # Só o próprio painel; imagem de produto vem do CDN do ML. Sem estilo inline. Script só arquivo
 # nosso em /static (arrastar na fila de envio): inline, eval e de outro domínio seguem bloqueados.
+# fetch só para o próprio painel (a fila decide sem recarregar desde 15/10/2026).
 CSP = (
     "default-src 'self'; img-src 'self' https://http2.mlstatic.com data:; style-src 'self'; "
-    "script-src 'self'; connect-src 'none'; form-action 'self'; frame-ancestors 'none'; "
+    "script-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; "
     "base-uri 'none'; object-src 'none'"
 )
 

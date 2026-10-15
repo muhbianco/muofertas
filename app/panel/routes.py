@@ -8,7 +8,7 @@ from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -82,6 +82,12 @@ NOTICES = {
     "nicho-tipo": "Nicho trocado para este produto e para todos do mesmo tipo. Os novos desse "
     "tipo já entram nesse nicho (regra na tela Nichos).",
     "nicho-invalido": "Escolha um nicho ativo.",
+}
+# Resposta da decisão pedida pela fila sem recarregar (fetch), quando não há aviso específico.
+DONE = {
+    "approved": "Aprovada.",
+    "rejected": "Rejeitada: saiu da fila.",
+    "blocked": "Bloqueada: o produto não volta para a fila.",
 }
 
 Admin = Annotated[AuthContext, Depends(require_admin)]
@@ -227,6 +233,7 @@ async def queue_page(
 
 @router.post("/decisao")
 async def decide(
+    request: Request,
     db: Db,
     ctx: Admin,
     product_id: Annotated[int, Form()],
@@ -241,43 +248,57 @@ async def decide(
     acaba_em: Annotated[str, Form(max_length=12)] = "",
     grupos: Annotated[str | None, Form(max_length=1)] = None,
     channel_id: Annotated[list[int] | None, Form()] = None,
+    seguinte: Annotated[int | None, Form()] = None,
 ) -> Response:
     """`grupos` marca o formulário com "Grupos ▾": aí vale o que foi marcado em `channel_id`
-    (nenhum marcado não aprova). Sem ele (formulário antigo), os grupos do nicho do produto."""
+    (nenhum marcado não aprova). Sem ele (formulário antigo), os grupos do nicho do produto.
+
+    A fila decide sem recarregar (fetch com `Accept: application/json`) e recebe o aviso em
+    JSON. Sem JavaScript, o redirect volta para o card `seguinte` (`#p-<id>`): antes cada
+    aprovação jogava o operador para o topo da página (15/10/2026)."""
     check_csrf(ctx, csrf)
+    wants_json = "application/json" in request.headers.get("accept", "")
     target = _safe_next(next)
-    sep = "&" if "?" in target else "?"
+
+    def reply(aviso: str | None, *, ok: bool = True) -> Response:
+        if wants_json:
+            message = NOTICES.get(aviso or "") or DONE.get(decision, "Feito.")
+            return JSONResponse(
+                {"ok": ok, "aviso": aviso, "mensagem": message},
+                status_code=200 if ok else 422,
+            )
+        url = target
+        if aviso:
+            url += ("&" if "?" in url else "?") + f"aviso={aviso}"
+        if ok and seguinte is not None:
+            url += f"#p-{seguinte}"
+        return RedirectResponse(url, status_code=status.HTTP_303_SEE_OTHER)
+
     try:
         last_units = parse_last_units(ultimas) if decision == "approved" else None
     except UnitsError:
-        return RedirectResponse(
-            target + sep + "aviso=unidades", status_code=status.HTTP_303_SEE_OTHER
-        )
+        return reply("unidades", ok=False)
     try:
         pix_cents = parse_brl(pix) if decision == "approved" else None
     except PixError:
-        return RedirectResponse(target + sep + "aviso=pix", status_code=status.HTTP_303_SEE_OTHER)
+        return reply("pix", ok=False)
     try:
         coupon_cents = parse_brl(cupom) if decision == "approved" else None
     except PixError:
-        return RedirectResponse(target + sep + "aviso=cupom", status_code=status.HTTP_303_SEE_OTHER)
+        return reply("cupom", ok=False)
     try:
         flash_left = (
             parse_flash_left(acaba_em) if decision == "approved" and acaba_em.strip() else None
         )
     except FlashError:
-        return RedirectResponse(
-            target + sep + "aviso=relampago", status_code=status.HTTP_303_SEE_OTHER
-        )
+        return reply("relampago", ok=False)
     if decision not in DECISIONS:
         raise HTTPException(status_code=422, detail="decisão inválida")
     channels: list[Channel] | None = None
     if decision == "approved" and grupos:
         channels = await chosen_channels(db, channel_id or [])
         if not channels:
-            return RedirectResponse(
-                target + sep + "aviso=grupos", status_code=status.HTTP_303_SEE_OTHER
-            )
+            return reply("grupos", ok=False)
     product = await db.get(CatalogProduct, product_id)
     if product is None:
         raise HTTPException(status_code=404)
@@ -317,9 +338,7 @@ async def decide(
             )
         except PixRejectedError as exc:
             await db.rollback()  # nem a decisão fica: o operador corrige e aprova de novo
-            return RedirectResponse(
-                target + sep + f"aviso={exc.field}", status_code=status.HTTP_303_SEE_OTHER
-            )
+            return reply(exc.field, ok=False)
         except DistributionError:
             notice = "sem-preco"
         else:
@@ -347,9 +366,7 @@ async def decide(
             "groups": [c.id for c in channels] if channels else None,
         },
     )
-    if notice:
-        target += ("&" if "?" in target else "?") + f"aviso={notice}"
-    return RedirectResponse(target, status_code=status.HTTP_303_SEE_OTHER)
+    return reply(notice)
 
 
 # --------------------------------------------------------------------------- páginas

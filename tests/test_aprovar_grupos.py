@@ -164,7 +164,7 @@ async def test_product_page_offers_the_groups_too(
     page = (await client.get(f"/produto/{ids['product']}")).text
     assert f'data-grupos="aprovar-{ids["product"]}"' in page
     assert _box(ids["family"]) in page and 'name="grupos" value="1"' in page
-    assert '<script src="/static/fila.js?v=6" defer></script>' in page
+    assert '<script src="/static/fila.js?v=7" defer></script>' in page
 
 
 async def test_flash_deal_on_approval_goes_with_the_post_and_its_copies(

@@ -50,9 +50,15 @@
 {% endif %}
 
 {% for c in cards %}
-<article class="card">
+{# Para onde a tela volta depois de decidir sem JavaScript: o card seguinte (ou o anterior, no último). #}
+{% if not loop.last %}{% set seguinte = cards[loop.index].product_id %}{% elif not loop.first %}{% set seguinte = cards[loop.index0 - 1].product_id %}{% else %}{% set seguinte = none %}{% endif %}
+<article class="card" id="p-{{ c.product_id }}" data-card="{{ c.product_id }}" tabindex="-1">
   {% if c.image_url %}<img src="{{ c.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<div class="sem-foto"></div>{% endif %}
   <div>
+    <div class="marcar" role="group" aria-label="Marcar para aplicar de uma vez">
+      <button type="button" class="m-sim" data-marca="approved" aria-pressed="false" title="Marcar para aprovar (V)" aria-label="Marcar para aprovar">✓</button>
+      <button type="button" class="m-nao" data-marca="rejected" aria-pressed="false" title="Marcar para rejeitar (X)" aria-label="Marcar para rejeitar">✕</button>
+    </div>
     <div><span class="selo {{ c.tier }}">{{ c.tier }}</span>{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}{% if c.highlight_position %}<span class="selo top">{{ c.highlight_position }}º mais vendido</span>{% endif %}{% if c.sent_at %}<span class="selo enviado" title="Aprovar de novo antes de 7 dias sai como repetida">já foi pro grupo · {{ c.sent_at | local }}</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
     <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
     <div class="linha nicho-linha">{% if targets %}{% call grupos_aprovar("aprovar-" ~ c.product_id, c.niche_id, targets) %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endcall %}{% else %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endif %}</div>
@@ -75,20 +81,36 @@
   </div>
   <div class="acoes">
     {% for value, label, cls in [('approved', 'Aprovar', 'aprovar'), ('rejected', 'Rejeitar', 'rejeitar'), ('blocked', 'Bloquear', 'bloquear')] %}
-    <form method="post" action="/decisao"{% if value == 'approved' %} id="aprovar-{{ c.product_id }}"{% endif %}>
+    <form method="post" action="/decisao" data-decisao="{{ value }}"{% if value == 'approved' %} id="aprovar-{{ c.product_id }}"{% endif %}>
       <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
       <input type="hidden" name="product_id" value="{{ c.product_id }}">
       {% if c.evaluation_id %}<input type="hidden" name="evaluation_id" value="{{ c.evaluation_id }}">{% endif %}
       <input type="hidden" name="decision" value="{{ value }}">
       <input type="hidden" name="next" value="{{ next }}">
+      {% if seguinte %}<input type="hidden" name="seguinte" value="{{ seguinte }}">{% endif %}
       {% if value == 'approved' and targets %}<input type="hidden" name="grupos" value="1">{% endif %}
       <button class="{{ cls }}" type="submit">{{ label }}</button>
     </form>
     {% endfor %}
   </div>
+  <p class="card-msg" data-msg role="status"></p>
 </article>
 {% endfor %}
+{% if cards %}
+{# Barra que acompanha a rolagem: aplica de uma vez o que foi marcado ✓ (aprovar) ou ✕ (rejeitar). Só com JavaScript. #}
+<div class="lote" data-lote role="region" aria-label="Aplicar os marcados">
+  <div class="lote-texto">
+    <b data-lote-titulo>Nada marcado</b>
+    <small data-lote-dica>Toque ✓ nos produtos para aprovar vários de uma vez (✕ rejeita).</small>
+    <small class="atalhos">J/K anda · V aprova · X rejeita · Ctrl+Enter aplica</small>
+  </div>
+  <button type="button" class="lote-limpar" data-lote-limpar>Limpar</button>
+  <button type="button" class="lote-aplicar" data-lote-aplicar disabled>Aprovar</button>
+  <div class="lote-progresso" data-lote-progresso></div>
+</div>
+<div class="avisos-flutuantes" data-toasts aria-live="polite"></div>
+{% endif %}
 </div>
 </div>
 {% endblock %}
-{% block scripts %}<script src="/static/fila.js?v=6" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=7" defer></script>{% endblock %}
