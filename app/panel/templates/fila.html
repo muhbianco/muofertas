@@ -47,12 +47,12 @@
   {% if discount_count %}<a class="chip-off" href="/?nivel=off{% if nicho %}&amp;nicho={{ nicho }}{% endif %}{% if enviados %}&amp;enviados={{ enviados }}{% endif %}">com % OFF: {{ discount_count }}</a>{% endif %}
   {% if watched_count %}<a class="chip-vigiado" href="/?origem=vigiados{% if nicho %}&amp;nicho={{ nicho }}{% endif %}">👁 vigiados: {{ watched_count }}</a>{% endif %}
 </div>
-{% if origem %}<p class="nota-pix">Vigiado entra aqui assim que você manda vigiar. Depois de aprovado (ou rejeitado), só volta quando o preço cair abaixo do daquela decisão. Todos os vigiados, com o que aconteceu com cada um, em <a href="/vigiar">Vigiar</a>.</p>{% endif %}
+{% if origem %}<p class="nota-pix">Vigiado entra aqui assim que você manda vigiar. Depois de aprovado (ou rejeitado), só volta quando o preço cair abaixo do daquela decisão, ou quando subir e voltar a ele (a mesma promoção de novo). Todos os vigiados, com o que aconteceu com cada um, em <a href="/vigiar">Vigiar</a>.</p>{% endif %}
 
 <p class="nota-pix">Preço do anúncio. O desconto no Pix que a página do ML às vezes mostra não vem pela API.</p>
 
 {% if not cards %}
-{% if origem %}<p class="vazio">Nenhum vigiado esperando agora: eles voltam quando o preço cair abaixo da última aprovação. Veja todos em <a href="/vigiar">Vigiar</a>.</p>
+{% if origem %}<p class="vazio">Nenhum vigiado esperando agora: eles voltam quando o preço cair abaixo da última aprovação, ou subir e voltar a ela. Veja todos em <a href="/vigiar">Vigiar</a>.</p>
 {% else %}<p class="vazio">Nada na fila agora. Nas primeiras semanas isso é esperado: sem ~10 dias de histórico nenhum desconto está comprovado.</p>{% endif %}
 {% endif %}
 
@@ -71,7 +71,7 @@
     <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
     <div class="linha nicho-linha">{% if targets %}{% call grupos_aprovar("aprovar-" ~ c.product_id, c.niche_id, targets) %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endcall %}{% else %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endif %}</div>
     <div class="preco">{% if c.listing_original_cents %}<s class="de">{{ c.listing_original_cents | brl }}</s> {% endif %}{{ c.price_cents | brl }}</div>
-    {% if c.watched %}<div class="linha vigia">{% if c.price_cents is none %}Aguardando a primeira leitura do preço (o robô lê em instantes).{% elif c.baseline_cents %}Caiu abaixo da última {{ 'aprovação' if c.baseline_decision == 'approved' else 'rejeição' }}: era {{ c.baseline_cents | brl }}.{% else %}Vigiado, ainda sem decisão.{% endif %}</div>{% endif %}
+    {% if c.watched %}<div class="linha vigia">{% if c.price_cents is none %}Aguardando a primeira leitura do preço (o robô lê em instantes).{% elif c.baseline_cents and c.price_cents == c.baseline_cents %}Subiu e voltou ao preço da última {{ 'aprovação' if c.baseline_decision == 'approved' else 'rejeição' }}: {{ c.baseline_cents | brl }}.{% elif c.baseline_cents %}Caiu abaixo da última {{ 'aprovação' if c.baseline_decision == 'approved' else 'rejeição' }}: era {{ c.baseline_cents | brl }}.{% else %}Vigiado, ainda sem decisão.{% endif %}</div>{% endif %}
     {% if c.offer_kind %}<div class="oferta">
       {% if c.used_official %}loja oficial{% elif c.seller %}{{ c.seller.nickname or 'vendedor' }} · reputação {{ c.seller.reputation }}{% if c.seller.power %} · {{ c.seller.power }}{% endif %} · {{ c.seller.sales }} vendas{% else %}{{ c.offer_kind }}{% endif %}
       · <a href="{{ c.offer_url }}" target="_blank" rel="noopener noreferrer">ver esta oferta</a>

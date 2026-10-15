@@ -9,6 +9,7 @@ from typing import Any
 
 from sqlalchemy import ColumnElement, and_, case, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.collector.domains import SOURCE_PANEL, label
 from app.collector.marketplace import MARKETPLACE
@@ -228,6 +229,21 @@ async def discount_count(db: AsyncSession, niche_id: int | None) -> int:
     return int((await db.execute(q)).scalar_one())
 
 
+def _decided_evaluation() -> ColumnElement[int | None]:
+    """Avaliação da última decisão (aprovar ou rejeitar) do produto."""
+    return (
+        select(OperatorDecision.evaluation_id)
+        .where(
+            OperatorDecision.product_id == CatalogProduct.id,
+            OperatorDecision.decision.in_(DECIDED),
+        )
+        .order_by(OperatorDecision.id.desc())  # só insert: o maior id é a última
+        .limit(1)
+        .correlate(CatalogProduct)
+        .scalar_subquery()
+    )
+
+
 def _decided_price() -> ColumnElement[int | None]:
     """Preço da avaliação da última decisão (aprovar ou rejeitar) do produto."""
     return (
@@ -257,10 +273,27 @@ def _current_price() -> ColumnElement[int | None]:
 
 
 def _watched_due() -> ColumnElement[bool]:
-    """Vigiado na fila: ainda não decidido, ou mais barato que na última decisão. Em nenhuma outra
-    condição (preço que sobe, mudança qualquer): ele está sendo vigiado justamente para a queda."""
+    """Vigiado na fila: ainda não decidido; mais barato que na última decisão; ou de volta ao preço
+    dela depois de ter subido (a mesma promoção de novo, pedido do dono em 15/10/2026). O mesmo
+    preço lido de novo sem ter subido não traz de volta (a leitura diária repete o preço), nem
+    qualquer outra mudança: ele está sendo vigiado justamente para a queda."""
     decided = _decided_price()
-    return or_(decided.is_(None), _current_price() < decided)
+    current = _current_price()
+    later = aliased(OfferEvaluation)
+    went_up = (
+        exists()
+        .where(
+            later.product_id == CatalogProduct.id,
+            later.id > _decided_evaluation(),
+            later.price_cents > _decided_price(),
+        )
+        .correlate(CatalogProduct)
+    )
+    return or_(
+        decided.is_(None),
+        current < decided,
+        and_(current == decided, went_up),
+    )
 
 
 def _queue_filters(
@@ -511,14 +544,22 @@ async def watch_statuses(db: AsyncSession, product_ids: list[int]) -> dict[int, 
         return {}
     latest = await _latest_evaluations(db, product_ids)
     last = await last_decisions(db, product_ids)
+    # A mesma regra da fila, no banco: a tela Vigiar nunca diverge do filtro.
+    due = set(
+        (
+            await db.execute(
+                select(CatalogProduct.id).where(CatalogProduct.id.in_(product_ids), _watched_due())
+            )
+        ).scalars()
+    )
     out: dict[int, WatchStatus] = {}
     for pid in product_ids:
         ev = latest.get(pid)
-        current = ev.price_cents if ev else None
-        decided = last.get(pid)
-        baseline = decided.price_cents if decided else None
-        due = baseline is None or (current is not None and current < baseline)
-        out[pid] = WatchStatus(current_cents=current, last=decided, in_queue=due)
+        out[pid] = WatchStatus(
+            current_cents=ev.price_cents if ev else None,
+            last=last.get(pid),
+            in_queue=pid in due,
+        )
     return out
 
 

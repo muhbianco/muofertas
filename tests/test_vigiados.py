@@ -1,6 +1,7 @@
 """Filtro "Só os vigiados" (pedido do dono em 15/10/2026): o vigiado entra na fila assim que é
-vigiado; depois de aprovado (ou rejeitado), só volta quando o preço cair abaixo do daquela decisão.
-Em nenhuma outra condição: preço que sobe ou se repete não traz de volta."""
+vigiado; depois de aprovado (ou rejeitado), só volta quando o preço cair abaixo do daquela decisão,
+ou quando subir e voltar a ele (a mesma promoção de novo). Em nenhuma outra condição: preço que
+sobe, ou o mesmo preço lido de novo sem ter subido, não traz de volta."""
 
 from __future__ import annotations
 
@@ -125,13 +126,23 @@ async def test_watched_enters_at_once_and_returns_only_cheaper(
     await _decide(client, watched, ev)
     assert _card(watched) not in (await client.get(WATCHED)).text
 
-    # Subiu, voltou ao mesmo preço: não volta. Nem na fila geral, mesmo com nível bom.
-    await _read(sessions, watched, 10500, tier="boa")
+    # O mesmo preço lido de novo (a leitura diária) e o preço que sobe: não volta. Nem na fila
+    # geral, mesmo com nível bom.
     await _read(sessions, watched, 10000, tier="boa")
+    assert _card(watched) not in (await client.get(WATCHED)).text
+    await _read(sessions, watched, 10500, tier="boa")
     assert _card(watched) not in (await client.get(WATCHED)).text
     assert _card(watched) not in (await client.get("/")).text
     page = (await client.get(WATCHED)).text
     assert "Nenhum vigiado esperando agora" in page and "👁 vigiados:" not in page
+
+    # Subiu e voltou ao preço da aprovação: a mesma promoção de novo, volta.
+    again = await _read(sessions, watched, 10000, tier="boa")
+    page = (await client.get(WATCHED)).text
+    assert _card(watched) in page
+    assert "Subiu e voltou ao preço da última aprovação: R$ 100,00." in page
+    await _decide(client, watched, again)
+    assert _card(watched) not in (await client.get(WATCHED)).text
 
     # Caiu abaixo da aprovação: volta, dizendo de quanto era.
     await _read(sessions, watched, 9990, tier="boa")
@@ -202,7 +213,7 @@ async def test_watch_page_tells_what_happened_to_each(
     assert "Na fila, esperando decisão · agora R$ 89,90." in block("Sanduicheira Britânia")
     fan = block("Ventilador Arno 40cm")
     assert "Aprovado a R$ 199,00 (" in fan and ", dono) · agora R$ 210,00." in fan
-    assert "Volta para a fila abaixo de R$ 199,00." in fan
+    assert "Volta para a fila se cair abaixo de R$ 199,00, ou se subir e voltar" in fan
     mixer = block("Mixer Philips Walita")
     assert "Voltou para a fila: aprovado a R$ 150,00 (" in mixer
     assert "e agora está R$ 129,90." in mixer and 'class="situacao na-fila"' in mixer
