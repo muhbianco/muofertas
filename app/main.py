@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Request, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,12 +20,14 @@ from app.alerts.service import alert_loop
 from app.core.clock import utcnow
 from app.core.config import settings
 from app.core.database import SessionFactory, check_database_health, dispose_engine, get_session
-from app.core.logging import configure_logging
+from app.core.logging import configure_logging, get_logger
 from app.models import CatalogProduct, CollectionRun, PriceObservation
 from app.panel.auth import AuthContext, LoginRequiredError, require_admin
 from app.panel.distribution_routes import router as distribution_router
 from app.panel.operators_routes import router as operators_router
+from app.panel.persist import SaveFailed
 from app.panel.routes import router as panel_router
+from app.panel.routes import templates as panel_templates
 from app.panel.whatsapp_routes import router as whatsapp_router
 
 # Só o próprio painel; imagem de produto vem do CDN do ML. Sem estilo inline. Script só arquivo
@@ -89,6 +91,32 @@ async def security_headers(
 @app.exception_handler(LoginRequiredError)
 async def login_required(_: Request, __: LoginRequiredError) -> Response:
     return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
+
+
+logger = get_logger(__name__)
+# Para onde o "Voltar" da tela de erro leva (o painel não manda Referer: no-referrer).
+BACK_PAGES = {"postar", "links", "grupos", "convites", "vigiar", "operadores", "numero", "login"}
+
+
+@app.exception_handler(SaveFailed)
+async def save_failed(request: Request, exc: SaveFailed) -> Response:
+    """O banco recusou a gravação: o operador vê que nada foi salvo (antes via "feito")."""
+    message = (
+        "Outra pessoa mexeu nisso ao mesmo tempo. Confira a tela e tente de novo."
+        if exc.conflict
+        else "O banco não respondeu na hora de salvar. Tente de novo em instantes."
+    )
+    code = status.HTTP_409_CONFLICT if exc.conflict else status.HTTP_503_SERVICE_UNAVAILABLE
+    logger.warning(
+        "gravação recusada pelo banco", extra={"rota": request.url.path, "conflito": exc.conflict}
+    )
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"ok": False, "mensagem": message}, status_code=code)
+    first = request.url.path.strip("/").split("/", 1)[0]
+    back = f"/{first}" if first in BACK_PAGES else "/"
+    return panel_templates.TemplateResponse(
+        request, "erro.html", {"ctx": None, "message": message, "back": back}, status_code=code
+    )
 
 
 @app.get("/health/live")

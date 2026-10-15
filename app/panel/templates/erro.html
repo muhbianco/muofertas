@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Não salvo{% endblock %}
+{% block content %}
+<h1>Nada foi salvo</h1>
+<p class="erro">{{ message }}</p>
+<p><a class="botao aprovar" href="{{ back }}">Voltar</a></p>
+{% endblock %}

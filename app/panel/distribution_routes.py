@@ -56,6 +56,7 @@ from app.integrations.wuzapi import WuzapiClient, WuzapiError
 from app.models import CatalogProduct, Channel, Niche, Publication
 from app.panel import queries
 from app.panel.auth import AuthContext, check_csrf
+from app.panel.persist import save
 from app.panel.routes import Admin, Db, templates
 from app.panel.whatsapp_routes import get_wa_client
 from app.whatsapp import service as wa
@@ -316,6 +317,7 @@ async def save_group(
     channel.min_interval_minutes = spacing_minutes(
         form.max_per_day, form.window_start_hour, form.window_end_hour
     )
+    await save(db)
     logger.info("grupo salvo", extra={"channel": form.name, "user": ctx.username})
     return _see_other("/grupos")
 
@@ -400,6 +402,7 @@ async def save_links(
             {"ctx": ctx, "groups": await _link_groups(db), "error": str(exc)},
             status_code=422,
         )
+    await save(db)
     logger.info(
         "links do ML", extra={"channel_id": channel_id, "saved": saved, "user": ctx.username}
     )
@@ -437,6 +440,7 @@ async def post_move_up(
     """Reordena a fila de envio: a publicação sobe para antes de `antes_de` (ou para o topo)."""
     check_csrf(ctx, csrf)
     moved = await service.move_up(db, publication_id=publication_id, before_id=antes_de)
+    await save(db)
     if moved:
         logger.info(
             "fila reordenada",
@@ -722,6 +726,7 @@ async def set_manual_photo(
     if url is None:
         return _see_other(f"/postar/{pub_id}?erro=foto#foto")
     product.image_url = url
+    await save(db)
     logger.info(
         "foto do link avulso",
         extra={"publication_id": pub_id, "product_id": product.id, "user": ctx.username},
@@ -787,7 +792,9 @@ async def set_pix(
     try:
         await service.set_pix(db, pub, pix, now)
     except DistributionError:
+        await db.rollback()
         return _see_other(f"/postar/{pub_id}?erro=pix")
+    await save(db)
     return _see_other(f"/postar/{pub_id}")
 
 
@@ -801,6 +808,7 @@ async def posted(
         changed = service.mark_sent(pub, actor=ctx.username, now=utcnow())
     except DistributionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    await save(db)
     if changed:
         logger.info("publicação enviada", extra={"publication_id": pub_id, "user": ctx.username})
     return _see_other("/postar")
@@ -824,6 +832,7 @@ async def checked_in_group(
     else:
         pub.state, pub.sending_at = "ready", None  # volta para a fila do envio
     pub.note = None
+    await save(db)
     logger.info(
         "envio conferido",
         extra={"publication_id": pub_id, "outcome": outcome, "user": ctx.username},
@@ -970,6 +979,7 @@ async def discard(
         service.discard(pub, actor=ctx.username, reason=reason)
     except DistributionError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    await save(db)
     logger.info("post tirado da fila", extra={"publication_id": pub.id, "user": ctx.username})
     return _see_other(f"/postar?aviso=removido#grupo-{pub.channel_id}")
 
@@ -1036,9 +1046,11 @@ async def skip_invite(
     csrf: Annotated[str | None, Form()] = None,
 ) -> Response:
     check_csrf(ctx, csrf)
-    if await invites.skip_day(
+    skipped = await invites.skip_day(
         db, channel_id=channel_id, day=_day(day), slot=slot, actor=ctx.username, now=utcnow()
-    ):
+    )
+    await save(db)
+    if skipped:
         logger.info("convite pulado", extra={"channel_id": channel_id, "day": day, "slot": slot})
     return _see_other("/convites")
 
@@ -1054,6 +1066,7 @@ async def undo_invite_skip(
 ) -> Response:
     check_csrf(ctx, csrf)
     await invites.undo_skip(db, channel_id=channel_id, day=_day(day), slot=slot, now=utcnow())
+    await save(db)
     return _see_other("/convites")
 
 
@@ -1127,4 +1140,5 @@ async def watch_stop(
     check_csrf(ctx, csrf)
     if not await watchlist.unwatch(db, product_id):
         raise HTTPException(status_code=404)
+    await save(db)
     return _see_other("/vigiar?aviso=parado")

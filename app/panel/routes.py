@@ -52,6 +52,7 @@ from app.panel.auth import (
     destroy_session,
     require_admin,
 )
+from app.panel.persist import save
 from app.panel.security import LoginThrottle, verify_password, verify_totp
 
 logger = get_logger(__name__)
@@ -161,6 +162,7 @@ async def login(
     user.totp_last_step = step
     user.last_login_at = utcnow()
     token, _ = await create_session(db, user)
+    await save(db)  # sem isto, cookie de sessão que não existe e passo TOTP não gravado
     logger.info("login", extra={"user": user.username})
     response = RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
     response.set_cookie(
@@ -181,6 +183,7 @@ async def logout(
 ) -> Response:
     check_csrf(ctx, csrf)
     await destroy_session(db, request.cookies.get(SESSION_COOKIE))
+    await save(db)  # sair que não grava deixaria a sessão valendo
     response = RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie(SESSION_COOKIE, path="/")
     return response

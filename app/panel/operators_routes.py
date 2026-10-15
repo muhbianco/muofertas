@@ -16,6 +16,7 @@ from app.core.logging import get_logger
 from app.models import AdminInvite, AdminSession, AdminUser
 from app.panel import invites
 from app.panel.auth import check_csrf
+from app.panel.persist import save
 from app.panel.routes import Admin, Db, templates
 from app.panel.security import otpauth_uri
 
@@ -107,6 +108,7 @@ async def deactivate(
         raise HTTPException(status_code=404)
     user.active = False
     await db.execute(delete(AdminSession).where(AdminSession.user_id == user_id))
+    await save(db)
     logger.warning("operador desativado", extra={"target": user.username, "user": ctx.username})
     return RedirectResponse("/operadores", status_code=status.HTTP_303_SEE_OTHER)
 
