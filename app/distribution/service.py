@@ -30,6 +30,8 @@ from app.domain.distribution import (
     PixError,
     PriorPost,
     Recheck,
+    batch_open_for,
+    batch_starts,
     check_coupon,
     check_pix,
     current_batch_start,
@@ -40,6 +42,7 @@ from app.domain.distribution import (
     listing_discount,
     local_day_start,
     min_gap,
+    next_batch_start,
     offer_page_url,
     official_comparison,
     parse_affiliate_links,
@@ -381,6 +384,51 @@ def is_priority(pub: Publication, now: datetime) -> bool:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class BatchProgress:
+    """Onde o grupo em lote está agora (tela Postar e o próprio envio)."""
+
+    size: int
+    every_minutes: int
+    starts: list[datetime]  # horários dos lotes do dia
+    current: datetime | None  # o lote de agora (o último que começou)
+    open_until: datetime | None  # até quando ele aceita post comum
+    sent: int  # comuns que saíram nele; prioridade não conta
+    next_start: datetime | None
+
+
+async def batch_progress(db: AsyncSession, channel: Channel, now: datetime) -> BatchProgress | None:
+    policy = policy_of(channel)
+    if policy.batch is None:
+        return None
+    current = current_batch_start(now, policy)
+    sent = 0
+    if current is not None:
+        sent = (
+            await db.execute(
+                select(func.count()).where(
+                    Publication.channel_id == channel.id,
+                    Publication.state == "sent",
+                    Publication.sent_at >= current,
+                    Publication.tier != MANUAL_TIER,
+                    Publication.flash_ends_at.is_(None),
+                    Publication.last_units.is_(None),
+                )
+            )
+        ).scalar_one()
+    return BatchProgress(
+        size=policy.batch.size,
+        every_minutes=int(policy.batch.every.total_seconds() // 60),
+        starts=batch_starts(
+            now, policy.window_start_hour, policy.window_end_hour, policy.batch.every
+        ),
+        current=current,
+        open_until=current + batch_open_for(policy) if current else None,
+        sent=sent,
+        next_start=next_batch_start(now, policy),
+    )
+
+
 async def channel_status(
     db: AsyncSession, channel: Channel, now: datetime, *, priority: bool = False
 ) -> str | None:
@@ -397,29 +445,13 @@ async def channel_status(
             )
         )
     ).one()
-    policy = policy_of(channel)
-    batch_sent = 0
-    batch_start = current_batch_start(now, policy)
-    if batch_start is not None:
-        # Os comuns que saíram neste lote; os marcados como prioridade não contam.
-        batch_sent = (
-            await db.execute(
-                select(func.count()).where(
-                    Publication.channel_id == channel.id,
-                    Publication.state == "sent",
-                    Publication.sent_at >= batch_start,
-                    Publication.tier != MANUAL_TIER,
-                    Publication.flash_ends_at.is_(None),
-                    Publication.last_units.is_(None),
-                )
-            )
-        ).scalar_one()
+    progress = await batch_progress(db, channel, now)
     return send_block_reason(
-        policy,
+        policy_of(channel),
         now=now,
         sent_today=sent_today,
         last_sent_at=last_sent,
-        batch_sent=batch_sent,
+        batch_sent=progress.sent if progress else 0,
         priority=priority,
     )
 

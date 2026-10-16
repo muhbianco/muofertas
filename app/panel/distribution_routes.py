@@ -49,6 +49,7 @@ from app.domain.distribution import (
     SEND_STEADY,
     batch_starts,
     format_brl,
+    hour_label,
     is_fresh,
     is_urgent,
     local_day_start,
@@ -182,10 +183,6 @@ def _batch_slots(form: ChannelForm) -> list[datetime]:
     return batch_starts(utcnow(), form.window_start_hour, form.window_end_hour, every)
 
 
-def _hour(slot: datetime) -> str:
-    return f"{slot:%H}h" if slot.minute == 0 else f"{slot:%H:%M}"
-
-
 def _every(minutes: int) -> str:
     return f"{minutes // 60} h" if minutes % 60 == 0 else f"{minutes} min"
 
@@ -207,7 +204,7 @@ def send_plan(channel: Channel) -> str:
     )
     if form.send_mode == SEND_BATCH and form.batch_size and form.batch_every_minutes:
         slots = _batch_slots(form)
-        hours = ", ".join(_hour(s) for s in slots)
+        hours = ", ".join(hour_label(s) for s in slots)
         return (
             f"Em lotes: {form.batch_size} a cada {_every(form.batch_every_minutes)}, às {hours} "
             f"· até {form.batch_size * len(slots)} por dia, fora as prioridades "
@@ -509,6 +506,39 @@ class ReadyGroup:
     rows: list[ReadyRow]
     total: int = 0  # prontos no grupo (a lista mostra até PER_GROUP)
     sent_today: int = 0
+    batch: BatchView | None = None  # só no grupo em lotes
+
+
+@dataclass(frozen=True, slots=True)
+class BatchView:
+    """O lote do grupo no aviso do Postar: "lote das 07h: 15/20 · próximo lote 10h"."""
+
+    size: int
+    sent: int
+    current: str | None
+    next: str | None
+    rule: str
+
+
+def batch_view(progress: service.BatchProgress | None) -> BatchView | None:
+    if progress is None:
+        return None
+    hours = [hour_label(s) for s in progress.starts]
+    listed = ", ".join(hours[:-1]) + f" e {hours[-1]}" if len(hours) > 1 else "".join(hours)
+    is_open = ""
+    if progress.current is not None and progress.open_until is not None:
+        minutes = int((progress.open_until - progress.current).total_seconds() // 60)
+        is_open = f"; cada lote fica aberto {minutes} min"
+    return BatchView(
+        size=progress.size,
+        sent=progress.sent,
+        current=hour_label(progress.current) if progress.current else None,
+        next=hour_label(progress.next_start) if progress.next_start else None,
+        rule=(
+            f"Em lotes de {progress.size} a cada {_every(progress.every_minutes)} ({listed})"
+            f"{is_open}. Avulso, relâmpago e últimas unidades saem a qualquer hora, fora do lote."
+        ),
+    )
 
 
 @router.post("/postar/{publication_id}/subir")
@@ -598,6 +628,7 @@ async def post_list(
             [],
             totals.get(channel.id, 0),
             sent_today.get(channel.id, 0),
+            batch_view(await service.batch_progress(db, channel, now)),
         )
     for pub, name, image in rows:
         if pub.channel_id in groups:

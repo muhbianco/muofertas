@@ -60,10 +60,17 @@ def test_full_batch_waits_for_the_next_one_but_priority_goes() -> None:
         )
 
     assert reason(at(10, 25), 19) is None
-    assert reason(at(10, 25), 20) == "lote das 10:00 completo (20); próximo lote às 13:00"
+    assert reason(at(10, 25), 20) == "lote das 10h completo (20); próximo lote às 13h"
     assert reason(at(10, 25), 20, priority=True) is None  # relâmpago, avulso, últimas unidades
-    assert reason(at(19, 40), 20) == "lote das 19:00 completo (20); era o último do dia"
+    assert reason(at(19, 30), 20) == "lote das 19h completo (20); era o último do dia"
     assert reason(at(6, 59), 0) == "fora da janela (07h às 22h)"
+    # 16/10/2026: o lote das 7h ainda tinha cota às 9h e seguiu soltando post. O lote de 20 fica
+    # aberto 40 min; depois disso só a prioridade sai até o próximo horário.
+    assert reason(at(10, 39), 5) is None
+    assert reason(at(10, 40), 5) == "lote das 10h encerrado; próximo lote às 13h"
+    assert reason(at(9, 14), 15) == "lote das 07h encerrado; próximo lote às 10h"
+    assert reason(at(9, 14), 15, priority=True) is None
+    assert reason(at(21, 0), 0) == "lote das 19h encerrado; era o último do dia"
     # Dentro do lote: 1 min entre um anúncio e o seguinte.
     tight = send_block_reason(
         LOTE, now=at(10, 5), sent_today=3, last_sent_at=at(10, 4, 30), batch_sent=3
@@ -137,19 +144,19 @@ async def _sent(sessions: async_sessionmaker[AsyncSession], pub_id: int, when: d
 
 async def test_the_sender_follows_the_batches(sessions: async_sessionmaker[AsyncSession]) -> None:
     channel, (first, second, third) = await _group(sessions)
-    assert await _due(sessions, at(9, 30)) == [(channel, first)]  # lote das 7h, nada saiu
-    await _sent(sessions, first, at(9, 30))
-    assert await _due(sessions, at(9, 30, 40)) == []  # 1 min entre os anúncios do lote
-    assert await _due(sessions, at(9, 32)) == [(channel, second)]
-    await _sent(sessions, second, at(9, 32))
-    assert await _due(sessions, at(9, 40)) == []  # lote das 7h completo (2)
+    assert await _due(sessions, at(7, 5)) == [(channel, first)]  # lote das 7h, nada saiu
+    await _sent(sessions, first, at(7, 5))
+    assert await _due(sessions, at(7, 5, 40)) == []  # 1 min entre os anúncios do lote
+    assert await _due(sessions, at(7, 7)) == [(channel, second)]
+    await _sent(sessions, second, at(7, 7))
+    assert await _due(sessions, at(7, 10)) == []  # lote das 7h completo (2)
 
     # O relâmpago fura o lote completo (e não conta nele).
     async with sessions() as s, s.begin():
         pub = await s.get(Publication, third)
         assert pub is not None
         pub.flash_ends_at = at(12)
-    assert await _due(sessions, at(9, 40)) == [(channel, third)]
+    assert await _due(sessions, at(7, 10)) == [(channel, third)]
     async with sessions() as s, s.begin():
         pub = await s.get(Publication, third)
         assert pub is not None
@@ -163,6 +170,18 @@ async def test_the_sender_follows_the_batches(sessions: async_sessionmaker[Async
         row = (await s.execute(select(Channel))).scalar_one()
         row.send_mode = "ritmo"
     assert await _due(sessions, at(9, 40)) == [(channel, third)]
+
+
+async def test_a_batch_that_did_not_fill_closes_and_waits(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Lote de 2 aberto 30 min: o que ficou pronto depois espera o próximo horário."""
+    channel, (first, _second, _third) = await _group(sessions)
+    assert await _due(sessions, at(7, 29)) == [(channel, first)]
+    await _sent(sessions, first, at(7, 29))
+    assert await _due(sessions, at(7, 31)) == []  # cota sobrando, mas o lote fechou às 7h30
+    assert await _due(sessions, at(9, 14)) == []
+    assert await _due(sessions, at(10, 1)) != []
 
 
 async def test_groups_screen_saves_and_checks_the_batches(
@@ -211,3 +230,40 @@ async def test_groups_screen_saves_and_checks_the_batches(
     assert steady.status_code == 303
     page = (await client.get("/grupos")).text
     assert "Espalhado: 200 por dia, um a cada ~4 min, das 7h às 22h" in page
+
+
+def test_postar_notice_shows_where_the_batch_is() -> None:
+    """16/10/2026: o aviso do Postar dizia "Próximo envio: próximo envio a partir de 09:12" e não
+    mostrava o lote."""
+    from app.distribution.service import BatchProgress
+    from app.panel.distribution_routes import batch_view
+
+    view = batch_view(
+        BatchProgress(
+            size=20,
+            every_minutes=180,
+            starts=batch_starts(at(9), 7, 22, timedelta(minutes=180)),
+            current=at(7),
+            open_until=at(7, 40),
+            sent=15,
+            next_start=at(10),
+        )
+    )
+    assert view is not None
+    assert (view.current, view.sent, view.size, view.next) == ("07h", 15, 20, "10h")
+    assert view.rule == (
+        "Em lotes de 20 a cada 3 h (07h, 10h, 13h, 16h e 19h); cada lote fica aberto 40 min. "
+        "Avulso, relâmpago e últimas unidades saem a qualquer hora, fora do lote."
+    )
+    assert batch_view(None) is None
+
+
+async def test_postar_page_has_the_batch_rule_and_no_repeated_label(
+    client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    secret = await seed_admin(sessions)
+    await _group(sessions)
+    assert (await login(client, secret)).status_code == 303
+    page = (await client.get("/postar")).text
+    assert "Em lotes de 2 a cada 3 h (07h, 10h, 13h, 16h e 19h)" in page
+    assert "fora do lote." in page and "Próximo envio: " not in page

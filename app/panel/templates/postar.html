@@ -37,10 +37,12 @@
   <summary>
     <span class="titulo">{{ g.channel.name }}</span>
     {% if g.channel.paused %}<span class="selo bloqueada">pausado</span>{% elif g.channel.transport == 'wuzapi' %}<span class="selo oficial">automático</span>{% endif %}
-    <span class="resumo"><b>{{ g.total }}</b> prontos · hoje {{ g.sent_today }}/{{ g.channel.max_per_day }}{% if g.block %} · {{ g.block }}{% endif %}</span>
+    {% if g.batch %}<span class="resumo"><b>{{ g.total }}</b> prontos{% if g.batch.current %} · lote das {{ g.batch.current }}: {{ g.batch.sent }}/{{ g.batch.size }}{% endif %}{% if g.batch.next %} · próximo lote {{ g.batch.next }}{% endif %} · hoje {{ g.sent_today }}/{{ g.channel.max_per_day }}</span>
+    {% else %}<span class="resumo"><b>{{ g.total }}</b> prontos · hoje {{ g.sent_today }}/{{ g.channel.max_per_day }}{% if g.block %} · {{ g.block }}{% endif %}</span>{% endif %}
   </summary>
   <div class="grupo-corpo">
-  {% if g.block %}<p class="linha">Próximo envio: {{ g.block }}.</p>{% elif g.channel.transport == 'wuzapi' %}<p class="linha ok">Sai sozinho nos próximos minutos.</p>{% else %}<p class="linha ok">Pode enviar agora.</p>{% endif %}
+  {% if g.block %}<p class="linha">{{ g.block[:1] | upper }}{{ g.block[1:] }}.</p>{% elif g.channel.transport == 'wuzapi' %}<p class="linha ok">Sai sozinho nos próximos minutos.</p>{% else %}<p class="linha ok">Pode enviar agora.</p>{% endif %}
+  {% if g.batch %}<p class="dica">{{ g.batch.rule }}</p>{% endif %}
   {% if not g.rows %}<p class="vazio">Nada pronto para este grupo. Aprove na Fila, filtrando pelo nicho.</p>{% endif %}
   {% if g.rows | length > 1 %}<p class="dica">Ordem de saída: o primeiro é o próximo. Relâmpago e últimas unidades ainda valendo saem na frente sozinhos (selo “prioridade”). No resto, arraste pela alça ⠿ para cima, ou use ▲ (sobe uma) e ⤒ (vira o próximo).</p>{% endif %}
   <ol class="fila-envio">

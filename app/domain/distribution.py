@@ -71,6 +71,11 @@ BATCH_GAP = timedelta(minutes=1)  # entre um post e o seguinte dentro do lote
 BATCH_JITTER_SECONDS = 20
 MAX_BATCH_SIZE = 50
 MIN_BATCH_EVERY_MINUTES = 30
+# O lote fica aberto só um tempo depois do horário: o bastante para sair inteiro (um post por
+# ciclo do worker, 1 min entre eles), não um conta-gotas até o próximo. Em 16/10/2026 o lote das
+# 7h ainda tinha cota às 9h e seguiu soltando post, contra o "20 às 7h, 10h…" da descrição.
+MIN_BATCH_OPEN = timedelta(minutes=30)
+BATCH_OPEN_PER_POST = timedelta(minutes=2)
 MIN_DISCOUNT_PCT = 5
 MAX_DISCOUNT_PCT = 70
 MIN_OFFICIAL_GAP_PCT = 10  # "mais barato que a loja oficial" só a partir disso
@@ -142,6 +147,20 @@ def batch_starts(
     return slots
 
 
+def hour_label(moment: datetime) -> str:
+    """ "10h", ou "10:30" quando não é hora cheia (Brasília)."""
+    local = moment.astimezone(SP)
+    return f"{local:%H}h" if local.minute == 0 else f"{local:%H:%M}"
+
+
+def batch_open_for(policy: ChannelPolicy) -> timedelta:
+    """Quanto tempo o lote aceita post comum depois do horário dele (20 posts: 40 min)."""
+    if policy.batch is None:
+        return timedelta(0)
+    wanted = max(MIN_BATCH_OPEN, policy.batch.size * BATCH_OPEN_PER_POST)
+    return min(policy.batch.every, wanted)
+
+
 def current_batch_start(now: datetime, policy: ChannelPolicy) -> datetime | None:
     if policy.batch is None:
         return None
@@ -210,16 +229,19 @@ def send_block_reason(
         return f"fora da janela ({policy.window_start_hour:02d}h às {policy.window_end_hour:02d}h)"
     if sent_today >= policy.max_per_day:
         return f"limite do dia atingido ({policy.max_per_day})"
+    if policy.batch is not None and not priority:
+        current = current_batch_start(now, policy)
+        upcoming = next_batch_start(now, policy)
+        then = f"próximo lote às {hour_label(upcoming)}" if upcoming else "era o último do dia"
+        if current is None:
+            return then
+        if now >= current + batch_open_for(policy):
+            return f"lote das {hour_label(current)} encerrado; {then}"
+        if batch_sent >= policy.batch.size:
+            return f"lote das {hour_label(current)} completo ({policy.batch.size}); {then}"
     if last_sent_at is not None and now - last_sent_at < policy.min_interval:
         allowed = (last_sent_at + policy.min_interval).astimezone(SP)
         return f"próximo envio a partir de {allowed:%H:%M}"
-    if policy.batch is not None and not priority and batch_sent >= policy.batch.size:
-        current = current_batch_start(now, policy)
-        upcoming = next_batch_start(now, policy)
-        done = f"lote das {current:%H:%M} completo ({policy.batch.size})" if current else "lote"
-        if upcoming is None:
-            return f"{done}; era o último do dia"
-        return f"{done}; próximo lote às {upcoming:%H:%M}"
     return None
 
 

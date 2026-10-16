@@ -32,7 +32,7 @@
     <label>Anúncios por lote <small>(Y)</small><input name="lote_tamanho" type="number" min="1" max="50" placeholder="20" value="{{ c.batch_size or '' if c else '' }}"></label>
     <label>Um lote a cada (min) <small>(X)</small><input name="lote_minutos" type="number" min="30" max="1440" placeholder="180" value="{{ c.batch_every_minutes or '' if c else '' }}"></label>
   </div>
-  <p class="dica">Espalhado: intervalo = janela ÷ envios por dia, variando até 5 min para mais ou para menos. Em lotes: o lote sai nos horários contados do começo da janela (das 7h, a cada 180 min: 7h, 10h, 13h, 16h e 19h), com 1 min entre um anúncio e o outro; link avulso, relâmpago e últimas unidades saem a qualquer hora e não gastam o lote, e "Envios por dia" vira o teto do dia.</p>
+  <p class="dica">Espalhado: intervalo = janela ÷ envios por dia, variando até 5 min para mais ou para menos. Em lotes: o lote sai nos horários contados do começo da janela (das 7h, a cada 180 min: 7h, 10h, 13h, 16h e 19h), com 1 min entre um anúncio e o outro, e fica aberto o bastante para sair inteiro (20 anúncios: 40 min); o que ficar pronto depois espera o próximo lote. Link avulso, relâmpago e últimas unidades saem a qualquer hora e não gastam o lote, e "Envios por dia" vira o teto do dia.</p>
   <label>Envio
     <select name="transport">
       <option value="manual" {% if not c or c.transport != 'wuzapi' %}selected{% endif %}>Manual (Postar pelo celular)</option>
