@@ -25,6 +25,7 @@ from app.distribution.service import (
     apply_recheck,
     channel_status,
     fetch_recheck,
+    is_priority,
     message_for,
     policy_of,
     ready_order,
@@ -121,7 +122,7 @@ async def _due(sessions: async_sessionmaker[AsyncSession], now: datetime) -> lis
             ).scalar_one_or_none()
             if last_invite is not None and now - last_invite < AFTER_INVITE:
                 continue  # o convite acabou de sair: a oferta não vai colada nele
-            if await channel_status(db, channel, now) is None:
+            if await channel_status(db, channel, now, priority=is_priority(pub, now)) is None:
                 picks.append((channel.id, pub.id))
     return picks
 

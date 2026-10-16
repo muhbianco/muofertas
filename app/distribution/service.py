@@ -10,17 +10,21 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.distribution import (
+    BATCH_GAP,
+    BATCH_JITTER_SECONDS,
     DEDUP_WINDOW,
     FLASH_MIN_LEFT,
     LAST_UNITS_VALID_FOR,
     MANUAL_TIER,
+    SEND_BATCH,
+    BatchPlan,
     ChannelPolicy,
     LinkError,
     PixError,
@@ -28,8 +32,10 @@ from app.domain.distribution import (
     Recheck,
     check_coupon,
     check_pix,
+    current_batch_start,
     flash_to_show,
     is_fresh,
+    is_urgent,
     jitter_cap,
     listing_discount,
     local_day_start,
@@ -140,6 +146,18 @@ async def move_up(db: AsyncSession, *, publication_id: int, before_id: int | Non
 
 
 def policy_of(channel: Channel) -> ChannelPolicy:
+    if channel.send_mode == SEND_BATCH and channel.batch_size and channel.batch_every_minutes:
+        return ChannelPolicy(
+            max_per_day=channel.max_per_day,
+            min_interval=BATCH_GAP,
+            window_start_hour=channel.window_start_hour,
+            window_end_hour=channel.window_end_hour,
+            paused=channel.paused,
+            jitter_cap_seconds=BATCH_JITTER_SECONDS,
+            batch=BatchPlan(
+                size=channel.batch_size, every=timedelta(minutes=channel.batch_every_minutes)
+            ),
+        )
     spacing = spacing_minutes(
         channel.max_per_day, channel.window_start_hour, channel.window_end_hour
     )
@@ -356,8 +374,20 @@ def apply_recheck(pub: Publication, recheck: Recheck, now: datetime) -> None:
 # --------------------------------------------------------------------------- envio
 
 
-async def channel_status(db: AsyncSession, channel: Channel, now: datetime) -> str | None:
-    """Motivo para não enviar agora (ou None). A janela fecha à noite: o dia basta."""
+def is_priority(pub: Publication, now: datetime) -> bool:
+    """Sai fora do lote e não gasta a cota dele: link avulso, relâmpago e últimas unidades."""
+    return pub.tier == MANUAL_TIER or is_urgent(
+        pub.flash_ends_at, pub.last_units, pub.last_units_at, now
+    )
+
+
+async def channel_status(
+    db: AsyncSession, channel: Channel, now: datetime, *, priority: bool = False
+) -> str | None:
+    """Motivo para não enviar agora (ou None). A janela fecha à noite: o dia basta.
+
+    `priority`: o próximo da fila é avulso, relâmpago ou últimas unidades (no modo lote, sai
+    mesmo com o lote completo)."""
     sent_today, last_sent = (
         await db.execute(
             select(func.count(), func.max(Publication.sent_at)).where(
@@ -367,8 +397,30 @@ async def channel_status(db: AsyncSession, channel: Channel, now: datetime) -> s
             )
         )
     ).one()
+    policy = policy_of(channel)
+    batch_sent = 0
+    batch_start = current_batch_start(now, policy)
+    if batch_start is not None:
+        # Os comuns que saíram neste lote; os marcados como prioridade não contam.
+        batch_sent = (
+            await db.execute(
+                select(func.count()).where(
+                    Publication.channel_id == channel.id,
+                    Publication.state == "sent",
+                    Publication.sent_at >= batch_start,
+                    Publication.tier != MANUAL_TIER,
+                    Publication.flash_ends_at.is_(None),
+                    Publication.last_units.is_(None),
+                )
+            )
+        ).scalar_one()
     return send_block_reason(
-        policy_of(channel), now=now, sent_today=sent_today, last_sent_at=last_sent
+        policy,
+        now=now,
+        sent_today=sent_today,
+        last_sent_at=last_sent,
+        batch_sent=batch_sent,
+        priority=priority,
     )
 
 

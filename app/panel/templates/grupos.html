@@ -22,7 +22,17 @@
     <label>Das (h)<input name="window_start_hour" type="number" min="0" max="23" required value="{{ c.window_start_hour if c else 7 }}"></label>
     <label>Até (h)<input name="window_end_hour" type="number" min="1" max="24" required value="{{ c.window_end_hour if c else 22 }}"></label>
   </div>
-  <p class="dica">Os envios são espalhados na janela: intervalo = janela ÷ envios por dia, variando até 5 min para mais ou para menos. Mudou os números? O intervalo é recalculado ao salvar.</p>
+  <label>Ritmo de envio
+    <select name="modo">
+      <option value="ritmo" {% if not c or c.send_mode != 'lote' %}selected{% endif %}>Espalhado na janela (envios por dia)</option>
+      <option value="lote" {% if c and c.send_mode == 'lote' %}selected{% endif %}>Em lotes (Y anúncios a cada X minutos)</option>
+    </select>
+  </label>
+  <div class="duas">
+    <label>Anúncios por lote <small>(Y)</small><input name="lote_tamanho" type="number" min="1" max="50" placeholder="20" value="{{ c.batch_size or '' if c else '' }}"></label>
+    <label>Um lote a cada (min) <small>(X)</small><input name="lote_minutos" type="number" min="30" max="1440" placeholder="180" value="{{ c.batch_every_minutes or '' if c else '' }}"></label>
+  </div>
+  <p class="dica">Espalhado: intervalo = janela ÷ envios por dia, variando até 5 min para mais ou para menos. Em lotes: o lote sai nos horários contados do começo da janela (das 7h, a cada 180 min: 7h, 10h, 13h, 16h e 19h), com 1 min entre um anúncio e o outro; link avulso, relâmpago e últimas unidades saem a qualquer hora e não gastam o lote, e "Envios por dia" vira o teto do dia.</p>
   <label>Envio
     <select name="transport">
       <option value="manual" {% if not c or c.transport != 'wuzapi' %}selected{% endif %}>Manual (Postar pelo celular)</option>
@@ -77,6 +87,7 @@
 <article class="bloco">
   <h2>{{ c.name }}{% if c.paused %} <span class="selo regular">pausado</span>{% endif %}</h2>
   {% set gr = growth.get(c.id) if growth else none %}
+  <p class="linha ritmo">{{ plans[c.id] }}</p>
   {% if c.wa_jid %}<p class="linha">WhatsApp ligado{% if gr and gr.today is not none %} · {{ gr.today }} membros hoje{% if gr.delta is not none %} ({{ '%+d' % gr.delta }} em 7 dias){% endif %}{% endif %}</p>{% endif %}
   {{ channel_form(c, "/grupos/" ~ c.id, "Salvar") }}
 </article>

@@ -402,6 +402,11 @@ class Channel(Base):
     # 0028: vem marcado no "Grupos ▾" da aprovação e no link avulso de todo produto, não só
     # dos do nicho dele (o grupo Família, que mais rende, desde 13/10/2026).
     always_checked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    # 0031: "ritmo" (max_per_day espalhados na janela) ou "lote" (batch_size anúncios a cada
+    # batch_every_minutes, alinhados ao começo da janela), pedido do dono em 16/10/2026.
+    send_mode: Mapped[str] = mapped_column(String(8), default="ritmo", server_default="ritmo")
+    batch_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    batch_every_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())
     # 0008: grupo de verdade no WhatsApp (JID `…@g.us`), ligado pela tela Grupos.
     wa_jid: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import secrets
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
@@ -36,11 +36,18 @@ from app.distribution.move import (
 from app.distribution.sender import resend_now, send_now
 from app.distribution.service import DistributionError
 from app.domain.distribution import (
+    BATCH_GAP,
     INVITE_PREFIX,
     MANUAL_TIER,
+    MAX_BATCH_SIZE,
     MAX_PER_DAY,
+    MIN_BATCH_EVERY_MINUTES,
     MIN_SPACING_MINUTES,
     ML_TAG_RE,
+    SEND_BATCH,
+    SEND_MODES,
+    SEND_STEADY,
+    batch_starts,
     format_brl,
     is_fresh,
     is_urgent,
@@ -165,6 +172,52 @@ class ChannelForm:
     paused: bool
     transport: str = "manual"
     always_checked: bool = False
+    send_mode: str = SEND_STEADY
+    batch_size: int | None = None
+    batch_every_minutes: int | None = None
+
+
+def _batch_slots(form: ChannelForm) -> list[datetime]:
+    every = timedelta(minutes=form.batch_every_minutes or 0)
+    return batch_starts(utcnow(), form.window_start_hour, form.window_end_hour, every)
+
+
+def _hour(slot: datetime) -> str:
+    return f"{slot:%H}h" if slot.minute == 0 else f"{slot:%H:%M}"
+
+
+def _every(minutes: int) -> str:
+    return f"{minutes // 60} h" if minutes % 60 == 0 else f"{minutes} min"
+
+
+def send_plan(channel: Channel) -> str:
+    """Resumo do ritmo do grupo na tela Grupos (o que o envio vai fazer de verdade)."""
+    form = ChannelForm(
+        name=channel.name,
+        niche_id=channel.niche_id,
+        ml_tag=None,
+        invite_url=None,
+        max_per_day=channel.max_per_day,
+        window_start_hour=channel.window_start_hour,
+        window_end_hour=channel.window_end_hour,
+        paused=channel.paused,
+        send_mode=channel.send_mode,
+        batch_size=channel.batch_size,
+        batch_every_minutes=channel.batch_every_minutes,
+    )
+    if form.send_mode == SEND_BATCH and form.batch_size and form.batch_every_minutes:
+        slots = _batch_slots(form)
+        hours = ", ".join(_hour(s) for s in slots)
+        return (
+            f"Em lotes: {form.batch_size} a cada {_every(form.batch_every_minutes)}, às {hours} "
+            f"· até {form.batch_size * len(slots)} por dia, fora as prioridades "
+            f"(teto de {form.max_per_day})"
+        )
+    spacing = spacing_minutes(form.max_per_day, form.window_start_hour, form.window_end_hour)
+    return (
+        f"Espalhado: {form.max_per_day} por dia, um a cada ~{spacing} min, das "
+        f"{form.window_start_hour}h às {form.window_end_hour}h"
+    )
 
 
 NEEDS_WHATSAPP_LINK = (
@@ -188,12 +241,34 @@ def _validate(form: ChannelForm, niche_ids: set[int]) -> str | None:
         return f"envios por dia: de 1 a {MAX_PER_DAY}"
     if not (0 <= form.window_start_hour < form.window_end_hour <= 24):
         return "janela: início antes do fim, entre 0h e 24h"
-    room = max_sends_in_window(form.window_start_hour, form.window_end_hour)
-    if form.max_per_day > room:
-        return (
-            f"nessa janela cabem no máximo {room} envios por dia "
-            f"(um a cada {MIN_SPACING_MINUTES} min)"
-        )
+    if form.send_mode not in SEND_MODES:
+        return "ritmo de envio: espalhado ou em lotes"
+    if form.send_mode == SEND_BATCH:
+        window = (form.window_end_hour - form.window_start_hour) * 60
+        if form.batch_size is None or not 1 <= form.batch_size <= MAX_BATCH_SIZE:
+            return f"anúncios por lote: de 1 a {MAX_BATCH_SIZE}"
+        every = form.batch_every_minutes
+        if every is None or not MIN_BATCH_EVERY_MINUTES <= every <= window:
+            return f"um lote a cada: de {MIN_BATCH_EVERY_MINUTES} min até a janela ({window} min)"
+        gap = int(BATCH_GAP.total_seconds() // 60)
+        if form.batch_size * gap > every:
+            return (
+                f"o lote não cabe: com {gap} min entre um anúncio e outro, {form.batch_size} "
+                f"anúncios levam {form.batch_size * gap} min"
+            )
+        wanted = form.batch_size * len(_batch_slots(form))
+        if wanted > form.max_per_day:
+            return (
+                f"envios por dia ({form.max_per_day}) corta os lotes: eles pedem {wanted}. "
+                "Suba o limite do dia ou diminua o lote"
+            )
+    else:
+        room = max_sends_in_window(form.window_start_hour, form.window_end_hour)
+        if form.max_per_day > room:
+            return (
+                f"nessa janela cabem no máximo {room} envios por dia "
+                f"(um a cada {MIN_SPACING_MINUTES} min)"
+            )
     if form.transport not in ("manual", "wuzapi"):
         return "envio: manual ou automático"
     return None
@@ -242,6 +317,7 @@ async def _render_groups(
             "wa_error": wa_error,
             "wa_session": session,
             "spacing": spacing_minutes,
+            "plans": {c.id: send_plan(c) for c in channels},
         },
         status_code=code,
     )
@@ -276,6 +352,9 @@ async def save_group(
     paused: Annotated[str | None, Form()] = None,
     transport: Annotated[str, Form(max_length=12)] = "manual",
     sempre: Annotated[str | None, Form(max_length=1)] = None,
+    modo: Annotated[str, Form(max_length=8)] = SEND_STEADY,
+    lote_tamanho: Annotated[str, Form(max_length=4)] = "",
+    lote_minutos: Annotated[str, Form(max_length=5)] = "",
     channel_id: int | None = None,
 ) -> Response:
     check_csrf(ctx, csrf)
@@ -290,6 +369,9 @@ async def save_group(
         paused=paused == "1",
         transport=transport,
         always_checked=sempre == "1",
+        send_mode=modo,
+        batch_size=int(lote_tamanho) if lote_tamanho.strip().isdigit() else None,
+        batch_every_minutes=int(lote_minutos) if lote_minutos.strip().isdigit() else None,
     )
     niche_ids = set((await db.execute(select(Niche.id).limit(50))).scalars())
     error = _validate(form, niche_ids)

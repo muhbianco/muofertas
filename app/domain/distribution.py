@@ -60,6 +60,17 @@ MAX_JITTER_SECONDS = 600
 # 13/10/2026: até 200 por dia (decisão do dono); das 07h às 22h dá um a cada ~4,5 min.
 MIN_SPACING_MINUTES = 4
 MAX_PER_DAY = 200
+# Modo de envio do grupo (0031). "ritmo": `max_per_day` espalhados na janela, como sempre foi.
+# "lote": `batch_size` anúncios a cada `batch_every_minutes`, nos horários alinhados ao começo da
+# janela (das 7h, a cada 180 min: 7h, 10h, 13h, 16h, 19h), pedido do dono em 16/10/2026. Link
+# avulso, relâmpago e últimas unidades saem a qualquer hora da janela e não gastam o lote.
+SEND_STEADY = "ritmo"
+SEND_BATCH = "lote"
+SEND_MODES = (SEND_STEADY, SEND_BATCH)
+BATCH_GAP = timedelta(minutes=1)  # entre um post e o seguinte dentro do lote
+BATCH_JITTER_SECONDS = 20
+MAX_BATCH_SIZE = 50
+MIN_BATCH_EVERY_MINUTES = 30
 MIN_DISCOUNT_PCT = 5
 MAX_DISCOUNT_PCT = 70
 MIN_OFFICIAL_GAP_PCT = 10  # "mais barato que a loja oficial" só a partir disso
@@ -101,6 +112,12 @@ def offer_page_url(permalink: str | None, external_id: str, item_id: str | None)
 
 
 @dataclass(frozen=True, slots=True)
+class BatchPlan:
+    size: int
+    every: timedelta
+
+
+@dataclass(frozen=True, slots=True)
 class ChannelPolicy:
     max_per_day: int
     min_interval: timedelta
@@ -108,6 +125,36 @@ class ChannelPolicy:
     window_end_hour: int
     paused: bool = False
     jitter_cap_seconds: int = MAX_JITTER_SECONDS
+    batch: BatchPlan | None = None  # só no modo "lote"
+
+
+def batch_starts(
+    day: datetime, window_start_hour: int, window_end_hour: int, every: timedelta
+) -> list[datetime]:
+    """Horários dos lotes do dia de `day` (Brasília): do começo da janela, a cada `every`."""
+    midnight = day.astimezone(SP).replace(hour=0, minute=0, second=0, microsecond=0)
+    start = midnight + timedelta(hours=window_start_hour)
+    end = midnight + timedelta(hours=window_end_hour)
+    slots: list[datetime] = []
+    while start < end and every > timedelta(0):
+        slots.append(start)
+        start += every
+    return slots
+
+
+def current_batch_start(now: datetime, policy: ChannelPolicy) -> datetime | None:
+    if policy.batch is None:
+        return None
+    slots = batch_starts(now, policy.window_start_hour, policy.window_end_hour, policy.batch.every)
+    started = [s for s in slots if s <= now]
+    return started[-1] if started else None
+
+
+def next_batch_start(now: datetime, policy: ChannelPolicy) -> datetime | None:
+    if policy.batch is None:
+        return None
+    slots = batch_starts(now, policy.window_start_hour, policy.window_end_hour, policy.batch.every)
+    return next((s for s in slots if s > now), None)
 
 
 def jitter_cap(spacing: int) -> int:
@@ -144,9 +191,18 @@ def local_day_start(now: datetime) -> datetime:
 
 
 def send_block_reason(
-    policy: ChannelPolicy, *, now: datetime, sent_today: int, last_sent_at: datetime | None
+    policy: ChannelPolicy,
+    *,
+    now: datetime,
+    sent_today: int,
+    last_sent_at: datetime | None,
+    batch_sent: int = 0,
+    priority: bool = False,
 ) -> str | None:
-    """Por que este grupo não pode receber agora (ou None se pode)."""
+    """Por que este grupo não pode receber agora (ou None se pode).
+
+    No modo lote, `batch_sent` é quantos posts comuns já saíram no lote atual; o post
+    `priority` (avulso, relâmpago, últimas unidades) sai mesmo com o lote completo."""
     if policy.paused:
         return "grupo pausado"
     local = now.astimezone(SP)
@@ -157,6 +213,13 @@ def send_block_reason(
     if last_sent_at is not None and now - last_sent_at < policy.min_interval:
         allowed = (last_sent_at + policy.min_interval).astimezone(SP)
         return f"próximo envio a partir de {allowed:%H:%M}"
+    if policy.batch is not None and not priority and batch_sent >= policy.batch.size:
+        current = current_batch_start(now, policy)
+        upcoming = next_batch_start(now, policy)
+        done = f"lote das {current:%H:%M} completo ({policy.batch.size})" if current else "lote"
+        if upcoming is None:
+            return f"{done}; era o último do dia"
+        return f"{done}; próximo lote às {upcoming:%H:%M}"
     return None
 
 

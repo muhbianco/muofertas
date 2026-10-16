@@ -15,9 +15,44 @@ Cada promessa abaixo é algo que o robô faz de verdade. Se uma regra mudar, a d
   descer";
 - **só administradores postam:** configuração dos grupos;
 - **"30 por dia, das 7h às 22h":** `channel.max_per_day` e a janela (0021).
+- **"20 ofertas a cada 3 horas" (Ofertas Reais):** `channel.send_mode = lote`,
+  `batch_size = 20`, `batch_every_minutes = 180` e a janela das 7h às 22h (0031); os lotes
+  saem às 7h, 10h, 13h, 16h e 19h. Fora deles só sai link avulso, relâmpago e últimas
+  unidades. Mudou o lote ou a janela na tela Grupos? Os horários da descrição mudam junto.
 
 A linha do `#publi` é o aviso completo de publicidade (CDC art. 36, CONAR); o post leva só o
 `#publi` curto. Limite do WhatsApp: 2.048 caracteres por descrição; todas estão abaixo disso.
+
+## Ofertas Reais (o grupo geral, desde 16/10/2026)
+
+O antigo Pais, Mães e Filhos, renomeado pelo dono no WhatsApp; recebe produto de qualquer
+nicho (`always_checked`). Por isso a linha do vendedor não promete "só loja oficial ou
+MercadoLíder": em Casa e Ferramentas entra vendedor amarelo/verde com envio pelo ML e 50+
+vendas. A versão anterior (sem o `#publi`) dizia isso e estava errada para esses produtos.
+1372 caracteres.
+
+```
+👨‍👩‍👧 *MegaPromoOz*
+As melhores ofertas para todo mundo em um só lugar: casa, tecnologia, moda, beleza, brinquedos, ferramentas e muito mais. Tudo caçado e conferido antes de chegar aqui.
+
+⏰ *Como chegam as ofertas*
+• 20 ofertas a cada 3 horas: às 7h, 10h, 13h, 16h e 19h.
+• Fora desses horários, só o que é fora da curva: oferta relâmpago, últimas unidades e achados que a gente garimpa na hora.
+Pode silenciar o grupo e olhar quando quiser.
+
+*Por que aqui é seguro*
+✅ Link oficial do Mercado Livre. Você paga direto no site do ML, com a Compra Garantida: se não chegar ou vier diferente do anúncio, o dinheiro volta.
+✅ Só vendedor bem avaliado no Mercado Livre, com envio pelo ML e histórico de vendas. Celular, perfume e suplemento, só de loja oficial; marca muito falsificada, só de loja oficial ou MercadoLíder Gold/Platinum.
+✅ Preço conferido antes de postar. Se subiu, a oferta não sai.
+✅ Desconto de mentira fica de fora: acompanhamos o histórico e ignoramos o "de" inflado.
+✅ Só os administradores postam. Nada de link de estranho por aqui.
+
+🚫 Nunca pedimos Pix, senha, dados ou pagamento, e não chamamos ninguém no privado. Se alguém fizer isso em nome do MegaPromoOz, é golpe: denuncie.
+
+📢 #publi: os links são de afiliado. O MegaPromoOz pode ganhar comissão do Mercado Livre, sem custo nenhum a mais pra você.
+
+📷 Siga no Instagram: instagram.com/megapromovipoz
+```
 
 ## Ferramentas
 
