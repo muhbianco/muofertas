@@ -201,7 +201,7 @@ async def test_marks_are_shared_and_lock_the_other_operator(
     assert (await login(client, secret)).status_code == 303
     page = (await client.get("/")).text
     assert 'class="fila-main" data-agora="' in page and "data-trava" in page
-    assert '<script src="/static/fila.js?v=8" defer></script>' in page
+    assert '<script src="/static/fila.js?v=9" defer></script>' in page
     mine = {"csrf": csrf_of(page)}
     his = {"csrf": csrf_of((await danilo.get("/")).text)}
     board = {"ids": f"{product},999999,abc", "desde": utcnow().isoformat()}

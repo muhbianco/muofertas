@@ -17,7 +17,7 @@
 </div>
 {% if p.offer_kind %}<p class="oferta">
   {% if s.used_official %}loja oficial{% elif p.seller %}{{ p.seller.nickname or 'vendedor' }} · reputação {{ p.seller.reputation }}{% if p.seller.power %} · {{ p.seller.power }}{% endif %} · {{ p.seller.sales }} vendas{% else %}{{ p.offer_kind }}{% endif %}
-  · <a href="{{ p.offer_url }}" target="_blank" rel="noopener noreferrer">ver esta oferta</a>
+  · <a href="{{ p.offer_url }}" target="_blank" rel="noopener noreferrer" data-oferta>ver esta oferta</a>
   · lido {{ prod.last_checked_at | local }}
 </p>{% endif %}
 <p class="nota-pix">Preço do anúncio. O desconto no Pix que a página do ML às vezes mostra não vem pela API.</p>
@@ -82,4 +82,4 @@
 </table>
 {% endif %}
 {% endblock %}
-{% block scripts %}<script src="/static/fila.js?v=8" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=9" defer></script>{% endblock %}

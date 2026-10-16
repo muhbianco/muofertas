@@ -74,7 +74,7 @@
     {% if c.watched %}<div class="linha vigia">{% if c.price_cents is none %}Aguardando a primeira leitura do preço (o robô lê em instantes).{% elif c.baseline_cents and c.price_cents == c.baseline_cents %}Subiu e voltou ao preço da última {{ 'aprovação' if c.baseline_decision == 'approved' else 'rejeição' }}: {{ c.baseline_cents | brl }}.{% elif c.baseline_cents %}Caiu abaixo da última {{ 'aprovação' if c.baseline_decision == 'approved' else 'rejeição' }}: era {{ c.baseline_cents | brl }}.{% else %}Vigiado, ainda sem decisão.{% endif %}</div>{% endif %}
     {% if c.offer_kind %}<div class="oferta">
       {% if c.used_official %}loja oficial{% elif c.seller %}{{ c.seller.nickname or 'vendedor' }} · reputação {{ c.seller.reputation }}{% if c.seller.power %} · {{ c.seller.power }}{% endif %} · {{ c.seller.sales }} vendas{% else %}{{ c.offer_kind }}{% endif %}
-      · <a href="{{ c.offer_url }}" target="_blank" rel="noopener noreferrer">ver esta oferta</a>
+      · <a href="{{ c.offer_url }}" target="_blank" rel="noopener noreferrer" data-oferta>ver esta oferta</a>
       · lido {{ c.read_at | local }}
     </div>{% endif %}
     <div class="linha">
@@ -123,4 +123,4 @@
 </div>
 </div>
 {% endblock %}
-{% block scripts %}<script src="/static/fila.js?v=8" defer></script>{% endblock %}
+{% block scripts %}<script src="/static/fila.js?v=9" defer></script>{% endblock %}

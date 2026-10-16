@@ -1017,3 +1017,44 @@
   render();
   poll(); // marcas deste operador (de outro aparelho) e as dos outros
 })();
+
+// "Ver esta oferta" (fila e produto): no computador, abre a página do ML numa janela encostada à
+// direita da tela, sempre a mesma, e o painel fica onde está (pedido do dono em 16/10/2026).
+// Embutir a página dentro do painel não dá: o ML só deixa os próprios domínios a exibirem dentro
+// de outra página (frame-ancestors). No celular, com Ctrl/⌘/Shift ou clique do meio, ou com a
+// janela bloqueada pelo navegador, o link abre uma aba como antes.
+(function () {
+  "use strict";
+
+  var NAME = "mpo-oferta-ml";
+  if (!window.matchMedia || !window.matchMedia("(pointer: fine)").matches) {
+    return;
+  }
+
+  document.addEventListener("click", function (ev) {
+    var link = ev.target.closest ? ev.target.closest("a[data-oferta]") : null;
+    if (!link || ev.defaultPrevented || ev.button !== 0 ||
+        ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey) {
+      return;
+    }
+    var screenInfo = window.screen;
+    var availWidth = screenInfo.availWidth || 1280; // 0 quando o navegador não informa a tela
+    var availHeight = screenInfo.availHeight || 900;
+    var width = Math.max(420, Math.min(560, Math.round(availWidth * 0.45)));
+    var left = (screenInfo.availLeft || 0) + availWidth - width;
+    var features = "popup=yes,width=" + width + ",height=" + availHeight +
+      ",left=" + left + ",top=" + (screenInfo.availTop || 0);
+    var win = window.open("", NAME, features);
+    if (!win) {
+      return; // janela bloqueada: segue o link (aba nova)
+    }
+    ev.preventDefault();
+    try {
+      win.opener = null; // a página do ML não alcança o painel
+    } catch (e) {
+      /* a janela já está no ML e já nasceu sem opener */
+    }
+    win.location.href = link.href;
+    win.focus();
+  });
+})();
