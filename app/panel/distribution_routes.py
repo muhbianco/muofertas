@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import secrets
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import func, or_, select
@@ -35,6 +37,7 @@ from app.distribution.move import (
 )
 from app.distribution.sender import resend_now, send_now
 from app.distribution.service import DistributionError
+from app.distribution.short_links import expand
 from app.domain.distribution import (
     BATCH_GAP,
     INVITE_PREFIX,
@@ -47,6 +50,7 @@ from app.domain.distribution import (
     SEND_BATCH,
     SEND_MODES,
     SEND_STEADY,
+    LinkError,
     batch_starts,
     format_brl,
     hour_label,
@@ -59,6 +63,7 @@ from app.domain.distribution import (
     spacing_minutes,
 )
 from app.domain.invites import InviteConfigError
+from app.integrations import ml_shortlink
 from app.integrations.mercadolivre import MercadoLivreClient
 from app.integrations.wuzapi import WuzapiClient, WuzapiError
 from app.models import CatalogProduct, Channel, Niche, Publication
@@ -729,11 +734,21 @@ async def manual_page(request: Request, db: Db, ctx: Admin) -> Response:
     return await _render_manual(request, db, ctx)
 
 
+async def get_short_client() -> AsyncIterator[httpx.AsyncClient]:
+    """Cliente do encurtador do ML (os testes trocam por um falso)."""
+    async with ml_shortlink.new_client() as client:
+        yield client
+
+
+ShortClient = Annotated[httpx.AsyncClient, Depends(get_short_client)]
+
+
 @router.post("/postar/avulso", response_class=HTMLResponse)
 async def manual_add(
     request: Request,
     db: Db,
     ctx: Admin,
+    short_client: ShortClient,
     url: Annotated[str, Form(max_length=2000)] = "",
     nome: Annotated[str, Form(max_length=300)] = "",
     preco: Annotated[str, Form(max_length=20)] = "",
@@ -765,7 +780,19 @@ async def manual_add(
     )
     marked = set(channel_id or [])
     try:
-        post = post_from_form(form, sorted(marked))
+        # Antes de tocar no banco: o link curto custa uma ida ao encurtador do ML.
+        expanded = await expand(url, client=short_client, our_tool_id=settings.ml_affiliate_tool_id)
+    except (LinkError, ml_shortlink.ShortLinkError) as exc:
+        return await _render_manual(
+            request, db, ctx, form=form, marked=marked, error=str(exc), code=422
+        )
+    try:
+        post = post_from_form(
+            form,
+            sorted(marked),
+            url=expanded.url,
+            short_url=expanded.own_short.url if expanded.own_short else None,
+        )
         result = await queue_manual(db, post, actor=ctx.username, now=utcnow())
         await db.commit()
     except ManualError as exc:
@@ -1230,13 +1257,25 @@ async def watch_add(
     sessions: Sessions,
     ctx: Admin,
     ml: Ml,
-    url: Annotated[str, Form(max_length=500)],
+    short_client: ShortClient,
+    url: Annotated[str, Form(max_length=2000)],
     niche_id: Annotated[int, Form()],
     csrf: Annotated[str | None, Form()] = None,
 ) -> Response:
     check_csrf(ctx, csrf)
     try:
-        result = await watchlist.watch(sessions, ml, url=url, niche_id=niche_id, now=utcnow())
+        expanded = await expand(url, client=short_client, our_tool_id=settings.ml_affiliate_tool_id)
+        if expanded.own_short is not None:
+            raise watchlist.WatchError(
+                "o link curto de afiliado não diz qual é o produto, e o robô precisa dele para "
+                "acompanhar o preço. Abra o produto no navegador e copie o endereço da página "
+                "(com /p/MLB…)"
+            )
+        result = await watchlist.watch(
+            sessions, ml, url=expanded.url, niche_id=niche_id, now=utcnow()
+        )
+    except (LinkError, ml_shortlink.ShortLinkError) as exc:
+        return await _render_watch(request, sessions, ctx, error=str(exc), url=url, code=422)
     except watchlist.WatchError as exc:
         return await _render_watch(request, sessions, ctx, error=str(exc), url=url, code=422)
     logger.info(

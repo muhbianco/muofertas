@@ -3,12 +3,13 @@
 {% block content %}
 <h1>Link avulso</h1>
 <p class="nota-pix">Para postar um anúncio que o robô não acompanha. Cole o link da página, digite o que ela mostra e marque os grupos: o post entra em <b>1º lugar</b> na fila de cada um, com o link de afiliado do grupo. A API não lê o anúncio, então vale o preço que você digitar, por <b>6 horas</b> (ou até a oferta relâmpago acabar); depois disso ele sai da fila sozinho.</p>
+<p class="nota-pix">Vale o link da página ou o que o app do ML compartilha (pode colar o texto inteiro). O link da página é limpo: a etiqueta de afiliado de quem copiou some e cada grupo recebe a sua. Link curto (meli.la) só o nosso, e ele vai como está para todos os grupos; de outro afiliado é recusado.</p>
 {% if error %}<p class="erro">Não entrou: {{ error }}.</p>{% endif %}
 <article class="bloco">
   <form class="formulario" method="post" action="/postar/avulso">
     <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
     <input type="hidden" name="nonce" value="{{ form.nonce }}">
-    <label>Link da página do anúncio<input name="url" type="url" maxlength="2000" required placeholder="https://www.mercadolivre.com.br/…" value="{{ form.url }}"></label>
+    <label>Link do anúncio <small>(da página, ou o link curto do app)</small><input name="url" type="text" inputmode="url" autocomplete="off" maxlength="2000" required placeholder="https://www.mercadolivre.com.br/… ou https://meli.la/…" value="{{ form.url }}"></label>
     <label>Nome do produto <small>como está na página (se já temos o produto, pode deixar vazio)</small><input name="nome" maxlength="200" value="{{ form.nome }}"></label>
     <div class="pix-aprovar">
       <label>Preço<input name="preco" inputmode="decimal" maxlength="20" required placeholder="308,00" value="{{ form.preco }}"></label>
@@ -23,7 +24,7 @@
       <label class="campo">Acaba em <small>o relógio “Encerra em” da página, ex.: 07:10:38</small><input name="acaba_em" inputmode="numeric" maxlength="12" placeholder="07:10:38" value="{{ form.acaba_em }}"></label>
       <p class="dica">O post diz a hora em que ela acaba e não sai depois disso (nem nos últimos 10 minutos).</p>
     </fieldset>
-    <label>Foto (opcional) <small>na página do ML, botão direito na foto → “Copiar endereço da imagem” (no celular, segure a foto); começa com https://http2.mlstatic.com. Sem foto, o post vai só com texto</small><input name="foto" type="url" maxlength="512" value="{{ form.foto }}"></label>
+    <label>Foto <small>(obrigatória quando o produto ainda não tem foto aqui: o sistema não lê a página do ML) na página do ML, botão direito na foto → “Copiar endereço da imagem” (no celular, segure a foto); começa com https://http2.mlstatic.com</small><input name="foto" type="url" maxlength="512" value="{{ form.foto }}"></label>
     <fieldset class="grupos-marcar">
       <legend>Grupos</legend>
       {% for t in targets %}<label><input type="checkbox" name="channel_id" value="{{ t.id }}"{% if t.id in marked %} checked{% endif %}> {{ t.label }}</label>{% endfor %}

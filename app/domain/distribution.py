@@ -20,7 +20,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
-from urllib.parse import quote, urlsplit
+from urllib.parse import parse_qs, quote, urlsplit
 from zoneinfo import ZoneInfo
 
 from app.domain.catalog_offers import Offer
@@ -575,6 +575,70 @@ class ManualLink:
     external_id: str  # o código do produto ou do anúncio (repetição em 7 dias)
     item_id: str | None  # o anúncio, quando o link diz qual
     target_url: str  # a página, sem rastreio, para o gerador de links do afiliado
+
+
+_URL_IN_TEXT = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
+_SHORT_CODE = re.compile(r"^[A-Za-z0-9_-]{3,24}$")
+SHORT_PREFIX = "CURTO-"  # external_id do produto que só existe por link curto do afiliado
+
+
+def link_in_text(text: str) -> str:
+    """O link dentro do texto do "Compartilhar" do app do ML ("Olha isso: https://meli.la/…")."""
+    match = _URL_IN_TEXT.search(text.strip())
+    return match.group(0).rstrip(".,;:!?)") if match else text.strip()
+
+
+@dataclass(frozen=True, slots=True)
+class ShortLink:
+    url: str  # canônico, montado a partir do código: é o que vai para a rede
+    code: str
+
+
+def short_link(url: str) -> ShortLink | None:
+    """Link curto do ML (`meli.la/<código>` ou `mercadolivre.com/sec/<código>`), ou None."""
+    parts = urlsplit(url.strip())
+    host = (parts.hostname or "").lower()
+    if parts.scheme not in ("http", "https"):
+        return None
+    if host == "meli.la":
+        code, prefix = parts.path.strip("/"), "https://meli.la/"
+    elif host in ("mercadolivre.com", "www.mercadolivre.com") and parts.path.startswith("/sec/"):
+        code, prefix = parts.path.removeprefix("/sec/").strip("/"), "https://mercadolivre.com/sec/"
+    else:
+        return None
+    if not _SHORT_CODE.match(code):
+        raise LinkError("link curto do ML num formato que não conheço: cole o link da página")
+    return ShortLink(prefix + code, code)
+
+
+@dataclass(frozen=True, slots=True)
+class AffiliateRedirect:
+    affiliate: str  # o perfil social do afiliado
+    tool_id: str  # `matt_tool`: o código do afiliado
+    tag: str | None  # `matt_word`: a etiqueta
+
+
+def affiliate_redirect(location: str) -> AffiliateRedirect | None:
+    """O primeiro salto do link curto de afiliado: `/social/<afiliado>?matt_tool=…&ref=…`, com o
+    produto cifrado no `ref` (medido em 18/10/2026). None quando é outra página do ML."""
+    parts = urlsplit(location)
+    host = (parts.hostname or "").lower()
+    segments = [s for s in parts.path.split("/") if s]
+    if host not in ML_PAGE_HOSTS or len(segments) < 2 or segments[0] != "social":
+        return None
+    query = parse_qs(parts.query)
+    return AffiliateRedirect(
+        affiliate=segments[1][:60],
+        tool_id=(query.get("matt_tool") or [""])[0],
+        tag=(query.get("matt_word") or [""])[0] or None,
+    )
+
+
+def short_manual_link(link: ShortLink) -> ManualLink:
+    """Link curto do afiliado do sistema no avulso: o produto não é conhecido, o link vale como
+    está (o mesmo para todos os grupos)."""
+    external = f"{SHORT_PREFIX}{link.code}"
+    return ManualLink(external, external, link.url)
 
 
 def parse_manual_link(url: str) -> ManualLink:

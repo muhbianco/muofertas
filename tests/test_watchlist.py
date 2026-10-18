@@ -24,8 +24,6 @@ PAGE = "https://www.mercadolivre.com.br/cebolinha-50ml/p/MLB23951248?pdp_filters
 def test_only_catalog_product_pages_are_accepted() -> None:
     assert catalog_id_from_url(PAGE) == "MLB23951248"
     assert catalog_id_from_url("https://www.mercadolivre.com.br/p/mlb123456") == "MLB123456"
-    with pytest.raises(WatchError, match="encurtado"):
-        catalog_id_from_url("https://meli.la/2f3krc6")
     with pytest.raises(WatchError, match="/p/MLB"):
         catalog_id_from_url("https://produto.mercadolivre.com.br/MLB-4093716883-gel-_JM")
 
@@ -66,7 +64,8 @@ async def test_watch_creates_a_hot_product_and_stop_deactivates_it(
     bad = await client.post(
         "/vigiar", data={"csrf": csrf, "url": "https://meli.la/x", "niche_id": niche_id}
     )
-    assert bad.status_code == 422 and "encurtado" in bad.text
+    # Código curto demais: recusado sem ir à rede (o link curto válido está em test_link_curto).
+    assert bad.status_code == 422 and "link curto do ML num formato" in bad.text
 
     r = await client.post("/vigiar", data={"csrf": csrf, "url": PAGE, "niche_id": niche_id})
     assert r.status_code == 303 and r.headers["location"].endswith("aviso=novo")

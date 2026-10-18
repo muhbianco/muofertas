@@ -1,9 +1,9 @@
 """Lista vigiada: o operador cola o link da página de um produto e o coletor passa a acompanhá-lo.
 
 Serve para o que não está entre os 20 mais vendidos da categoria (o caso do cebolinha de 50 mL).
-Só página de produto de catálogo (`/p/MLB…`): é o único tipo com preço pela API do app. Link
-encurtado (`meli.la`) não é seguido de propósito: abrir link de afiliado pelo servidor é clique de
-robô. Nenhuma transação fica aberta durante a chamada ao ML.
+Só página de produto de catálogo (`/p/MLB…`): é o único tipo com preço pela API do app. O link
+curto chega já expandido pelo painel (`app.distribution.short_links`); o de afiliado (`meli.la`)
+não diz o produto e é recusado lá. Nenhuma transação fica aberta durante a chamada ao ML.
 """
 
 from __future__ import annotations
@@ -38,10 +38,6 @@ class WatchResult:
 
 def catalog_id_from_url(url: str) -> str:
     text = url.strip()
-    if "meli.la/" in text:
-        raise WatchError(
-            "Link encurtado não serve: abra o produto e copie o endereço da página (com /p/MLB…)."
-        )
     match = CATALOG_URL.search(text)
     if match is None:
         raise WatchError(

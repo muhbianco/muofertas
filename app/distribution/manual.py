@@ -5,6 +5,10 @@ A API do app não lê anúncio fora do catálogo (`/items` dá 403), então não
 é o digitado, com a hora em que foi visto na mensagem. Vale 6 horas, ou até a oferta relâmpago
 acabar (`manual_block_reason`). O produto entra na base inativo (o robô não o acompanha); se o
 link é de um produto que já temos, usa o dele.
+
+A foto é obrigatória quando o produto não tem uma na base: o servidor não lê a página do ML.
+Link curto do afiliado do sistema (`short_url`, ver `app.distribution.short_links`): o produto é
+desconhecido, então o link vai como está, o mesmo para todos os grupos (18/10/2026).
 """
 
 from __future__ import annotations
@@ -37,6 +41,8 @@ from app.domain.distribution import (
     parse_flash_left,
     parse_last_units,
     parse_manual_link,
+    short_link,
+    short_manual_link,
 )
 from app.integrations.images import IMAGE_HOSTS
 from app.models import CatalogProduct, OperatorDecision, Publication
@@ -65,6 +71,7 @@ class ManualPost:
     flash_left: timedelta | None
     channel_ids: list[int]
     nonce: str  # do formulário: reenviar o mesmo formulário não duplica
+    short_url: str | None = None  # link curto do afiliado do sistema (o produto não é conhecido)
 
 
 @dataclass(frozen=True)
@@ -91,7 +98,13 @@ def _money(text: str, what: str) -> int | None:
         raise ManualError(f"{what}: valor inválido (ex.: 308,00)") from exc
 
 
-def post_from_form(form: ManualForm, channel_ids: list[int]) -> ManualPost:
+def post_from_form(
+    form: ManualForm,
+    channel_ids: list[int],
+    *,
+    url: str | None = None,
+    short_url: str | None = None,
+) -> ManualPost:
     """Texto do formulário → post. O tempo da relâmpago preenchido já vale como relâmpago."""
     price = _money(form.preco, "preço")
     if price is None:
@@ -109,7 +122,7 @@ def post_from_form(form: ManualForm, channel_ids: list[int]) -> ManualPost:
         except FlashError as exc:
             raise ManualError(str(exc)) from exc
     return ManualPost(
-        url=form.url,
+        url=url if url is not None else form.url,
         name=form.nome,
         price_cents=price,
         original_cents=_money(form.de, "preço “de”"),
@@ -120,6 +133,7 @@ def post_from_form(form: ManualForm, channel_ids: list[int]) -> ManualPost:
         flash_left=flash,
         channel_ids=channel_ids,
         nonce=form.nonce,
+        short_url=short_url,
     )
 
 
@@ -149,8 +163,9 @@ async def queue_manual(
 ) -> ManualResult:
     if not NONCE_RE.match(post.nonce):
         raise ManualError("formulário vencido: abra o link avulso de novo")
+    short = short_link(post.short_url) if post.short_url else None
     try:
-        link = parse_manual_link(post.url)
+        link = short_manual_link(short) if short else parse_manual_link(post.url)
     except LinkError as exc:
         raise ManualError(str(exc)) from exc
     if post.price_cents <= 0:
@@ -178,6 +193,11 @@ async def queue_manual(
         )
     ).scalar_one_or_none()
     name = post.name.strip()[:NAME_MAX]
+    if image is None and (product is None or not product.image_url):
+        raise ManualError(
+            "foto: obrigatória para este produto, o sistema não tem a foto dele. Na página do "
+            "anúncio, abra a foto e copie o endereço da imagem (https://http2.mlstatic.com/…)"
+        )
     if product is None:
         if not name:
             raise ManualError("escreva o nome do produto (como está na página)")
@@ -238,7 +258,9 @@ async def queue_manual(
                 decision_id=decision.id,
                 idempotency_key=key,
                 dedup_key=dedup_key,
-                state="skipped" if reason else "awaiting_link",
+                # Link curto do nosso afiliado: já é o link do post (não há página para gerar).
+                state="skipped" if reason else "ready" if short else "awaiting_link",
+                affiliate_url=link.target_url if short and not reason else None,
                 tier=MANUAL_TIER,
                 item_id=link.item_id or link.external_id,
                 target_url=link.target_url,

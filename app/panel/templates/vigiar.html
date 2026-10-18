@@ -2,14 +2,14 @@
 {% block title %}Vigiar{% endblock %}
 {% block content %}
 <h1>Vigiar produto</h1>
-<p class="nota-pix">Para o que não está entre os mais vendidos: cole o link da página do produto no Mercado Livre (o endereço com <b>/p/MLB…</b>). O robô lê o preço com frequência e o produto entra na fila como os outros. Link encurtado (meli.la) não serve.</p>
+<p class="nota-pix">Para o que não está entre os mais vendidos: cole o link da página do produto no Mercado Livre (o endereço com <b>/p/MLB…</b>). O robô lê o preço com frequência e o produto entra na fila como os outros. Pode colar o texto que o app compartilha; o link curto comum vale, o de afiliado (meli.la) não, porque ele não diz qual é o produto.</p>
 {% if notice %}<p class="aviso">{{ notice }}</p>{% endif %}
 {% if error %}<p class="erro">{{ error }}</p>
 <p class="linha">Só quer postar este anúncio agora? Use o <a href="/postar/avulso">link avulso</a>: você digita o preço e ele entra em 1º na fila.</p>{% endif %}
 <article class="bloco">
   <form class="formulario" method="post" action="/vigiar">
     <input type="hidden" name="csrf" value="{{ ctx.csrf_token }}">
-    <label>Link do produto<input name="url" type="url" maxlength="500" required placeholder="https://www.mercadolivre.com.br/…/p/MLB…" value="{{ url or '' }}"></label>
+    <label>Link do produto<input name="url" type="text" inputmode="url" autocomplete="off" maxlength="2000" required placeholder="https://www.mercadolivre.com.br/…/p/MLB…" value="{{ url or '' }}"></label>
     <label>Nicho
       <select name="niche_id" required>
         {% for n in niches %}<option value="{{ n.id }}">{{ n.name }}</option>{% endfor %}

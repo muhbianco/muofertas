@@ -25,9 +25,12 @@ from app.domain.distribution import (
 from app.integrations.mercadolivre import MercadoLivreClient
 from app.integrations.ml_affiliate import AffiliatePortal
 from app.integrations.wuzapi import WuzapiClient
+from app.main import app
 from app.models import CatalogProduct, Channel, Publication
+from app.panel.distribution_routes import get_short_client
 from tests.fake_ml import FakeML
 from tests.fake_wuzapi import FakeWuzapi
+from tests.test_link_curto import short_client
 from tests.test_mudar_grupo import _approved_in_the_wrong_group
 from tests.test_panel import login, seed_admin
 from tests.test_sender import ITEM, NOW, approve, cfg
@@ -92,6 +95,9 @@ def test_flash_line_in_the_message() -> None:
     assert "acaba em 22/10 às 03:00" in body(NOW + timedelta(hours=12))  # vira o dia
 
 
+FOTO = "https://http2.mlstatic.com/D_NQ_NP_2X_889169-MLA96868779849_102025-F.jpg"
+
+
 def _post(channel_ids: list[int], **extra: object) -> ManualPost:
     values: dict[str, object] = {
         "url": PANELAS,
@@ -101,7 +107,7 @@ def _post(channel_ids: list[int], **extra: object) -> ManualPost:
         "pix_cents": None,
         "coupon_cents": None,
         "last_units": 4,
-        "image_url": None,
+        "image_url": FOTO,  # obrigatória: o servidor não lê a página do anúncio (18/10/2026)
         "flash_left": timedelta(hours=7, minutes=10, seconds=38),
         "channel_ids": channel_ids,
         "nonce": "nonce-teste-1",
@@ -203,12 +209,19 @@ async def test_manual_link_form(
         "ultimas": "4",
         "relampago": "1",
         "acaba_em": "07:10:38",
+        "foto": FOTO,
         "channel_id": [str(tools_ch), str(tech_ch)],
     }
 
+    # Link curto de outro afiliado: recusado, com o formulário preenchido de volta.
+    app.dependency_overrides[get_short_client] = short_client(
+        "https://www.mercadolivre.com.br/social/outroafiliado?matt_word=x&matt_tool=111&ref=abc"
+    )
     short = await client.post("/postar/avulso", data=form | {"url": "https://meli.la/2xYz"})
-    assert short.status_code == 422 and "não o encurtado" in short.text
+    assert short.status_code == 422 and "de outro afiliado (outroafiliado)" in short.text
     assert 'value="https://meli.la/2xYz"' in short.text and 'value="308,00"' in short.text
+    no_photo = await client.post("/postar/avulso", data=form | {"foto": ""})
+    assert no_photo.status_code == 422 and "foto: obrigatória para este produto" in no_photo.text
     no_time = await client.post("/postar/avulso", data=form | {"acaba_em": ""})
     assert no_time.status_code == 422 and "digite quanto falta" in no_time.text
 
@@ -251,9 +264,14 @@ async def test_photo_can_be_set_on_a_queued_manual_post(
         channel = (await s.execute(select(Channel).order_by(Channel.id))).scalars().first()
         assert channel is not None
         await queue_manual(s, _post([channel.id]), actor="dono", now=NOW)
-        manual_id = (
-            await s.execute(select(Publication.id).where(Publication.tier == "avulso"))
+        manual = (
+            await s.execute(select(Publication).where(Publication.tier == "avulso"))
         ).scalar_one()
+        manual_id = manual.id
+        # Avulso de antes da foto obrigatória (18/10/2026): ficou sem foto, e dá para pôr depois.
+        product = await s.get(CatalogProduct, manual.product_id)
+        assert product is not None
+        product.image_url = None
     assert (await login(client, secret)).status_code == 303
     page = (await client.get(f"/postar/{manual_id}")).text
     assert f'action="/postar/{manual_id}/foto"' in page and "Sem foto" in page
