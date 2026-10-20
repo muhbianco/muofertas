@@ -471,6 +471,9 @@ class Publication(Base):
     queue_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # 0029: o 1º 404 na conferência adia o envio até aqui (pode ser instabilidade do ML).
     retry_after: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    # 0032: o produto saiu para o grupo há menos de 24 h; este post só sai a partir daqui, e na
+    # frente da fila (pedido do dono em 20/10/2026: antes ficava de fora por 7 dias).
+    not_before: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
     note: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime())

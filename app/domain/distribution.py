@@ -1,8 +1,9 @@
 """Regras da distribuição (Fase 2a: envio manual pelo celular do operador). Puro, sem I/O.
 
 - Política do grupo: janela em hora de Brasília, teto por dia, intervalo mínimo, pausa.
-- Repetição: o mesmo produto não volta ao mesmo grupo em 7 dias, a menos que esteja 10% mais
-  barato e seja Excelente ou Excepcional.
+- Repetição (desde 20/10/2026): o produto enviado ao grupo há menos de 24 h entra na fila e sai
+  quando completar 24 h do último envio, a menos que esteja 10% mais barato e seja Excelente ou
+  Excepcional (aí sai sem esperar). O que ainda está na fila do grupo não entra de novo.
 - Link de afiliado do ML: só o curto oficial do gerador (`meli.la` ou `/sec/`), nunca alterado
   (termos do afiliado 1.8).
 - Revalidação: o preço da oferta escolhida é relido antes de postar; subiu mais de 3%, não sai.
@@ -26,11 +27,14 @@ from zoneinfo import ZoneInfo
 from app.domain.catalog_offers import Offer
 
 SP = ZoneInfo("America/Sao_Paulo")
-DEDUP_WINDOW = timedelta(days=7)
+# O mesmo produto no mesmo grupo: espera 24 h do último envio (era 7 dias e ficava de fora).
+REPEAT_WAIT = timedelta(hours=24)
+# Na fila do grupo (ainda não saiu, ou não se sabe): o mesmo produto não entra de novo.
+PENDING_STATES = ("awaiting_link", "ready", "sending", "unknown")
 REPOST_DROP = 0.10
 # Nível das publicações de link avulso (o operador escolheu o anúncio e digitou o preço).
 MANUAL_TIER = "avulso"
-# Volta ao grupo em 7 dias se 10% mais barato: Excelente+, e o avulso (o operador escolheu).
+# Volta ao grupo sem esperar as 24 h se 10% mais barato: Excelente+, e o avulso.
 REPOST_TIERS = frozenset({"excepcional", "excelente", MANUAL_TIER})
 PRICE_UP_TOLERANCE = 0.03
 FRESH_FOR_SEND = timedelta(minutes=5)
@@ -251,20 +255,41 @@ def send_block_reason(
 @dataclass(frozen=True, slots=True)
 class PriorPost:
     price_cents: int
-    created_at: datetime
+    state: str
+    sent_at: datetime | None = None
 
 
-def repeat_block_reason(
+@dataclass(frozen=True, slots=True)
+class RepeatPlan:
+    """O que fazer com o produto que já passou por este grupo: não entrar, ou entrar agendado."""
+
+    skip: str | None = None
+    not_before: datetime | None = None
+
+
+def repeat_plan(
     prior: list[PriorPost], *, price_cents: int, tier: str, now: datetime
-) -> str | None:
-    """O mesmo produto no mesmo grupo em 7 dias só volta 10% mais barato e Excelente+."""
-    recent = [p for p in prior if now - p.created_at < DEDUP_WINDOW]
+) -> RepeatPlan:
+    """O mesmo produto no mesmo grupo (pedido do dono em 20/10/2026; eram 7 dias de fora):
+
+    - ainda na fila deste grupo: não entra de novo (seria o mesmo post duas vezes);
+    - enviado há menos de 24 h: entra, e sai quando completar 24 h do último envio, na frente da
+      fila; 10% mais barato e Excelente+ (ou avulso) sai sem esperar;
+    - fora isso, entra normal."""
+    if any(p.state in PENDING_STATES for p in prior):
+        return RepeatPlan(skip="já está na fila deste grupo")
+    recent = [
+        p.sent_at
+        for p in prior
+        if p.state == "sent" and p.sent_at is not None and now - p.sent_at < REPEAT_WAIT
+    ]
     if not recent:
-        return None
-    last = max(recent, key=lambda p: p.created_at)
-    if tier in REPOST_TIERS and price_cents <= last.price_cents * (1 - REPOST_DROP):
-        return None
-    return f"já foi para este grupo em {last.created_at.astimezone(SP):%d/%m}"
+        return RepeatPlan()
+    last_sent = max(recent)
+    last_price = next(p.price_cents for p in prior if p.sent_at == last_sent)
+    if tier in REPOST_TIERS and price_cents <= last_price * (1 - REPOST_DROP):
+        return RepeatPlan()
+    return RepeatPlan(not_before=last_sent + REPEAT_WAIT)
 
 
 # --------------------------------------------------------------------------- links do ML

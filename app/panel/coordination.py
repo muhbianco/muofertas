@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.distribution import DEDUP_WINDOW
+from app.domain.distribution import PENDING_STATES
 from app.models import ApprovalClaim, CatalogProduct, OperatorDecision, Publication
 
 MARKS = ("approved", "rejected")
@@ -25,8 +25,9 @@ MARKS = ("approved", "rejected")
 CLAIM_ACTIVE = timedelta(minutes=5)
 # Depois disso a marca some (aba esquecida, operador foi embora).
 CLAIM_KEEP = timedelta(hours=6)
-# Publicação que ainda vale: aprovar de novo seria duplicar a intenção.
-LIVE_STATES = ("awaiting_link", "ready", "sending", "unknown", "sent")
+# Publicação na fila: aprovar de novo seria duplicar a intenção. A que já saiu não conta: desde
+# 20/10/2026 aprovar de novo o que saiu agenda o post para 24 h depois do envio.
+LIVE_STATES = PENDING_STATES
 BOARD_LIMIT = 60  # cards por página da fila (50) com folga
 STALE_BATCH = 200
 
@@ -64,14 +65,12 @@ async def conflict(
 
     Leituras com trava compartilhada: com a linha do produto travada pelo chamador, elas veem o que
     a outra transação acabou de gravar (a leitura comum do InnoDB veria a foto do início)."""
-    since = max(product.last_changed_at or product.first_seen_at, now - DEDUP_WINDOW)
     live = (
         await db.execute(
             select(Publication.created_at, OperatorDecision.actor)
             .outerjoin(OperatorDecision, OperatorDecision.id == Publication.decision_id)
             .where(
                 Publication.product_id == product.id,
-                Publication.created_at >= since,
                 Publication.state.in_(LIVE_STATES),
             )
             .order_by(Publication.created_at.desc())

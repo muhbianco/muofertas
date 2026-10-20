@@ -43,8 +43,8 @@ async def _seed(sessions: async_sessionmaker[AsyncSession]) -> None:
             s.add(p)
             others.append(p)
         await s.flush()
-        for n, (product, days) in enumerate(((first, 2), (others[0], 10))):
-            when = now - timedelta(days=days)
+        for n, (product, hours) in enumerate(((first, 5), (others[0], 30))):
+            when = now - timedelta(hours=hours)
             s.add(
                 Publication(
                     channel_id=channel.id,
@@ -61,7 +61,7 @@ async def _seed(sessions: async_sessionmaker[AsyncSession]) -> None:
             )
 
 
-async def test_queue_marks_and_filters_products_sent_in_the_last_7_days(
+async def test_queue_marks_and_filters_products_sent_in_the_last_24_hours(
     client: httpx.AsyncClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
     secret = await seed_admin(sessions)

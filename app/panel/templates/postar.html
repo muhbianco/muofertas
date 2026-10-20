@@ -51,7 +51,7 @@
     {% if g.rows | length > 1 %}<span class="alca" title="Arraste para cima" aria-hidden="true">⠿</span>{% endif %}
     <a class="item" href="/postar/{{ r.pub.id }}">
       {% if r.image_url %}<img src="{{ r.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% else %}<span class="sem-foto"></span>{% endif %}
-      <span><b>{{ r.name }}</b><br><small>{% if r.pub.tier == 'avulso' %}<span class="selo off">avulso</span>{{ r.pub.approved_price_cents | brl }} digitado {{ r.pub.created_at | local }}{% if not r.image_url %} · sem foto{% endif %}{% else %}aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}{% endif %}{% if r.pub.flash_ends_at %} · ⏰ relâmpago até {{ r.pub.flash_ends_at | local }}{% endif %}{% if r.urgent and r.pub.last_units %} · ⏳ últimas {{ r.pub.last_units }}{% endif %}{% if r.urgent %} <span class="selo off">prioridade</span>{% endif %}</small></span>
+      <span><b>{{ r.name }}</b><br><small>{% if r.pub.tier == 'avulso' %}<span class="selo off">avulso</span>{{ r.pub.approved_price_cents | brl }} digitado {{ r.pub.created_at | local }}{% if not r.image_url %} · sem foto{% endif %}{% else %}aprovada a {{ r.pub.approved_price_cents | brl }} · nível {{ r.pub.tier }}{% endif %}{% if r.pub.flash_ends_at %} · ⏰ relâmpago até {{ r.pub.flash_ends_at | local }}{% endif %}{% if r.urgent and r.pub.last_units %} · ⏳ últimas {{ r.pub.last_units }}{% endif %}{% if r.urgent %} <span class="selo off">prioridade</span>{% endif %}{% if r.pub.not_before and r.waiting %} <span class="selo enviado" title="Saiu para este grupo há menos de 24 h">⏳ sai a partir de {{ r.pub.not_before | local }}</span>{% endif %}</small></span>
     </a>
     {% if r.pub.tier != 'avulso' %}<a class="mudar" href="/postar/{{ r.pub.id }}#enviar-tambem" data-enviar-tambem data-pub="{{ r.pub.id }}" data-canal="{{ g.channel.id }}" data-nome="{{ r.name }}" title="Enviar também em outro grupo" aria-label="Enviar também em outro grupo">＋</a>
     <a class="mudar" href="/postar/{{ r.pub.id }}#mudar-grupo" data-mudar-grupo data-pub="{{ r.pub.id }}" data-nicho="{{ g.channel.niche_id }}" data-nome="{{ r.name }}" title="Mudar de grupo" aria-label="Mudar de grupo">⇄</a>{% endif %}
@@ -119,7 +119,7 @@
       {% for c in move_targets %}<label data-canal="{{ c.id }}"><input type="checkbox" name="channel_id" value="{{ c.id }}"> {{ c.name }}</label>{% endfor %}
     </fieldset>
     <p class="erro" data-erro hidden>Escolha pelo menos um grupo.</p>
-    <p class="dica">Cada grupo marcado recebe uma cópia no fim da fila, com o link dele. O produto não muda de nicho. Grupo que já recebeu este produto nos últimos 7 dias fica de fora.</p>
+    <p class="dica">Cada grupo marcado recebe uma cópia no fim da fila, com o link dele. O produto não muda de nicho. Grupo que já tem este produto na fila fica de fora; se ele saiu lá há menos de 24 h, a cópia espera completar as 24 h.</p>
     <div class="acoes">
       <button type="button" class="rejeitar" data-fechar>Cancelar</button>
       <button type="submit" class="aprovar">Enviar também</button>

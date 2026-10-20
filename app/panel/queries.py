@@ -45,8 +45,8 @@ TOP_POSITIONS = 20  # a API de mais vendidos devolve 20 por categoria
 # Filtro "com % OFF no anúncio": todos os níveis menos bloqueada.
 DISCOUNT_FILTER = "off"
 DISCOUNT_TIERS = [t for t in TIER_ORDER if t != "bloqueada"]
-# Selo e filtro "já foi para o grupo": envio nos últimos 7 dias (a mesma janela da repetição).
-SENT_WINDOW = timedelta(days=7)
+# Selo e filtro "já foi para o grupo": envio nas últimas 24 h (a mesma espera da repetição).
+SENT_WINDOW = timedelta(hours=24)
 SENT_HIDE = "ocultar"
 SENT_ONLY = "so"
 SENT_FILTERS = (SENT_HIDE, SENT_ONLY)
@@ -132,7 +132,7 @@ class Card:
     listing_pct: int | None = None
     listing_original_cents: int | None = None
     niche_id: int | None = None
-    # Último envio a um grupo nos últimos 7 dias (aprovar de novo sai como repetida).
+    # Último envio a um grupo nas últimas 24 h (aprovar de novo agenda para depois das 24 h).
     sent_at: datetime | None = None
     # Melhor posição nos mais vendidos da categoria (1 a 20); vazio no produto vigiado.
     highlight_position: int | None = None

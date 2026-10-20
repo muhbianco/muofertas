@@ -115,6 +115,7 @@ async def move_publication(
 class Copied:
     created: int = 0
     skipped: list[str] = field(default_factory=list)
+    scheduled: int = 0  # entraram esperando as 24 h do último envio ao grupo
 
 
 async def copy_publication(
@@ -180,4 +181,4 @@ async def copy_publication(
             "user": actor,
         },
     )
-    return Copied(result.created, list(result.skipped or []))
+    return Copied(result.created, list(result.skipped or []), result.scheduled)

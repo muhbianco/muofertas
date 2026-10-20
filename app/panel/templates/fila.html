@@ -36,8 +36,8 @@
   </select>
   <select name="enviados" aria-label="Enviados aos grupos">
     <option value="">Com e sem envio recente</option>
-    <option value="ocultar" {% if enviados == 'ocultar' %}selected{% endif %}>Sem os enviados nos últimos 7 dias</option>
-    <option value="so" {% if enviados == 'so' %}selected{% endif %}>Só os enviados nos últimos 7 dias</option>
+    <option value="ocultar" {% if enviados == 'ocultar' %}selected{% endif %}>Sem os enviados nas últimas 24 h</option>
+    <option value="so" {% if enviados == 'so' %}selected{% endif %}>Só os enviados nas últimas 24 h</option>
   </select>
   <button type="submit">Filtrar</button>
 </form>
@@ -67,7 +67,7 @@
       <button type="button" class="m-nao" data-marca="rejected" aria-pressed="false" title="Marcar para rejeitar (X)" aria-label="Marcar para rejeitar">✕</button>
     </div>
     <p class="trava" data-trava role="status"></p>
-    <div>{% if c.watched %}<span class="selo vigiado">👁 vigiado</span>{% endif %}{% if c.tier %}<span class="selo {{ c.tier }}">{{ c.tier }}</span>{% endif %}{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}{% if c.highlight_position %}<span class="selo top">{{ c.highlight_position }}º mais vendido</span>{% endif %}{% if c.sent_at %}<span class="selo enviado" title="Aprovar de novo antes de 7 dias sai como repetida">já foi pro grupo · {{ c.sent_at | local }}</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
+    <div>{% if c.watched %}<span class="selo vigiado">👁 vigiado</span>{% endif %}{% if c.tier %}<span class="selo {{ c.tier }}">{{ c.tier }}</span>{% endif %}{% if c.listing_pct %}<span class="selo off">{{ c.listing_pct }}% OFF no anúncio</span>{% endif %}{% if c.used_official %}<span class="selo oficial">loja oficial</span>{% endif %}{% if c.highlight_position %}<span class="selo top">{{ c.highlight_position }}º mais vendido</span>{% endif %}{% if c.sent_at %}<span class="selo enviado" title="Saiu há menos de 24 h: aprovar de novo agenda o post para quando completar 24 h">já foi pro grupo · {{ c.sent_at | local }}</span>{% endif %}<small>nota {{ c.score if c.score is not none else '—' }}</small></div>
     <div class="nome"><a href="/produto/{{ c.product_id }}">{{ c.name }}</a></div>
     <div class="linha nicho-linha">{% if targets %}{% call grupos_aprovar("aprovar-" ~ c.product_id, c.niche_id, targets) %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endcall %}{% else %}{{ trocar_nicho(c.product_id, c.niche_id, niches, ctx, next, c.domain_label) }}{% endif %}</div>
     <div class="preco">{% if c.listing_original_cents %}<s class="de">{{ c.listing_original_cents | brl }}</s> {% endif %}{{ c.price_cents | brl }}</div>

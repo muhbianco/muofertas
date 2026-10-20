@@ -26,7 +26,7 @@ from app.core.logging import get_logger
 from app.distribution.service import (
     DistributionError,
     chosen_channels,
-    repeat_reason,
+    repeat_plan_for,
     top_position,
 )
 from app.domain.distribution import (
@@ -243,7 +243,7 @@ async def queue_manual(
         ).scalar_one_or_none()
         if exists is not None:
             continue  # o mesmo formulário de novo (duplo toque, voltar e reenviar)
-        reason = await repeat_reason(
+        plan = await repeat_plan_for(
             db,
             channel,
             dedup_key=dedup_key,
@@ -251,6 +251,7 @@ async def queue_manual(
             tier=MANUAL_TIER,
             now=now,
         )
+        reason = plan.skip
         db.add(
             Publication(
                 channel_id=channel.id,
@@ -276,6 +277,7 @@ async def queue_manual(
                 last_units=post.last_units,
                 last_units_at=now if post.last_units is not None else None,
                 flash_ends_at=flash_ends_at,
+                not_before=plan.not_before,
                 queue_position=None if reason else await top_position(db, channel.id),
                 note=reason,
                 created_at=now,

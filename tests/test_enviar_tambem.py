@@ -41,8 +41,8 @@ async def test_send_the_same_post_to_more_groups(
                 tier="regular",
                 target_url="https://x",
                 approved_price_cents=4875,
-                created_at=now - timedelta(days=1),
-                sent_at=now - timedelta(days=1),
+                created_at=now - timedelta(hours=10),
+                sent_at=now - timedelta(hours=10),
             )
         )
     tools_ch, tech_ch, home_ch = channels[tools_id], channels[tech_id], home_channel.id
@@ -58,14 +58,16 @@ async def test_send_the_same_post_to_more_groups(
     r = await client.post(
         url, data={"csrf": csrf.group(1), "channel_id": [str(tools_ch), str(tech_ch), str(home_ch)]}
     )
-    assert r.headers["location"] == f"/postar?aviso=copiado-parte#grupo-{tools_ch}"
+    assert r.headers["location"] == f"/postar?aviso=copiado-agendado#grupo-{tools_ch}"
     async with sessions() as s:
         pubs = (await s.execute(select(Publication).order_by(Publication.id))).scalars().all()
         product = (await s.execute(select(CatalogProduct))).scalar_one()
     by_channel = {(p.channel_id, p.state) for p in pubs}
     assert (tools_ch, "ready") in by_channel  # o original fica onde estava
     assert (tech_ch, "awaiting_link") in by_channel  # cópia, com link próprio a gerar
-    assert (home_ch, "skipped") in by_channel  # já foi para lá ontem
+    # Saiu lá há 10 h: entra, e espera completar 24 h do envio (era "de fora por 7 dias").
+    home = next(p for p in pubs if p.channel_id == home_ch and p.state == "awaiting_link")
+    assert home.not_before is not None
     copy = next(p for p in pubs if p.channel_id == tech_ch)
     assert copy.idempotency_key.endswith(f":cp{pub_id}") and copy.pix_price_cents == 4500
     assert (product.niche_id, product.niche_locked) == (tools_id, False)  # nicho não muda

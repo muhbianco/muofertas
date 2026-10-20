@@ -199,7 +199,8 @@ async def test_manual_flow_from_approval_to_posted_once(
         count = (await session.execute(select(func.count()).select_from(Publication))).scalar_one()
     assert sent.state == "sent" and sent.actor == "dono" and count == 1
 
-    # nova avaliação do mesmo produto em 7 dias, sem queda de 10%: não volta ao grupo
+    # nova avaliação do mesmo produto menos de 24 h depois do envio, sem queda de 10%: entra
+    # agendada para quando completar 24 h (até 20/10/2026 ficava de fora por 7 dias)
     async with sessions() as session, session.begin():
         session.add(evaluation(product_id, "excelente", price=125000))
         product = await session.get(CatalogProduct, product_id)
@@ -207,7 +208,13 @@ async def test_manual_flow_from_approval_to_posted_once(
         product.last_changed_at = utcnow()
     async with sessions() as session:
         ev2 = (await session.execute(select(func.max(OfferEvaluation.id)))).scalar_one()
-    assert (await approve(client, csrf, product_id, ev2)).endswith("aviso=repetida")
+    assert (await approve(client, csrf, product_id, ev2)).endswith("aviso=agendada")
+    async with sessions() as session:
+        again = (
+            await session.execute(select(Publication).where(Publication.evaluation_id == ev2))
+        ).scalar_one()
+    assert again.state == "awaiting_link" and sent.sent_at is not None
+    assert again.not_before == sent.sent_at + timedelta(hours=24)
 
 
 async def test_price_up_blocks_the_post(

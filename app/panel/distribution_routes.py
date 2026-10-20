@@ -82,22 +82,21 @@ PER_GROUP = 60  # itens por grupo na tela Postar (o resto aparece quando estes s
 POST_NOTICES = {
     "avulso": "Link avulso na fila: é o próximo a sair nos grupos marcados. O link de cada grupo "
     "sai em segundos.",
-    "avulso-parte": "Link avulso na fila em parte dos grupos: os outros já receberam este produto "
-    "nos últimos 7 dias.",
-    "avulso-repetido": "O link avulso não entrou: os grupos marcados já receberam este produto "
-    "nos últimos 7 dias.",
+    "avulso-parte": "Link avulso na fila em parte dos grupos: nos outros o produto já está na "
+    "fila.",
+    "avulso-repetido": "O link avulso não entrou: o produto já está na fila dos grupos marcados.",
     "movido": "Post mudou de grupo: entrou no fim da fila do grupo novo; o link novo sai em "
     "segundos. O produto ficou no nicho escolhido.",
-    "movido-repetido": "O produto mudou de nicho, mas não entrou na fila do grupo novo: já foi "
-    "para esse grupo nos últimos 7 dias.",
+    "movido-repetido": "O produto mudou de nicho, mas não entrou na fila do grupo novo: ele já "
+    "está na fila desse grupo.",
     "movido-sem-grupo": "O produto mudou de nicho, mas esse nicho não tem grupo ativo.",
     "mover-erro": "Não deu para mudar de grupo: o post já saiu ou está no grupo desse nicho.",
     "copiado": "Pronto: o post entrou também no fim da fila dos grupos escolhidos; o link de "
     "cada grupo sai em segundos.",
-    "copiado-parte": "Entrou em parte dos grupos: os outros já receberam este produto nos "
-    "últimos 7 dias.",
-    "copiado-repetido": "Não entrou em nenhum: os grupos escolhidos já receberam este produto "
-    "nos últimos 7 dias.",
+    "copiado-agendado": "Pronto: o post entrou também nos grupos escolhidos. Onde o produto saiu "
+    "há menos de 24 h, a cópia espera completar as 24 h (⏳ na fila).",
+    "copiado-parte": "Entrou em parte dos grupos: nos outros o produto já está na fila.",
+    "copiado-repetido": "Não entrou em nenhum: o produto já está na fila dos grupos escolhidos.",
     "copiado-ja": "O post já estava na fila desses grupos; nada foi duplicado.",
     "copiar-erro": "Não deu para enviar também: escolha pelo menos um outro grupo ativo (só "
     "vale para post que ainda não saiu).",
@@ -502,6 +501,7 @@ class ReadyRow:
     name: str
     image_url: str | None
     urgent: bool = False  # relâmpago ou últimas unidades ainda valendo: sai na frente
+    waiting: bool = False  # repetição agendada que ainda não chegou na hora (24 h)
 
 
 @dataclass
@@ -638,7 +638,10 @@ async def post_list(
     for pub, name, image in rows:
         if pub.channel_id in groups:
             urgent = is_urgent(pub.flash_ends_at, pub.last_units, pub.last_units_at, now)
-            groups[pub.channel_id].rows.append(ReadyRow(pub, name or "", image, urgent))
+            waiting = pub.not_before is not None and pub.not_before > now
+            groups[pub.channel_id].rows.append(
+                ReadyRow(pub, name or "", image, urgent and not waiting, waiting)
+            )
     attention = list(
         (
             await db.execute(
@@ -1092,7 +1095,7 @@ async def post_copy(
     if copied.created and copied.skipped:
         notice = "copiado-parte"
     elif copied.created:
-        notice = "copiado"
+        notice = "copiado-agendado" if copied.scheduled else "copiado"
     elif copied.skipped:
         notice = "copiado-repetido"
     else:

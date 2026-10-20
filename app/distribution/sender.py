@@ -92,6 +92,8 @@ async def _due(sessions: async_sessionmaker[AsyncSession], now: datetime) -> lis
                         Publication.state == "ready",
                         # adiado pelo 1º 404: o próximo da fila sai no lugar (nada de travar)
                         or_(Publication.retry_after.is_(None), Publication.retry_after <= now),
+                        # repetição agendada: só depois das 24 h do último envio ao grupo
+                        or_(Publication.not_before.is_(None), Publication.not_before <= now),
                     )
                     .order_by(*ready_order(now))
                     .limit(1)

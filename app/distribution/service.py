@@ -19,10 +19,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.distribution import (
     BATCH_GAP,
     BATCH_JITTER_SECONDS,
-    DEDUP_WINDOW,
     FLASH_MIN_LEFT,
     LAST_UNITS_VALID_FOR,
     MANUAL_TIER,
+    PENDING_STATES,
+    REPEAT_WAIT,
     SEND_BATCH,
     BatchPlan,
     ChannelPolicy,
@@ -30,6 +31,7 @@ from app.domain.distribution import (
     PixError,
     PriorPost,
     Recheck,
+    RepeatPlan,
     batch_open_for,
     batch_starts,
     check_coupon,
@@ -50,7 +52,7 @@ from app.domain.distribution import (
     pix_to_show,
     recheck_offer,
     render_message,
-    repeat_block_reason,
+    repeat_plan,
     seller_line,
     send_block_reason,
     spacing_minutes,
@@ -107,10 +109,17 @@ def ready_order(now: datetime) -> tuple[Any, ...]:
         Publication.last_units.is_not(None),
         Publication.last_units_at > now - LAST_UNITS_VALID_FOR,
     )
+    # Repetição agendada (20/10/2026): antes da hora fica no fim (o envio nem a vê); na hora,
+    # sai logo depois das prioridades, a mais antiga primeiro.
+    waiting = Publication.not_before > now
+    due = and_(Publication.not_before.is_not(None), Publication.not_before <= now)
     return (
+        case((waiting, 1), else_=0),
         case((or_(flash, units), 0), else_=1),
         case((flash, 0), else_=1),
         case((flash, Publication.flash_ends_at), else_=None),
+        case((due, 0), else_=1),
+        case((Publication.not_before.is_not(None), Publication.not_before), else_=None),
         *READY_ORDER,
     )
 
@@ -186,6 +195,7 @@ class ApprovalResult:
     automatic: int = 0  # e vão sozinhas para o grupo
     skipped: list[str] | None = None
     no_channel: bool = False
+    scheduled: int = 0  # entraram esperando as 24 h do último envio ao grupo
 
 
 async def publications_for_approval(
@@ -204,7 +214,8 @@ async def publications_for_approval(
     channels: list[Channel] | None = None,
     flash_ends_at: datetime | None = None,
 ) -> ApprovalResult:
-    """Uma publicação por grupo do nicho. Repetida em 7 dias ou grupo pausado: `skipped`.
+    """Uma publicação por grupo do nicho. Ainda na fila do grupo, ou grupo pausado: `skipped`;
+    enviada ao grupo há menos de 24 h: entra agendada (`not_before`).
 
     `pix_cents`, `coupon_cents` e `last_units`: o que o operador viu na página ao aprovar (o Pix
     vale por 3 horas, as últimas unidades por 2). `seen_at`: quando viu (a troca de grupo
@@ -250,7 +261,7 @@ async def publications_for_approval(
         ).scalar_one_or_none()
         if exists is not None:
             continue  # o mesmo toque de novo (outra aba, reenvio do formulário)
-        reason = await repeat_reason(
+        plan = await repeat_plan_for(
             db,
             channel,
             dedup_key=dedup_key,
@@ -258,6 +269,7 @@ async def publications_for_approval(
             tier=evaluation.tier,
             now=now,
         )
+        reason = plan.skip
         target_url = offer_page_url(product.permalink, product.external_id, item_id)
         db.add(
             Publication(
@@ -279,6 +291,7 @@ async def publications_for_approval(
                 last_units=last_units,
                 last_units_at=seen if last_units is not None else None,
                 flash_ends_at=flash_ends_at,
+                not_before=plan.not_before,
                 note=reason,
                 created_at=now,
             )
@@ -288,6 +301,7 @@ async def publications_for_approval(
             result.skipped.append(f"{channel.name}: {reason}")
         else:
             result.created += 1
+            result.scheduled += 1 if plan.not_before else 0
             if channel.ml_tag and (affiliate_tool_id or channel.transport == "wuzapi"):
                 result.auto_link += 1
                 if channel.transport == "wuzapi" and channel.wa_jid:
@@ -456,7 +470,7 @@ async def channel_status(
     )
 
 
-async def repeat_reason(
+async def repeat_plan_for(
     db: AsyncSession,
     channel: Channel,
     *,
@@ -464,33 +478,37 @@ async def repeat_reason(
     price_cents: int,
     tier: str,
     now: datetime,
-) -> str | None:
-    """Por que o produto não entra agora neste grupo (repetido em 7 dias, grupo pausado)."""
+) -> RepeatPlan:
+    """O produto neste grupo: não entra (ainda na fila, grupo pausado), entra agendado (enviado
+    há menos de 24 h) ou entra normal."""
     prior = (
         await db.execute(
             select(
                 func.coalesce(Publication.checked_price_cents, Publication.approved_price_cents),
-                Publication.created_at,
+                Publication.state,
+                Publication.sent_at,
             )
             .where(
                 Publication.channel_id == channel.id,
                 Publication.dedup_key == dedup_key,
-                Publication.created_at >= now - DEDUP_WINDOW,
-                Publication.state.in_(("awaiting_link", "ready", "sending", "unknown", "sent")),
+                or_(
+                    Publication.state.in_(PENDING_STATES),
+                    and_(Publication.state == "sent", Publication.sent_at >= now - REPEAT_WAIT),
+                ),
             )
-            .order_by(Publication.created_at.desc())
+            .order_by(Publication.id.desc())
             .limit(PRIOR_LIMIT)
         )
     ).all()
-    reason = repeat_block_reason(
-        [PriorPost(price, created) for price, created in prior],
+    plan = repeat_plan(
+        [PriorPost(price, state, sent_at) for price, state, sent_at in prior],
         price_cents=price_cents,
         tier=tier,
         now=now,
     )
-    if reason is None and channel.paused:
-        reason = "grupo pausado"
-    return reason
+    if plan.skip is None and channel.paused:
+        return RepeatPlan(skip="grupo pausado")
+    return plan
 
 
 async def chosen_channels(db: AsyncSession, ids: list[int]) -> list[Channel]:

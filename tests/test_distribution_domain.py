@@ -9,12 +9,13 @@ from app.domain.distribution import (
     ChannelPolicy,
     LinkError,
     PriorPost,
+    RepeatPlan,
     local_day_start,
     offer_page_url,
     parse_affiliate_links,
     recheck_offer,
     render_message,
-    repeat_block_reason,
+    repeat_plan,
     send_block_reason,
     share_url,
 )
@@ -48,15 +49,21 @@ def test_policy_window_is_in_brasilia_time() -> None:
     assert local_day_start(late).hour == 0 and local_day_start(late).day == 21
 
 
-def test_repeat_needs_ten_percent_drop_and_high_tier() -> None:
-    prior = [PriorPost(10_000, NOW - timedelta(days=2))]
-    assert repeat_block_reason(prior, price_cents=9_500, tier="excepcional", now=NOW) == (
-        "já foi para este grupo em 19/10"
+def test_repeat_waits_24h_from_the_last_send_instead_of_staying_out() -> None:
+    """20/10/2026: eram 7 dias de fora ("já foi para este grupo"). Agora entra e espera 24 h do
+    último envio; 10% mais barato e Excelente+ sai sem esperar; o que está na fila não entra."""
+    sent = NOW - timedelta(hours=10)
+    prior = [PriorPost(10_000, "sent", sent)]
+    waiting = repeat_plan(prior, price_cents=9_500, tier="excepcional", now=NOW)
+    assert waiting == RepeatPlan(not_before=sent + timedelta(hours=24))
+    assert repeat_plan(prior, price_cents=9_000, tier="excelente", now=NOW) == RepeatPlan()
+    assert repeat_plan(prior, price_cents=8_000, tier="boa", now=NOW).not_before is not None
+    day_old = [PriorPost(10_000, "sent", NOW - timedelta(hours=25))]
+    assert repeat_plan(day_old, price_cents=10_000, tier="boa", now=NOW) == RepeatPlan()
+    queued = [PriorPost(10_000, "ready"), PriorPost(10_000, "sent", sent)]
+    assert repeat_plan(queued, price_cents=10_000, tier="boa", now=NOW) == RepeatPlan(
+        skip="já está na fila deste grupo"
     )
-    assert repeat_block_reason(prior, price_cents=9_000, tier="excelente", now=NOW) is None
-    assert repeat_block_reason(prior, price_cents=8_000, tier="boa", now=NOW) is not None
-    old = [PriorPost(10_000, NOW - timedelta(days=8))]
-    assert repeat_block_reason(old, price_cents=10_000, tier="boa", now=NOW) is None
 
 
 def test_affiliate_links_only_official_short_links_in_order() -> None:

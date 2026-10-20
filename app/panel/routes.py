@@ -74,9 +74,10 @@ NOTICES = {
     "grupos": "Não aprovada: marque pelo menos um grupo ativo em “Grupos”.",
     "varios": "Aprovada para os grupos marcados. O link de cada grupo sai em instantes e o post "
     "aparece na fila de cada um em Postar.",
-    "varios-parte": "Aprovada em parte dos grupos marcados: os outros já receberam este produto "
-    "nos últimos 7 dias.",
-    "repetida": "Aprovada, mas não vai agora: já foi para o grupo nos últimos 7 dias.",
+    "varios-parte": "Aprovada em parte dos grupos marcados: nos outros o produto já está na fila.",
+    "repetida": "Não entrou: o produto já está na fila deste grupo.",
+    "agendada": "Aprovada. Onde o produto saiu há menos de 24 h, ele espera e sai assim que "
+    "completar 24 h do último envio, na frente da fila.",
     "sem-preco": "Aprovada, mas esta avaliação não tem preço válido para publicar.",
     "nicho": "Nicho trocado. O robô reavalia com as regras do nicho novo em instantes.",
     "nicho-fila": "Nicho trocado. Ele saiu da fila de envio do grupo antigo: aprove de novo na "
@@ -437,6 +438,8 @@ async def decide(
                 notice = "links"
             elif result.skipped:
                 notice = "repetida"
+            if result.scheduled and notice not in ("sem-grupo", "varios-parte", "repetida"):
+                notice = "agendada"
     await coordination.settle(db, product_id)
     try:
         await db.commit()
