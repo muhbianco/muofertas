@@ -1,4 +1,5 @@
-"""Boas-vindas a quem entra no grupo: uma saudação por leva, na janela, sem guardar quem entrou."""
+"""Boas-vindas a quem entra no grupo: uma saudação por leva, na janela, marcando quem entrou sem
+guardar quem é."""
 
 from __future__ import annotations
 
@@ -18,15 +19,18 @@ from app.core.config import Settings
 from app.distribution.greetings import Greeter
 from app.domain.distribution import BATCH_GAP, BatchPlan, ChannelPolicy
 from app.domain.greetings import (
+    MAX_MENTIONS,
     GreetingConfig,
     GreetingConfigError,
     GreetingRules,
     greeting_due,
+    handle,
+    mentions_for,
     new_members,
     parse_config,
     render_greeting,
 )
-from app.integrations.wuzapi import WuzapiClient, member_keys
+from app.integrations.wuzapi import WuzapiClient, members
 from app.models import Channel, ChannelGreeting, Niche
 from tests.fake_wuzapi import ADMIN, SESSION, FakeWuzapi, group, person
 from tests.test_panel import login, seed_admin
@@ -94,6 +98,25 @@ def test_batch_text_tells_the_hours_and_the_next_batch() -> None:
     # Depois do último lote (19h, aberto até 19h40): o de amanhã.
     assert "O próximo lote sai amanhã às 7h." in render_greeting(config, BATCH, at(20))
     assert "{" not in text and "}" not in text
+    assert text.splitlines()[0] == "👋 *Boas-vindas ao MegaPromoOz!*"
+
+
+def test_who_joined_is_marked_after_the_title() -> None:
+    text = render_greeting(real_config(), BATCH, at(11), ["5511912345678", "84172398712345"])
+    assert text.splitlines()[0] == "👋 *Boas-vindas ao MegaPromoOz!* @5511912345678 @84172398712345"
+    steady = render_greeting(real_config(), STEADY, at(11), ["123"])
+    assert steady.splitlines()[0].endswith("!* @123")
+
+
+def test_handle_is_the_user_part_of_the_jid() -> None:
+    assert handle("5511912345678@s.whatsapp.net") == "5511912345678"
+    assert handle("5511912345678:12@s.whatsapp.net") == "5511912345678"
+    assert handle("84172398712345@lid") == "84172398712345"
+    assert handle("bot@g.us") is None
+    jids = [f"{i}@lid" for i in range(MAX_MENTIONS)]
+    assert len(mentions_for(jids)) == MAX_MENTIONS
+    # Leva grande demais: ninguém marcado (parede de @ no grupo).
+    assert mentions_for([*jids, "99@lid"]) == []
 
 
 def test_steady_text_tells_the_daily_limit() -> None:
@@ -116,11 +139,11 @@ def test_new_members_counts_who_came_in() -> None:
 
 def test_member_keys_hide_the_phone_and_depend_on_the_salt() -> None:
     raw = {"Participants": [person(1), person(2), {"JID": ""}, "lixo"]}
-    one = member_keys(raw, b"sal-1")
-    assert len(one) == 2
+    one = members(raw, b"sal-1")
+    assert sorted(one.values()) == [person(1)["JID"], person(2)["JID"]]
     assert not any("55119" in key for key in one)
-    assert one != member_keys(raw, b"sal-2")
-    assert member_keys({"Participants": None}, b"sal") == frozenset()
+    assert set(one) != set(members(raw, b"sal-2"))
+    assert members({"Participants": None}, b"sal") == {}
 
 
 def due(now: datetime, *, first: datetime, last: datetime, greeted: datetime | None) -> bool:
@@ -246,11 +269,19 @@ async def test_four_people_in_a_row_get_one_greeting(
         assert await h.tick(at(11, 9)) == 1
         assert await h.tick(at(11, 15)) == 0
         assert len(h.greetings()) == 1
-        assert "O próximo lote sai às 13h." in h.greetings()[0]
+        body = h.greetings()[0]
+        assert "O próximo lote sai às 13h." in body
         assert h.wa.sent[0]["LinkPreview"] is False
+        # Os quatro marcados: no texto (@) e na lista de marcação do WhatsApp.
+        joined = [person(i)["JID"] for i in range(1000, 1004)]
+        assert sorted(h.wa.sent[0]["ContextInfo"]["MentionedJID"]) == sorted(joined)
+        for jid in joined:
+            assert f"@{jid.split('@')[0]}" in body.splitlines()[0]
         rows = await h.rows()
         assert [(r.state, r.new_members) for r in rows] == [("sent", 4)]
-        assert rows[0].message == h.greetings()[0]
+        # O banco guarda o texto sem as marcações.
+        assert rows[0].message is not None and "55119" not in rows[0].message
+        assert rows[0].message.splitlines()[0] == "👋 *Boas-vindas ao MegaPromoOz!*"
         # Uma olhada por volta, só no Família: o pausado e o manual nem foram olhados.
         assert h.wa.calls.count("GET /group/info") == 8
     finally:
@@ -275,6 +306,77 @@ async def test_people_arriving_during_the_cooldown_wait_for_the_next_greeting(
         assert await h.tick(at(13, 6)) == 1
         rows = await h.rows()
         assert [(r.state, r.new_members) for r in rows] == [("sent", 2), ("sent", 3)]
+        # Cada saudação marca só a própria leva.
+        assert [len(m["ContextInfo"]["MentionedJID"]) for m in h.wa.sent] == [2, 3]
+    finally:
+        await h.close()
+
+
+async def test_who_left_before_the_greeting_is_not_marked(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await seed_channels(sessions)
+    h = Harness(sessions)
+    try:
+        await h.tick(at(11))
+        h.join(2)
+        await h.tick(at(11, 1))
+        h.leave(1)  # o último a entrar já saiu
+        await h.tick(at(11, 3))
+        assert await h.tick(at(11, 7)) == 1
+        assert h.wa.sent[0]["ContextInfo"]["MentionedJID"] == [person(1000)["JID"]]
+        assert "@5511900001001" not in h.greetings()[0]
+    finally:
+        await h.close()
+
+
+async def test_wait_from_before_a_restart_goes_without_marks(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await seed_channels(sessions)
+    h = Harness(sessions)
+    try:
+        await h.tick(at(11))
+        h.join(2)
+        await h.tick(at(11, 1))
+        h.greeter = Greeter(sessions, h.client, real_config())  # deploy no meio da espera
+        assert await h.tick(at(11, 7)) == 1
+        assert "ContextInfo" not in h.wa.sent[0]
+        assert "@" not in h.greetings()[0].splitlines()[0]
+    finally:
+        await h.close()
+
+
+async def test_refused_marks_fall_back_to_the_plain_greeting(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await seed_channels(sessions)
+    h = Harness(sessions)
+    try:
+        await h.tick(at(11))
+        h.join(1)
+        await h.tick(at(11, 1))
+        h.wa.mention_mode = "refuse"
+        assert await h.tick(at(11, 7)) == 1
+        assert len(h.wa.sent) == 1 and "ContextInfo" not in h.wa.sent[0]
+        assert "@" not in h.greetings()[0].splitlines()[0]
+        assert [r.state for r in await h.rows()] == ["sent"]
+    finally:
+        await h.close()
+
+
+async def test_a_crowd_is_greeted_without_marks(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await seed_channels(sessions)
+    h = Harness(sessions, members=60)
+    try:
+        await h.tick(at(11))
+        h.join(MAX_MENTIONS + 1)
+        await h.tick(at(11, 1))
+        assert await h.tick(at(11, 7)) == 1
+        assert "ContextInfo" not in h.wa.sent[0]
+        assert [r.new_members for r in await h.rows()] == [MAX_MENTIONS + 1]
     finally:
         await h.close()
 

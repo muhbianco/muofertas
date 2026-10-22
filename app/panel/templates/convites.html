@@ -40,7 +40,7 @@
 
 <h1 id="boas-vindas">Boas-vindas</h1>
 {% if greeting_rules %}{% set r = greeting_rules %}
-<p class="nota-pix">Quando entra gente no grupo, sai uma saudação só por leva: o robô olha a lista do grupo a cada {{ (r.poll_every.total_seconds() // 60)|int }} min e espera {{ (r.quiet.total_seconds() // 60)|int }} min sem ninguém novo (ou {{ (r.max_wait.total_seconds() // 60)|int }} min da primeira entrada) antes de mandar. {% set h = r.cooldown.total_seconds() / 3600 %}No máximo uma a cada {{ h|int if h == h|int else h|round(1) }} h por grupo, e só dentro da janela do grupo: quem entra de madrugada é saudado na abertura. Os horários do texto vêm da tela Grupos. Não conta nos envios de oferta do dia. Quem entrou com o robô reiniciando (deploy) não é visto.</p>
+<p class="nota-pix">Quando entra gente no grupo, sai uma saudação só por leva: o robô olha a lista do grupo a cada {{ (r.poll_every.total_seconds() // 60)|int }} min e espera {{ (r.quiet.total_seconds() // 60)|int }} min sem ninguém novo (ou {{ (r.max_wait.total_seconds() // 60)|int }} min da primeira entrada) antes de mandar. {% set h = r.cooldown.total_seconds() / 3600 %}No máximo uma a cada {{ h|int if h == h|int else h|round(1) }} h por grupo, e só dentro da janela do grupo: quem entra de madrugada é saudado na abertura. Quem entrou aparece marcado (no exemplo, @Fulano e @Ciclano; leva de mais de {{ max_mentions }} pessoas sai sem marcar ninguém). Os horários do texto vêm da tela Grupos. Não conta nos envios de oferta do dia. Quem entrou com o robô reiniciando (deploy) não é visto.</p>
 {% endif %}
 {% if not greetings_enabled %}<p class="erro">Boas-vindas desligadas no servidor (GREETINGS_ENABLED).</p>{% endif %}
 {% if greeting_error %}<p class="erro">{{ greeting_error }}</p>{% endif %}

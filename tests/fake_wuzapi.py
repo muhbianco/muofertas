@@ -33,6 +33,7 @@ class FakeWuzapi:
     send_mode: str = "ok"
     image_mode: str = "ok"  # ok | refuse (400: a foto não saiu, o texto pode ir)
     info_mode: str = "ok"  # ok | refuse (500 no /group/info)
+    mention_mode: str = "ok"  # ok | refuse (400 quando o texto leva ContextInfo)
     sent: list[dict[str, Any]] = field(default_factory=list)
 
     def transport(self) -> httpx.MockTransport:
@@ -92,6 +93,8 @@ class FakeWuzapi:
                 raise httpx.ConnectError("sem rota", request=request)
             if self.send_mode == "refuse":
                 return httpx.Response(500, json={"error": "failed to send"})
+            if self.mention_mode == "refuse" and "ContextInfo" in body:
+                return httpx.Response(400, json={"error": "could not decode Payload"})
             self.sent.append(body)
             if self.send_mode == "timeout":
                 raise httpx.ReadTimeout("sem resposta", request=request)

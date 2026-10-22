@@ -10,12 +10,13 @@ Quem entra junto (alguém compartilhou o link e quatro entraram em seguida) rece
   ontem não é bem-vindo.
 
 O texto diz quando as ofertas chegam, a partir da regra de envio do grupo (tela Grupos), para nunca
-prometer horário que o envio não cumpre.
+prometer horário que o envio não cumpre, e marca quem entrou (`{marcados}`, até `MAX_MENTIONS`).
 """
 
 from __future__ import annotations
 
 import string
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
@@ -31,8 +32,11 @@ from app.domain.distribution import (
 
 EXPIRE = timedelta(hours=24)
 MAX_TEXT = 1500
-BATCH_FIELDS = frozenset({"lote", "horarios", "proximo", "instagram"})
-STEADY_FIELDS = frozenset({"por_dia", "inicio", "fim", "instagram"})
+BATCH_FIELDS = frozenset({"lote", "horarios", "proximo", "instagram", "marcados"})
+STEADY_FIELDS = frozenset({"por_dia", "inicio", "fim", "instagram", "marcados"})
+# Leva maior que isso (alguém postou o link numa comunidade) sai sem marcar ninguém: uma parede
+# de @ no grupo é pior que a saudação sem nome.
+MAX_MENTIONS = 15
 # Mais da metade da lista "nova" de uma vez não é gente entrando: é o WhatsApp trocando o formato
 # do identificador (telefone ↔ LID). A lista vira a referência e ninguém é saudado.
 REBASE_SHARE = 0.5
@@ -191,7 +195,26 @@ def next_batch_sentence(now: datetime, policy: ChannelPolicy) -> str:
     return f"O próximo lote sai amanhã às {_hour(tomorrow[0])}."
 
 
-def render_greeting(config: GreetingConfig, policy: ChannelPolicy, now: datetime) -> str:
+def handle(jid: str) -> str | None:
+    """O `@` do texto: a parte do JID antes do `@`, sem o aparelho (`5511…:12@…`). Só dígitos
+    (telefone ou LID); outra coisa não se marca."""
+    user = jid.split("@", 1)[0].split(":", 1)[0]
+    return user if user.isdigit() else None
+
+
+def mentions_for(jids: Sequence[str]) -> list[tuple[str, str]]:
+    """(JID, @) de quem será marcado: nenhum quando a leva passa de `MAX_MENTIONS`."""
+    if len(jids) > MAX_MENTIONS:
+        return []
+    pairs = [(jid, handle(jid)) for jid in jids]
+    return [(jid, h) for jid, h in pairs if h is not None]
+
+
+def render_greeting(
+    config: GreetingConfig, policy: ChannelPolicy, now: datetime, handles: Sequence[str] = ()
+) -> str:
+    """`handles`: os `@` de quem entrou (sem a arroba), no lugar de `{marcados}`."""
+    marked = "".join(f" @{h}" for h in handles)
     if policy.batch is not None:
         starts = batch_starts(
             now, policy.window_start_hour, policy.window_end_hour, policy.batch.every
@@ -201,6 +224,7 @@ def render_greeting(config: GreetingConfig, policy: ChannelPolicy, now: datetime
             horarios=_join([_hour(s) for s in starts]),
             proximo=next_batch_sentence(now, policy),
             instagram=config.instagram,
+            marcados=marked,
         )
     else:
         text = config.steady_text.format(
@@ -208,6 +232,7 @@ def render_greeting(config: GreetingConfig, policy: ChannelPolicy, now: datetime
             inicio=f"{policy.window_start_hour}h",
             fim=f"{policy.window_end_hour}h",
             instagram=config.instagram,
+            marcados=marked,
         )
     # Placeholder vazio (sem Instagram, sem lote amanhã) não deixa linha pendurada.
     return "\n".join(line.rstrip() for line in text.splitlines()).strip()

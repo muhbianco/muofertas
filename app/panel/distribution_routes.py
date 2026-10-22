@@ -62,7 +62,7 @@ from app.domain.distribution import (
     share_url,
     spacing_minutes,
 )
-from app.domain.greetings import GreetingConfigError
+from app.domain.greetings import MAX_MENTIONS, GreetingConfigError
 from app.domain.invites import InviteConfigError
 from app.integrations import ml_shortlink
 from app.integrations.mercadolivre import MercadoLivreClient
@@ -1194,6 +1194,7 @@ async def invites_page(request: Request, db: Db, ctx: Admin) -> Response:
             "greeting_previews": previews,
             "greeting_recent": recent,
             "greeting_states": GREETING_STATES,
+            "max_mentions": MAX_MENTIONS,
         },
     )
 

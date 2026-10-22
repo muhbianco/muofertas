@@ -2,12 +2,15 @@
 
 A sessão da MegaPromoOz não recebe evento do WhatsApp (sem webhook, de propósito), então quem
 entrou se descobre comparando a lista do grupo (`/group/info`) de uma olhada para a outra, a cada
-`poll_every`. A lista fica só na memória do worker, em chaves com sal; o banco guarda quantos
-entraram. Consequências aceitas:
+`poll_every`. A lista fica só na memória do worker, em chaves com sal; o JID de quem entrou fica
+lá também, só até a saudação sair, para marcar a pessoa. O banco guarda quantos entraram e o texto
+sem as marcações; nada de quem entrou vai para o log. Consequências aceitas:
 
 - a primeira olhada depois de o worker subir (deploy, troca de líder) é só a referência: quem
   entrou com o worker fora não é saudado;
-- quem entra e sai entre duas olhadas não conta.
+- a espera gravada antes de um reinício sai sem marcar ninguém (os JIDs ficaram no processo
+  antigo);
+- quem entra e sai entre duas olhadas não conta, e quem sai antes da saudação não é marcado.
 
 O envio segue o convite: a linha vira `sending` antes de chamar a WuzAPI; timeout ambíguo vira
 `unknown` e não reenvia; WuzAPI fora do ar volta para a espera; recusa clara vira `failed`.
@@ -31,6 +34,7 @@ from app.domain.greetings import (
     GreetingConfig,
     expired,
     greeting_due,
+    mentions_for,
     new_members,
     parse_config,
     render_greeting,
@@ -44,6 +48,7 @@ WAITING = "waiting"
 # Contam para o intervalo mínimo entre saudações (a tentativa, saindo ou não confirmada).
 ATTEMPTED = ("sending", "sent", "unknown")
 MAX_GROUPS = 50
+PREVIEW_HANDLES = ("Fulano", "Ciclano")
 _CONFIG: dict[str, GreetingConfig] = {}
 
 
@@ -151,7 +156,8 @@ class Greeter:
 
     def __post_init__(self) -> None:
         self._salt = secrets.token_bytes(16)
-        self._seen: dict[int, tuple[str, frozenset[str]]] = {}  # canal → (JID, chaves)
+        self._seen: dict[int, tuple[str, frozenset[str]]] = {}  # canal → (JID do grupo, chaves)
+        self._newcomers: dict[int, dict[str, str]] = {}  # canal → chave → JID de quem entrou
         self._next_look: datetime | None = None
 
     async def run(self, now: datetime) -> int:
@@ -166,26 +172,33 @@ class Greeter:
             channels = await _channels(db)
         alive = {c.id for c in channels}
         for gone in set(self._seen) - alive:
-            del self._seen[gone]  # pausado: ao voltar, a primeira olhada é referência de novo
+            # Pausado: ao voltar, a primeira olhada é referência de novo.
+            del self._seen[gone]
+            self._newcomers.pop(gone, None)
         for channel in channels:
             assert channel.wa_jid is not None
             try:
-                keys = await self.wa.group_member_keys(channel.wa_jid, self._salt)
+                people = await self.wa.group_members(channel.wa_jid, self._salt)
             except WuzapiError as exc:
                 logger.warning(
                     "lista do grupo indisponível",
                     extra={"channel_id": channel.id, "status": exc.status},
                 )
                 continue
+            keys = frozenset(people)
             seen = self._seen.get(channel.id)
             # Outro grupo ligado ao canal: a lista dele é referência nova.
             before = seen[1] if seen is not None and seen[0] == channel.wa_jid else None
-            if keys:
-                self._seen[channel.id] = (channel.wa_jid, keys)
+            if not keys:
+                continue  # lista vazia não é o grupo: fica a referência anterior
+            self._seen[channel.id] = (channel.wa_jid, keys)
+            waiting = {k: j for k, j in self._newcomers.get(channel.id, {}).items() if k in keys}
             fresh = new_members(before, keys)
-            if fresh:
+            if fresh and before is not None:
+                waiting.update((k, people[k]) for k in sorted(keys - before))
                 await record_joins(self.sessions, channel.id, fresh, now)
                 logger.info("entrou gente no grupo", extra={"channel_id": channel.id, "n": fresh})
+            self._newcomers[channel.id] = waiting
 
     async def send_due(self, now: datetime) -> int:
         async with self.sessions() as db:
@@ -202,6 +215,7 @@ class Greeter:
         sent = 0
         for greeting, channel in rows:
             if expired(greeting.first_join_at, now):
+                self._newcomers.pop(channel.id, None)
                 await _set(
                     self.sessions,
                     greeting.id,
@@ -220,12 +234,19 @@ class Greeter:
             ):
                 continue
             assert channel.wa_jid is not None
-            message = render_greeting(self.config, policy_of(channel), now)
-            if not await _claim(self.sessions, greeting.id, message, now):
+            policy = policy_of(channel)
+            # O banco guarda o texto sem as marcações: nada de quem entrou vai para lá.
+            plain = render_greeting(self.config, policy, now)
+            pairs = mentions_for(list(self._newcomers.get(channel.id, {}).values()))
+            marked = render_greeting(self.config, policy, now, [h for _, h in pairs])
+            mentions = [jid for jid, h in pairs if f"@{h}" in marked]
+            if not await _claim(self.sessions, greeting.id, plain, now):
                 continue
             try:
-                message_id = await self.wa.send_text(channel.wa_jid, message)
+                message_id = await self._deliver(channel.wa_jid, marked, plain, mentions)
             except WuzapiError as exc:
+                if exc.status is not None or exc.maybe_sent:
+                    self._newcomers.pop(channel.id, None)
                 if exc.maybe_sent:
                     await _set(
                         self.sessions,
@@ -249,6 +270,7 @@ class Greeter:
                     extra={"channel_id": channel.id, "status": exc.status},
                 )
                 continue
+            self._newcomers.pop(channel.id, None)
             await _set(
                 self.sessions,
                 greeting.id,
@@ -258,9 +280,26 @@ class Greeter:
             sent += 1
             logger.info(
                 "boas-vindas enviadas",
-                extra={"channel_id": channel.id, "n": greeting.new_members},
+                extra={
+                    "channel_id": channel.id,
+                    "n": greeting.new_members,
+                    "marcados": len(mentions),
+                },
             )
         return sent
+
+    async def _deliver(self, jid: str, marked: str, plain: str, mentions: list[str]) -> str:
+        """Com as marcações; recusa clara delas (4xx) cai para o texto sem ninguém marcado, que
+        nunca mostra `@` solto."""
+        if not mentions:
+            return await self.wa.send_text(jid, plain)
+        try:
+            return await self.wa.send_text(jid, marked, mentions=mentions)
+        except WuzapiError as exc:
+            if exc.maybe_sent or exc.status is None or exc.status >= 500:
+                raise
+            logger.warning("marcação recusada; vai sem marcar", extra={"status": exc.status})
+        return await self.wa.send_text(jid, plain)
 
 
 # --------------------------------------------------------------------------- painel
@@ -275,9 +314,11 @@ class GreetingPreview:
 async def panel_view(
     db: AsyncSession, config: GreetingConfig, now: datetime, *, limit: int = 15
 ) -> tuple[list[GreetingPreview], list[tuple[ChannelGreeting, str]]]:
-    """O texto como sairia agora em cada grupo e as últimas levas (com o nome do grupo)."""
+    """O texto como sairia agora em cada grupo (com dois marcados de exemplo) e as últimas levas
+    (com o nome do grupo)."""
     previews = [
-        GreetingPreview(c, render_greeting(config, policy_of(c), now)) for c in await _channels(db)
+        GreetingPreview(c, render_greeting(config, policy_of(c), now, PREVIEW_HANDLES))
+        for c in await _channels(db)
     ]
     recent = (
         await db.execute(

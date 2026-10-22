@@ -8,9 +8,10 @@ Duas portas com credenciais diferentes, como na api-agents:
 - **sessão** (`token: <token da sessão>`): conectar, QR, código, estado, grupos.
 
 Rotas conferidas no spec da imagem em uso (`asternic/wuzapi:1.0.9`, `/app/static/api/spec.yml`,
-em 10/10/2026; `/group/info` em 22/10/2026). A lista de participantes dos grupos traz telefones:
-este módulo devolve só contagens ou chaves com sal (as boas-vindas comparam a lista de uma olhada
-para a outra), e nada dela vai para log ou banco (LGPD, §9.6 do plano).
+em 10/10/2026; `/group/info` e `ContextInfo.MentionedJID` em 22/10/2026). A lista de participantes
+dos grupos traz telefones: este módulo devolve contagens ou, para as boas-vindas, o JID de cada um
+sob uma chave com sal (a chave compara uma olhada com a outra; o JID só serve para marcar quem
+entrou). Nada dela vai para log ou banco (LGPD, §9.6 do plano).
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -107,17 +109,18 @@ def summarize_group(raw: dict[str, Any]) -> GroupSummary | None:
     )
 
 
-def member_keys(raw: dict[str, Any], salt: bytes) -> frozenset[str]:
-    """Uma chave por participante, HMAC do JID com o sal do processo: compara duas olhadas sem
-    guardar telefone, e a chave não serve fora do processo que a criou."""
+def members(raw: dict[str, Any], salt: bytes) -> dict[str, str]:
+    """Chave → JID de cada participante. A chave é o HMAC do JID com o sal do processo: compara
+    duas olhadas e não serve fora do processo que a criou. Em grupo `AddressingMode: lid` (o da
+    família, desde 22/10/2026) o JID é `…@lid`, o mesmo que o WhatsApp usa para marcar."""
     participants = raw.get("Participants")
     if not isinstance(participants, list):
-        return frozenset()
-    return frozenset(
-        hmac.new(salt, p["JID"].encode(), hashlib.sha256).hexdigest()[:20]
+        return {}
+    return {
+        hmac.new(salt, p["JID"].encode(), hashlib.sha256).hexdigest()[:20]: p["JID"]
         for p in participants
         if isinstance(p, dict) and isinstance(p.get("JID"), str) and p["JID"]
-    )
+    }
 
 
 def digits(phone: str) -> str:
@@ -240,15 +243,23 @@ class WuzapiClient:
         groups = [summarize_group(g) for g in raw or [] if isinstance(g, dict)]
         return sorted((g for g in groups if g), key=lambda g: g.name.lower())
 
-    async def send_text(self, chat_jid: str, body: str, *, link_preview: bool = False) -> str:
+    async def send_text(
+        self,
+        chat_jid: str,
+        body: str,
+        *,
+        link_preview: bool = False,
+        mentions: Sequence[str] = (),
+    ) -> str:
         """`POST /chat/send/text` para o grupo (`Phone` = JID `…@g.us`; o parseJID da 1.0.9
         aceita JID completo). Sem prévia de link por padrão: a prévia faria o servidor abrir o
-        link de afiliado, um clique de robô. Só o convite do grupo liga a prévia (foto e nome)."""
-        data = await self._request(
-            "POST",
-            "/chat/send/text",
-            json={"Phone": chat_jid, "Body": body, "LinkPreview": link_preview},
-        )
+        link de afiliado, um clique de robô. Só o convite do grupo liga a prévia (foto e nome).
+        `mentions`: JIDs marcados (`ContextInfo.MentionedJID`); o texto leva `@<usuário>` de cada
+        um, senão o WhatsApp não mostra a marcação."""
+        payload: dict[str, Any] = {"Phone": chat_jid, "Body": body, "LinkPreview": link_preview}
+        if mentions:
+            payload["ContextInfo"] = {"MentionedJID": list(mentions)}
+        data = await self._request("POST", "/chat/send/text", json=payload)
         return str((data or {}).get("Id") or "") if isinstance(data, dict) else ""
 
     async def send_image(self, chat_jid: str, data_uri: str, caption: str) -> str:
@@ -260,10 +271,10 @@ class WuzapiClient:
         )
         return str((data or {}).get("Id") or "") if isinstance(data, dict) else ""
 
-    async def group_member_keys(self, group_jid: str, salt: bytes) -> frozenset[str]:
-        """`GET /group/info`: quem está no grupo, em chaves com sal (`member_keys`)."""
+    async def group_members(self, group_jid: str, salt: bytes) -> dict[str, str]:
+        """`GET /group/info`: quem está no grupo, chave com sal → JID (`members`)."""
         data = await self._request("GET", "/group/info", params={"groupJID": group_jid})
-        return member_keys(data if isinstance(data, dict) else {}, salt)
+        return members(data if isinstance(data, dict) else {}, salt)
 
     async def invite_link(self, group_jid: str) -> str:
         data = await self._request("GET", "/group/invitelink", params={"groupJID": group_jid})
