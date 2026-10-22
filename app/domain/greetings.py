@@ -176,10 +176,11 @@ def _join(labels: list[str]) -> str:
 
 
 def next_batch_sentence(now: datetime, policy: ChannelPolicy) -> str:
-    """ "O lote das 10h está saindo agora." / "O próximo lote sai às 13h." / "... amanhã às 7h."."""
+    """ "O próximo lote sai às 13h." / "... amanhã às 7h."; nada com um lote saindo (o dono não
+    quer o aviso de "saindo agora", 22/10/2026, e o próximo horário ali só confundiria)."""
     current = current_batch_start(now, policy)
     if current is not None and now < current + batch_open_for(policy):
-        return f"O lote das {_hour(current)} está saindo agora."
+        return ""
     upcoming = next_batch_start(now, policy)
     if upcoming is not None:
         return f"O próximo lote sai às {_hour(upcoming)}."

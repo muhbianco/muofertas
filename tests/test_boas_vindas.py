@@ -94,7 +94,10 @@ def test_batch_text_tells_the_hours_and_the_next_batch() -> None:
     assert "O próximo lote sai às 13h." in text
     assert "*Em breve:* ofertas da Shopee e da Amazon também!" in text
     assert text.endswith("Segue a gente no Insta: https://www.instagram.com/megapromovipoz/")
-    assert "O lote das 10h está saindo agora." in render_greeting(config, BATCH, at(10, 20))
+    # Com o lote das 10h saindo (até 10h40), nada de próximo lote nem de "saindo agora".
+    during = render_greeting(config, BATCH, at(10, 20))
+    assert "lote sai" not in during and "saindo" not in during
+    assert "últimas unidades.\nPode silenciar" in during
     # Depois do último lote (19h, aberto até 19h40): o de amanhã.
     assert "O próximo lote sai amanhã às 7h." in render_greeting(config, BATCH, at(20))
     assert "{" not in text and "}" not in text
@@ -393,7 +396,7 @@ async def test_night_joiners_are_greeted_when_the_window_opens(
         assert await h.tick(at(23, 30)) == 0
         assert await h.tick(at(6, 59, day=23)) == 0
         assert await h.tick(at(7, 0, day=23)) == 1
-        assert "O lote das 7h está saindo agora." in h.greetings()[0]
+        assert "lote sai" not in h.greetings()[0]  # o das 7h está saindo: sem aviso
     finally:
         await h.close()
 
