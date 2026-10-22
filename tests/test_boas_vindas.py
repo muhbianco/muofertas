@@ -88,6 +88,7 @@ def test_batch_text_tells_the_hours_and_the_next_batch() -> None:
     text = render_greeting(config, BATCH, at(11))
     assert "20 ofertas às 7h, 10h, 13h, 16h e 19h." in text
     assert "O próximo lote sai às 13h." in text
+    assert "*Em breve:* ofertas da Shopee e da Amazon também!" in text
     assert text.endswith("Segue a gente no Insta: https://www.instagram.com/megapromovipoz/")
     assert "O lote das 10h está saindo agora." in render_greeting(config, BATCH, at(10, 20))
     # Depois do último lote (19h, aberto até 19h40): o de amanhã.
