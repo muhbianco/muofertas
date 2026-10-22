@@ -1,17 +1,25 @@
 from __future__ import annotations
 
+import asyncio
 import json
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import httpx
+import pytest
 from pydantic import SecretStr
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
-from app.alerts.service import check_once
+from app.alerts import service
+from app.alerts.service import ALERT_LEASE, alert_loop, check_once
+from app.core.clock import utcnow
 from app.core.config import Settings
+from app.core.lease import acquire_lease, holder_id, release_lease
 from app.domain.alerts import HealthFacts, firing, mail_for
-from app.models import Alert, CatalogProduct, CollectionRun, WorkerLease
+from app.models import Alert, Base, CatalogProduct, CollectionRun, WorkerLease
 
 NOW = datetime(2026, 10, 21, 18, 0, tzinfo=UTC)
 
@@ -193,3 +201,76 @@ async def test_panel_shows_open_alerts(
     assert (await login(client, secret)).status_code == 303
     assert "1 alerta aberto" in (await client.get("/")).text
     assert "Última atualização de preço concluída" in (await client.get("/saude")).text
+
+
+# ------------------------------------------------------------------------- lease do vigia no deploy
+
+
+def quiet_settings() -> Settings:
+    return Settings(database_url_override="sqlite+aiosqlite://", alert_check_seconds=300)
+
+
+@pytest.fixture
+async def own_connections(tmp_path: Path) -> AsyncIterator[async_sessionmaker[AsyncSession]]:
+    """SQLite em arquivo, uma conexão por sessão, como o MariaDB. O `sessions` do conftest divide
+    uma conexão só: o rollback da leitura do teste desfazia o lease que o vigia acabara de pegar."""
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'vigia.db'}", poolclass=NullPool)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield async_sessionmaker(bind=engine, expire_on_commit=False, autoflush=False)
+    await engine.dispose()
+
+
+async def holds_lease(
+    sessions: async_sessionmaker[AsyncSession], holder: str, *, within: float = 2.0
+) -> bool:
+    deadline = asyncio.get_running_loop().time() + within
+    while asyncio.get_running_loop().time() < deadline:
+        async with sessions() as session:
+            lease = await session.get(WorkerLease, ALERT_LEASE)
+        if lease is not None and lease.holder == holder and lease.expires_at > utcnow():
+            return True
+        await asyncio.sleep(0.02)
+    return False
+
+
+async def test_check_once_says_when_another_replica_holds_the_lease(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    assert await acquire_lease(sessions, "web-velho", 600, name=ALERT_LEASE)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda r: httpx.Response(200))) as h:
+        assert await check_once(sessions, h, quiet_settings(), "web-novo", NOW) is None
+
+
+async def test_watcher_releases_its_lease_when_the_web_stops(
+    own_connections: async_sessionmaker[AsyncSession],
+) -> None:
+    sessions = own_connections
+    stop = asyncio.Event()
+    task = asyncio.create_task(alert_loop(sessions, quiet_settings(), stop))
+    assert await holds_lease(sessions, holder_id())
+    stop.set()
+    await asyncio.wait_for(task, timeout=5)
+    # A réplica nova assume na hora, sem esperar o lease expirar (2 ciclos, 10 min).
+    assert await acquire_lease(sessions, "web-novo", 600, name=ALERT_LEASE)
+
+
+async def test_waiting_replica_takes_over_right_after_the_old_one_leaves(
+    own_connections: async_sessionmaker[AsyncSession], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sessions = own_connections
+    monkeypatch.setattr(service, "LEASE_RETRY_SECONDS", 0.05)
+    assert await acquire_lease(sessions, "web-velho", 600, name=ALERT_LEASE)
+    stop = asyncio.Event()
+    task = asyncio.create_task(alert_loop(sessions, quiet_settings(), stop))
+    try:
+        await asyncio.sleep(0.2)
+        async with sessions() as session:
+            lease = await session.get(WorkerLease, ALERT_LEASE)
+        assert lease is not None and lease.holder == "web-velho"  # não rouba de quem está vivo
+        await release_lease(sessions, "web-velho", name=ALERT_LEASE)
+        # Ciclo de 300 s, mas quem espera o lease tenta de novo logo: assume em instantes.
+        assert await holds_lease(sessions, holder_id())
+    finally:
+        stop.set()
+        await asyncio.wait_for(task, timeout=5)

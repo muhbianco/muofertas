@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.clock import utcnow
 from app.core.config import Settings
-from app.core.lease import LEASE_NAME, acquire_lease, holder_id
+from app.core.lease import LEASE_NAME, acquire_lease, holder_id, release_lease
 from app.core.logging import get_logger
 from app.distribution.links import PORTAL_SOURCE
 from app.domain.alerts import (
@@ -49,6 +49,8 @@ OPEN_LIMIT = 50
 RESOLUTION_RETRY = timedelta(days=1)
 WHATSAPP_FRESH = timedelta(hours=1)
 PORTAL_ALERT_WINDOW = timedelta(hours=3)
+# Outro processo com o lease (deploy sobrepondo réplicas): assume segundos depois de ele soltar.
+LEASE_RETRY_SECONDS = 30.0
 
 
 async def gather_facts(db: AsyncSession, now: datetime) -> HealthFacts:
@@ -231,13 +233,14 @@ async def check_once(
     holder: str,
     now: datetime | None = None,
     wa_client: WuzapiClient | None = None,
-) -> int:
-    """Um ciclo do vigia. Devolve quantos e-mails saíram."""
+) -> int | None:
+    """Um ciclo do vigia. Devolve quantos e-mails saíram; `None` quando outro processo está com
+    o lease (réplica velha durante o deploy)."""
     now = now or utcnow()
     if not await acquire_lease(
         sessions, holder, settings.alert_check_seconds * 2, name=ALERT_LEASE
     ):
-        return 0
+        return None
     if wa_client is not None:
         try:
             await wa.tick(sessions, wa_client, settings, now)
@@ -268,15 +271,28 @@ async def check_once(
 async def alert_loop(
     sessions: async_sessionmaker[AsyncSession], settings: Settings, stop: asyncio.Event
 ) -> None:
+    """O vigia do processo web. No deploy as duas réplicas se sobrepõem: a velha solta o lease ao
+    sair e a nova, enquanto não o tem, tenta a cada `LEASE_RETRY_SECONDS`. Antes (22/10/2026) a
+    velha não soltava e a nova só tentava a cada ciclo: ~15 min sem vigia depois de cada deploy."""
     holder = holder_id()
     wa_client = WuzapiClient(settings)
-    async with httpx.AsyncClient(timeout=10.0) as http:
-        while not stop.is_set():
-            try:
-                await check_once(sessions, http, settings, holder, wa_client=wa_client)
-            except (SQLAlchemyError, OSError) as exc:
-                # Banco fora: o próximo ciclo tenta de novo; o /health/ready já denuncia a queda.
-                logger.warning("vigia de alertas falhou", extra={"error": type(exc).__name__})
-            with contextlib.suppress(TimeoutError):
-                await asyncio.wait_for(stop.wait(), timeout=settings.alert_check_seconds)
-    await wa_client.aclose()
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as http:
+            while not stop.is_set():
+                wait = float(settings.alert_check_seconds)
+                try:
+                    sent = await check_once(sessions, http, settings, holder, wa_client=wa_client)
+                    if sent is None:
+                        wait = min(wait, LEASE_RETRY_SECONDS)
+                except (SQLAlchemyError, OSError) as exc:
+                    # Banco fora: o próximo ciclo tenta de novo; o /health/ready denuncia a queda.
+                    logger.warning("vigia de alertas falhou", extra={"error": type(exc).__name__})
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(stop.wait(), timeout=wait)
+    finally:
+        try:
+            await release_lease(sessions, holder, name=ALERT_LEASE)
+        except (SQLAlchemyError, OSError) as exc:
+            # Sem banco na saída: o lease expira sozinho (2 ciclos), como antes.
+            logger.warning("vigia: lease não foi solto", extra={"error": type(exc).__name__})
+        await wa_client.aclose()
