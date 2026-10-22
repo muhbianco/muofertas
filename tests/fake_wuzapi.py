@@ -12,11 +12,12 @@ ADMIN = "admin-token-de-teste"
 SESSION = "session-token-de-teste"
 
 
+def person(i: int, *, admin: bool = False) -> dict[str, Any]:
+    return {"IsAdmin": admin, "IsSuperAdmin": admin, "JID": f"55119{i:08d}@s.whatsapp.net"}
+
+
 def group(jid: str, name: str, members: int, *, announce: bool = False) -> dict[str, Any]:
-    people = [
-        {"IsAdmin": i == 0, "IsSuperAdmin": i == 0, "JID": f"55119000000{i:02d}@s.whatsapp.net"}
-        for i in range(members)
-    ]
+    people = [person(i, admin=i == 0) for i in range(members)]
     return {"JID": jid, "Name": name, "IsAnnounce": announce, "Participants": people}
 
 
@@ -31,6 +32,7 @@ class FakeWuzapi:
     # envio: ok | refuse (500) | timeout (depois de enviar) | connect (nem conectou)
     send_mode: str = "ok"
     image_mode: str = "ok"  # ok | refuse (400: a foto não saiu, o texto pode ir)
+    info_mode: str = "ok"  # ok | refuse (500 no /group/info)
     sent: list[dict[str, Any]] = field(default_factory=list)
 
     def transport(self) -> httpx.MockTransport:
@@ -102,6 +104,14 @@ class FakeWuzapi:
             return self._ok({"Details": "Sent", "Id": f"IMG{len(self.sent)}"})
         if path == "/group/list":
             return self._ok({"Groups": self.groups})
+        if path == "/group/info":
+            jid = request.url.params.get("groupJID", "")
+            if self.info_mode == "refuse":
+                return httpx.Response(500, json={"error": "failed to get group info"})
+            for g in self.groups:
+                if g["JID"] == jid:
+                    return self._ok(g)
+            return httpx.Response(500, json={"error": "not participating"})
         if path == "/group/invitelink":
             jid = request.url.params.get("groupJID", "")
             return self._ok({"InviteLink": f"https://chat.whatsapp.com/{jid[:6]}X"})

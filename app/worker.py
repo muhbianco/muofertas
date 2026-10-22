@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 import httpx
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.collector.service import Collector
 from app.core.clock import utcnow
@@ -27,9 +28,11 @@ from app.core.database import SessionFactory, dispose_engine
 from app.core.lease import acquire_lease, holder_id, release_lease
 from app.core.logging import configure_logging, get_logger
 from app.distribution.auto_approve import AutoApprover
+from app.distribution.greetings import Greeter, greeting_config
 from app.distribution.invites import invite_config, send_invites
 from app.distribution.links import resolve_links
 from app.distribution.sender import send_due
+from app.domain.greetings import GreetingConfigError
 from app.domain.invites import InviteConfig, InviteConfigError
 from app.evaluation.service import Evaluator
 from app.integrations.mercadolivre import (
@@ -150,6 +153,12 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
         calendar = await invite_config(cfg.invites_file)
     except (OSError, ValueError, InviteConfigError):
         logger.exception("calendário inválido: convites e congelamento desligados")
+    greeter: Greeter | None = None
+    if cfg.greetings_enabled:
+        try:
+            greeter = Greeter(SessionFactory, wa_client, await greeting_config(cfg.greetings_file))
+        except (OSError, ValueError, GreetingConfigError):
+            logger.exception("texto de boas-vindas inválido: boas-vindas desligadas")
     evaluator = Evaluator(SessionFactory, calendar=calendar)
     approver = AutoApprover(
         SessionFactory,
@@ -176,6 +185,13 @@ async def run_worker(cfg: Settings, stop: asyncio.Event) -> None:
                         await sales_watch.run(utcnow())
                     if linked:
                         logger.info("links de afiliado", extra={"linked": linked})
+                    if greeter is not None:
+                        # Antes do convite e das ofertas: quem chegou é saudado primeiro. Banco
+                        # com problema aqui não segura o convite nem as ofertas do ciclo.
+                        try:
+                            await greeter.run(utcnow())
+                        except SQLAlchemyError:
+                            logger.exception("boas-vindas: erro no banco")
                     if cfg.invites_enabled and calendar is not None:
                         # Antes das ofertas: o convite da manhã é a primeira mensagem do dia.
                         # Não chama o ML, então sai mesmo com a coleta em pausa.

@@ -21,7 +21,7 @@ from app.core.clock import utcnow
 from app.core.config import settings
 from app.core.database import get_sessionmaker
 from app.core.logging import get_logger
-from app.distribution import invites, service
+from app.distribution import greetings, invites, service
 from app.distribution.manual import (
     DISCOVERED_MANUAL,
     ManualError,
@@ -62,11 +62,12 @@ from app.domain.distribution import (
     share_url,
     spacing_minutes,
 )
+from app.domain.greetings import GreetingConfigError
 from app.domain.invites import InviteConfigError
 from app.integrations import ml_shortlink
 from app.integrations.mercadolivre import MercadoLivreClient
 from app.integrations.wuzapi import WuzapiClient, WuzapiError
-from app.models import CatalogProduct, Channel, Niche, Publication
+from app.models import CatalogProduct, Channel, ChannelGreeting, Niche, Publication
 from app.panel import queries
 from app.panel.auth import AuthContext, check_csrf
 from app.panel.persist import save
@@ -1139,6 +1140,14 @@ INVITE_STATES = {
     "skipped": "pulado",
     "sem_envio": "não sai",
 }
+GREETING_STATES = {
+    "waiting": "esperando",
+    "sending": "saindo",
+    "sent": "enviada",
+    "unknown": "sem confirmação",
+    "failed": "falhou",
+    "expired": "não saiu (passou de 24 h)",
+}
 
 
 @router.get("/convites", response_class=HTMLResponse)
@@ -1157,6 +1166,17 @@ async def invites_page(request: Request, db: Db, ctx: Admin) -> Response:
     except (OSError, ValueError, InviteConfigError) as exc:
         logger.warning("config de convites inválido", extra={"error": str(exc)[:200]})
         error = "O arquivo de convites está com erro: nenhum convite sai até corrigir."
+    greeting_error = None
+    greeting_rules = None
+    previews: list[greetings.GreetingPreview] = []
+    recent: list[tuple[ChannelGreeting, str]] = []
+    try:
+        greeting_cfg = await greetings.greeting_config(settings.greetings_file)
+        greeting_rules = greeting_cfg.rules
+        previews, recent = await greetings.panel_view(db, greeting_cfg, utcnow())
+    except (OSError, ValueError, GreetingConfigError) as exc:
+        logger.warning("texto de boas-vindas inválido", extra={"error": str(exc)[:200]})
+        greeting_error = "O texto de boas-vindas está com erro: nenhuma saudação sai até corrigir."
     return templates.TemplateResponse(
         request,
         "convites.html",
@@ -1168,6 +1188,12 @@ async def invites_page(request: Request, db: Db, ctx: Admin) -> Response:
             "error": error,
             "weekdays": INVITE_WEEKDAYS,
             "states": INVITE_STATES,
+            "greetings_enabled": settings.greetings_enabled,
+            "greeting_error": greeting_error,
+            "greeting_rules": greeting_rules,
+            "greeting_previews": previews,
+            "greeting_recent": recent,
+            "greeting_states": GREETING_STATES,
         },
     )
 

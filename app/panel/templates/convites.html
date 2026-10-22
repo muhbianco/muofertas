@@ -37,4 +37,25 @@
 {% else %}
 <p class="vazio">Nenhum grupo cadastrado.</p>
 {% endfor %}
+
+<h1 id="boas-vindas">Boas-vindas</h1>
+{% if greeting_rules %}{% set r = greeting_rules %}
+<p class="nota-pix">Quando entra gente no grupo, sai uma saudação só por leva: o robô olha a lista do grupo a cada {{ (r.poll_every.total_seconds() // 60)|int }} min e espera {{ (r.quiet.total_seconds() // 60)|int }} min sem ninguém novo (ou {{ (r.max_wait.total_seconds() // 60)|int }} min da primeira entrada) antes de mandar. {% set h = r.cooldown.total_seconds() / 3600 %}No máximo uma a cada {{ h|int if h == h|int else h|round(1) }} h por grupo, e só dentro da janela do grupo: quem entra de madrugada é saudado na abertura. Os horários do texto vêm da tela Grupos. Não conta nos envios de oferta do dia. Quem entrou com o robô reiniciando (deploy) não é visto.</p>
+{% endif %}
+{% if not greetings_enabled %}<p class="erro">Boas-vindas desligadas no servidor (GREETINGS_ENABLED).</p>{% endif %}
+{% if greeting_error %}<p class="erro">{{ greeting_error }}</p>{% endif %}
+{% for p in greeting_previews %}
+<article class="bloco">
+  <h2>{{ p.channel.name }}</h2>
+  <details open><summary>como sai agora</summary><pre class="previa">{{ p.message }}</pre></details>
+</article>
+{% endfor %}
+{% if greeting_recent %}
+<article class="bloco">
+  <h2>Últimas levas</h2>
+  {% for g, name in greeting_recent %}
+  <p class="linha convite">{{ g.first_join_at|local }} · {{ name }} · {{ g.new_members }} {{ 'pessoa' if g.new_members == 1 else 'pessoas' }} · <span class="estado {{ g.state }}">{{ greeting_states.get(g.state, g.state) }}</span>{% if g.sent_at and g.state != 'waiting' %} em {{ g.sent_at|local }}{% endif %}{% if g.note %} · {{ g.note }}{% endif %}</p>
+  {% endfor %}
+</article>
+{% endif %}
 {% endblock %}

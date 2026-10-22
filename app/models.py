@@ -584,6 +584,36 @@ class ChannelInvite(Base):
     actor: Mapped[str | None] = mapped_column(String(80), nullable=True)
 
 
+class ChannelGreeting(Base):
+    """Boas-vindas a quem entrou no grupo (0033): uma linha por leva de entradas.
+
+    Estados: `waiting` (juntando quem entra; no máximo uma por grupo), `sending` (gravado antes de
+    chamar a WuzAPI), `sent`, `unknown` (a WuzAPI não confirmou: não reenvia), `failed` (recusado)
+    e `expired` (passou de 24 h sem poder sair). Nada de quem entrou é guardado: só quantos.
+    """
+
+    __tablename__ = "channel_greeting"
+    __table_args__ = (
+        Index("ix_channel_greeting_channel_state", "channel_id", "state"),
+        Index("ix_channel_greeting_state", "state", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(
+        BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True
+    )
+    channel_id: Mapped[int] = mapped_column(ForeignKey("channel.id", ondelete="CASCADE"))
+    state: Mapped[str] = mapped_column(String(10))
+    new_members: Mapped[int] = mapped_column(Integer, default=0)
+    first_join_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    last_join_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    # Hora da tentativa (sending/sent/unknown): conta para o intervalo mínimo entre saudações.
+    sent_at: Mapped[datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    external_message_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    note: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+
 class SalesCheck(Base):
     """Checagem da lista de vendas do painel de afiliado (0017), a cada 3 h.
 

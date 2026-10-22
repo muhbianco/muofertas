@@ -110,6 +110,10 @@ class Settings(BaseSettings):
     # Convite da manhã, no primeiro horário de envio de cada grupo (início da janela).
     invite_morning_enabled: bool = True
     invites_file: str = "config/convites.json"
+    # Boas-vindas a quem entra no grupo (22/10/2026): uma saudação por leva de entradas, só na
+    # janela do grupo. Texto e tempos em `config/boas_vindas.json`.
+    greetings_enabled: bool = True
+    greetings_file: str = "config/boas_vindas.json"
     # Código de afiliado do ML (`matt_tool`, público: vai em todo link). Com ele e a etiqueta
     # do grupo, o link nasce na aprovação; vazio, o link vem colado pela tela Links.
     ml_affiliate_tool_id: str = ""

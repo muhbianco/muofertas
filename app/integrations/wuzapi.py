@@ -8,12 +8,15 @@ Duas portas com credenciais diferentes, como na api-agents:
 - **sessão** (`token: <token da sessão>`): conectar, QR, código, estado, grupos.
 
 Rotas conferidas no spec da imagem em uso (`asternic/wuzapi:1.0.9`, `/app/static/api/spec.yml`,
-em 10/10/2026). A lista de participantes dos grupos traz telefones: este módulo devolve só
-contagens, e nada dela vai para log ou banco (LGPD, §9.6 do plano).
+em 10/10/2026; `/group/info` em 22/10/2026). A lista de participantes dos grupos traz telefones:
+este módulo devolve só contagens ou chaves com sal (as boas-vindas comparam a lista de uma olhada
+para a outra), e nada dela vai para log ou banco (LGPD, §9.6 do plano).
 """
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -101,6 +104,19 @@ def summarize_group(raw: dict[str, Any]) -> GroupSummary | None:
         announce=bool(raw.get("IsAnnounce")),
         members=len(people),
         admins=sum(1 for p in people if p.get("IsAdmin") or p.get("IsSuperAdmin")),
+    )
+
+
+def member_keys(raw: dict[str, Any], salt: bytes) -> frozenset[str]:
+    """Uma chave por participante, HMAC do JID com o sal do processo: compara duas olhadas sem
+    guardar telefone, e a chave não serve fora do processo que a criou."""
+    participants = raw.get("Participants")
+    if not isinstance(participants, list):
+        return frozenset()
+    return frozenset(
+        hmac.new(salt, p["JID"].encode(), hashlib.sha256).hexdigest()[:20]
+        for p in participants
+        if isinstance(p, dict) and isinstance(p.get("JID"), str) and p["JID"]
     )
 
 
@@ -243,6 +259,11 @@ class WuzapiClient:
             json={"Phone": chat_jid, "Image": data_uri, "Caption": caption},
         )
         return str((data or {}).get("Id") or "") if isinstance(data, dict) else ""
+
+    async def group_member_keys(self, group_jid: str, salt: bytes) -> frozenset[str]:
+        """`GET /group/info`: quem está no grupo, em chaves com sal (`member_keys`)."""
+        data = await self._request("GET", "/group/info", params={"groupJID": group_jid})
+        return member_keys(data if isinstance(data, dict) else {}, salt)
 
     async def invite_link(self, group_jid: str) -> str:
         data = await self._request("GET", "/group/invitelink", params={"groupJID": group_jid})
