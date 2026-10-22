@@ -377,6 +377,18 @@ class WorkerLease(Base):
     expires_at: Mapped[datetime] = mapped_column(UTCDateTime())
 
 
+class PortalStatus(Base):
+    """Último acerto de uma integração (0034): fecha o alerta dela sem esperar a janela.
+
+    Hoje só `ml_portal`: rodada de links do gerador do ML que terminou sem recusa de sessão.
+    """
+
+    __tablename__ = "portal_status"
+
+    source: Mapped[str] = mapped_column(String(20), primary_key=True)
+    last_ok_at: Mapped[datetime] = mapped_column(UTCDateTime())
+
+
 class Channel(Base):
     """Grupo de WhatsApp de um nicho, com a etiqueta do ML e a política de envio (0005).
 

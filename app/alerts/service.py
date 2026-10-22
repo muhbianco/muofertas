@@ -21,6 +21,7 @@ from app.core.clock import utcnow
 from app.core.config import Settings
 from app.core.lease import LEASE_NAME, acquire_lease, holder_id
 from app.core.logging import get_logger
+from app.distribution.links import PORTAL_SOURCE
 from app.domain.alerts import (
     OVERDUE_AFTER,
     HealthFacts,
@@ -35,6 +36,7 @@ from app.models import (
     CatalogProduct,
     CollectionRun,
     IntegrationError,
+    PortalStatus,
     Publication,
     WaSession,
     WorkerLease,
@@ -51,6 +53,12 @@ PORTAL_ALERT_WINDOW = timedelta(hours=3)
 
 async def gather_facts(db: AsyncSession, now: datetime) -> HealthFacts:
     lease = await db.get(WorkerLease, LEASE_NAME)
+    # Recusa de sessão só conta se veio depois do último link curto (sessão renovada fecha o
+    # alerta no ciclo seguinte) e dentro da janela.
+    portal_since = now - PORTAL_ALERT_WINDOW
+    portal = await db.get(PortalStatus, PORTAL_SOURCE)
+    if portal is not None and portal.last_ok_at >= portal_since:
+        portal_since = portal.last_ok_at
     last_ok = (
         await db.execute(
             select(func.max(CollectionRun.finished_at)).where(
@@ -102,9 +110,9 @@ async def gather_facts(db: AsyncSession, now: datetime) -> HealthFacts:
                 select(func.count())
                 .select_from(IntegrationError)
                 .where(
-                    IntegrationError.source == "ml_portal",
+                    IntegrationError.source == PORTAL_SOURCE,
                     IntegrationError.error_code.in_(("session", "blocked")),
-                    IntegrationError.occurred_at >= now - PORTAL_ALERT_WINDOW,
+                    IntegrationError.occurred_at >= portal_since,
                 )
             )
         ).scalar_one(),
