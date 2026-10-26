@@ -11,6 +11,7 @@ from pydantic import SecretStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.core.clock import utcnow
 from app.core.config import Settings
 from app.distribution.links import resolve_links
 from app.distribution.sender import send_due
@@ -426,6 +427,11 @@ async def test_resend_now_copies_and_sends_immediately(
     await approve(sessions)
     wa = FakeWuzapi()
     assert await run(sessions, wa) == 1
+    # A tela Postar lista os "Últimos 2 dias" pela hora real: com o NOW fixo (21/10) o teste
+    # quebrou sozinho em 23/10. O envio vira de 5 min atrás.
+    async with sessions() as session, session.begin():
+        sent = (await session.execute(select(Publication))).scalar_one()
+        sent.created_at = sent.sent_at = utcnow() - timedelta(minutes=5)
     fake_ml = FakeML(offers={"MLBP1": [{"item_id": ITEM, "price": 449.90, "currency_id": "BRL"}]})
     ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
     wa_client = WuzapiClient(cfg(), transport=wa.transport())

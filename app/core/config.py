@@ -104,8 +104,9 @@ class Settings(BaseSettings):
     retention_hour: int = 4  # hora de Brasília
     retention_runs_days: int = 30
     retention_evaluations_days: int = 90
-    # Aprovação automática (plano, semana 3): níveis separados por vírgula; vazio desliga.
-    auto_approve_tiers: str = "excepcional,excelente"
+    # Aprovação automática (plano, semana 3): níveis separados por vírgula; vazio desliga. Desde
+    # 26/10/2026 boa e regular também, só enchendo a fila do grupo (app/distribution/auto_approve).
+    auto_approve_tiers: str = "excepcional,excelente,boa,regular"
     invite_hour: int = 19
     # Convite da manhã, no primeiro horário de envio de cada grupo (início da janela).
     invite_morning_enabled: bool = True
