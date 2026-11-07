@@ -645,11 +645,8 @@ async def test_offer_without_listings_leaves_the_queue_instead_of_blocking_it(
     assert wa.sent == []
 
 
-async def test_a_deferred_post_lets_the_next_one_in_the_group_go(
-    sessions: async_sessionmaker[AsyncSession],
-) -> None:
-    """O post adiado pelo 1º 404 não trava o grupo: na rodada seguinte sai o próximo da fila."""
-    first = await approve(sessions)
+async def add_second_post(sessions: async_sessionmaker[AsyncSession], first: int) -> int:
+    """Outro produto (MLBP2, "Esteira Elétrica") pronto no mesmo grupo, atrás do primeiro."""
     async with sessions() as session, session.begin():
         a = await session.get(Publication, first)
         assert a is not None
@@ -667,21 +664,30 @@ async def test_a_deferred_post_lets_the_next_one_in_the_group_go(
         )
         session.add(b_product)
         await session.flush()
-        session.add(
-            Publication(
-                channel_id=a.channel_id,
-                product_id=b_product.id,
-                idempotency_key="b",
-                dedup_key="mercadolivre:MLBP2",
-                state="ready",
-                tier=a.tier,
-                target_url=a.target_url,
-                affiliate_url=a.affiliate_url,
-                item_id=a.item_id,
-                approved_price_cents=a.approved_price_cents,
-                created_at=a.created_at + timedelta(minutes=1),
-            )
+        b = Publication(
+            channel_id=a.channel_id,
+            product_id=b_product.id,
+            idempotency_key="b",
+            dedup_key="mercadolivre:MLBP2",
+            state="ready",
+            tier=a.tier,
+            target_url=a.target_url,
+            affiliate_url=a.affiliate_url,
+            item_id=a.item_id,
+            approved_price_cents=a.approved_price_cents,
+            created_at=a.created_at + timedelta(minutes=1),
         )
+        session.add(b)
+        await session.flush()
+        return b.id
+
+
+async def test_a_deferred_post_lets_the_next_one_in_the_group_go(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """O post adiado pelo 1º 404 não trava o grupo: na rodada seguinte sai o próximo da fila."""
+    first = await approve(sessions)
+    await add_second_post(sessions, first)
     wa = FakeWuzapi()
     fake_ml = FakeML(offers={"MLBP2": [{"item_id": ITEM, "price": 449.90, "currency_id": "BRL"}]})
     ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
@@ -733,3 +739,102 @@ async def test_post_header_falls_back_to_the_group_when_the_product_niche_is_off
     wa = FakeWuzapi()
     assert await run(sessions, wa) == 1
     assert wa.sent[0]["Body"].startswith("#publi · 👟 *TÊNIS E ESPORTE*")
+
+
+# --------------------------------------------------------------------------- 06/11/2026
+
+
+def items_206(missing_ours: bool) -> object:
+    """MLBP1 responde 206 sempre (uma oferta a menos), como o Sabonete Hora do Sono em 06/11."""
+
+    def handler(request: httpx.Request) -> httpx.Response | None:
+        if request.url.path != "/products/MLBP1/items":
+            return None
+        ours = {"item_id": ITEM, "price": 449.90, "currency_id": "BRL"}
+        other = {"item_id": "MLB999", "price": 470.0, "currency_id": "BRL"}
+        results = [other] if missing_ours else [ours, other]
+        return httpx.Response(206, json={"paging": {"total": 3}, "results": results})
+
+    return handler
+
+
+async def test_permanent_206_still_sends_the_post(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await approve(sessions)
+    wa = FakeWuzapi()
+    fake_ml = FakeML(offers={}, override=items_206(missing_ours=False))  # type: ignore[arg-type]
+    ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
+    wa_client = WuzapiClient(cfg(), transport=wa.transport())
+    try:
+        assert await send_due(sessions, ml_client, wa_client, NOW) == 1
+    finally:
+        await ml_client.aclose()
+        await wa_client.aclose()
+    assert (await state(sessions)).state == "sent"
+    assert fake_ml.calls.count("/products/MLBP1/items") == 2  # uma nova tentativa, depois vale
+
+
+async def test_partial_answer_without_our_offer_waits_and_the_next_post_goes(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    first = await approve(sessions)
+    second = await add_second_post(sessions, first)
+    wa = FakeWuzapi()
+
+    def handler(request: httpx.Request) -> httpx.Response | None:
+        if request.url.path == "/products/MLBP2/items":
+            offer = {"item_id": ITEM, "price": 449.90, "currency_id": "BRL"}
+            return httpx.Response(200, json={"paging": {"total": 1}, "results": [offer]})
+        return items_206(missing_ours=True)(request)  # type: ignore[operator]
+
+    fake_ml = FakeML(offers={}, override=handler)
+    ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
+    wa_client = WuzapiClient(cfg(), transport=wa.transport())
+    try:
+        assert await send_due(sessions, ml_client, wa_client, NOW) == 0
+        assert await send_due(sessions, ml_client, wa_client, NOW + timedelta(minutes=1)) == 1
+    finally:
+        await ml_client.aclose()
+        await wa_client.aclose()
+    async with sessions() as session:
+        a = await session.get(Publication, first)
+        b = await session.get(Publication, second)
+    # Pode ter sido justo a nossa oferta a que faltou: espera, não sai da fila de cara.
+    assert a is not None and a.state == "ready" and a.retry_after is not None
+    assert b is not None and b.state == "sent"
+
+
+async def test_ml_failing_for_the_first_post_does_not_block_the_group(
+    sessions: async_sessionmaker[AsyncSession], caplog: pytest.LogCaptureFixture
+) -> None:
+    """06/11/2026: o 1º da fila nunca passava na conferência, o envio voltava calado e o grupo
+    ficou 15 h sem oferta. Agora o post com problema espera 15 min e o próximo sai."""
+    first = await approve(sessions)
+    second = await add_second_post(sessions, first)
+    wa = FakeWuzapi()
+
+    def handler(request: httpx.Request) -> httpx.Response | None:
+        if request.url.path == "/products/MLBP1/items":
+            return httpx.Response(500, json={"message": "internal"})
+        if request.url.path == "/products/MLBP2/items":
+            offer = {"item_id": ITEM, "price": 449.90, "currency_id": "BRL"}
+            return httpx.Response(200, json={"paging": {"total": 1}, "results": [offer]})
+        return None
+
+    fake_ml = FakeML(offers={}, override=handler)
+    ml_client = MercadoLivreClient(cfg(), transport=fake_ml.transport())
+    wa_client = WuzapiClient(cfg(), transport=wa.transport())
+    try:
+        assert await send_due(sessions, ml_client, wa_client, NOW) == 0
+        assert "conferência no ML falhou; post adiado" in caplog.text
+        assert await send_due(sessions, ml_client, wa_client, NOW + timedelta(minutes=1)) == 1
+    finally:
+        await ml_client.aclose()
+        await wa_client.aclose()
+    async with sessions() as session:
+        a = await session.get(Publication, first)
+        b = await session.get(Publication, second)
+    assert a is not None and a.state == "ready"
+    assert a.retry_after == NOW + timedelta(minutes=15)
+    assert b is not None and b.state == "sent"

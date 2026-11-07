@@ -43,6 +43,8 @@ AFTER_INVITE = timedelta(minutes=5)
 ROBOT = "envio automático"
 # O 1º 404 na conferência adia o post (o próximo do grupo sai no lugar); o 2º tira da fila.
 NOT_FOUND_RETRY = timedelta(minutes=30)
+# Conferência que falhou no ML (fora do ar, 5xx, rede): o post espera isto e o próximo sai.
+ML_ERROR_RETRY = timedelta(minutes=15)
 
 
 async def recover_stuck(sessions: async_sessionmaker[AsyncSession], now: datetime) -> int:
@@ -139,6 +141,16 @@ async def _finish(
                 setattr(pub, key, value)
 
 
+async def _postpone(
+    sessions: async_sessionmaker[AsyncSession], pub_id: int, until: datetime
+) -> None:
+    """Adia o post ainda pronto (o operador pode ter mexido enquanto o ML respondia)."""
+    async with sessions() as db, db.begin():
+        pub = await db.get(Publication, pub_id, with_for_update=True)
+        if pub is not None and pub.state == "ready":
+            pub.retry_after = until
+
+
 async def send_one(
     sessions: async_sessionmaker[AsyncSession],
     ml: MercadoLivreClient,
@@ -177,8 +189,16 @@ async def send_one(
             result = await fetch_recheck(
                 ml, external_id=external_id, item_id=item_id, approved_cents=approved
             )
-        except DistributionError:
-            return False  # ML fora: tenta na próxima rodada
+        except DistributionError as exc:
+            # O ML não respondeu para ESTE produto: adia só ele e o próximo da fila sai no
+            # lugar. Antes voltava calado e o 1º da fila travava o grupo (06/11/2026, 206 fixo
+            # num produto: 15 h sem envio e nenhum aviso).
+            await _postpone(sessions, publication_id, now + ML_ERROR_RETRY)
+            logger.warning(
+                "conferência no ML falhou; post adiado",
+                extra={"publication_id": publication_id, "error": str(exc)[:120]},
+            )
+            return False
     photo = await fetch_product_image(images, image_url) if images is not None else None
 
     async with sessions() as db, db.begin():

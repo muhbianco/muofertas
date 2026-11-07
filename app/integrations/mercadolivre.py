@@ -204,8 +204,16 @@ class MercadoLivreClient:
                 )
             if status == 404:
                 raise NotFoundError(f"404: {_snippet(resp)}", status=status, path=path)
-            # 206 (resposta parcial) é passageiro: a mesma rota volta 200 completa logo depois.
-            if (status >= 500 or status == 206) and attempt + 1 < MAX_ATTEMPTS:
+            # 206 (resposta parcial): às vezes passa na seguinte (10/2026), mas desde 06/11/2026
+            # alguns produtos respondem 206 sempre, com uma oferta a menos (25 de 26). Uma nova
+            # tentativa; depois vale a parte que veio. Tratado como erro, travou o envio do grupo
+            # (o 1º da fila nunca passava na conferência) e a atualização desses produtos.
+            if status == 206 and isinstance(body, dict):
+                if attempt == 0:
+                    await asyncio.sleep(_backoff(attempt))
+                    continue
+                return body
+            if status >= 500 and attempt + 1 < MAX_ATTEMPTS:
                 await asyncio.sleep(_backoff(attempt))
                 continue
             raise MercadoLivreError(
@@ -229,8 +237,16 @@ class MercadoLivreClient:
 
     async def product_items(self, product_id: str) -> list[dict[str, Any]]:
         """Todas as ofertas do produto de catálogo, paginadas e com teto (lista sempre limitada)."""
+        offers, _ = await self.product_offers(product_id)
+        return offers
+
+    async def product_offers(self, product_id: str) -> tuple[list[dict[str, Any]], bool]:
+        """`product_items` e se veio faltando oferta (206: menos resultados que o `paging.total`,
+        dentro do teto). A conferência antes do envio precisa saber: oferta ausente numa
+        resposta parcial não quer dizer que saiu do ar."""
         offers: list[dict[str, Any]] = []
         offset = 0
+        total = 0
         while offset < PRODUCT_ITEMS_MAX:
             body = await self.get(
                 f"/products/{product_id}/items",
@@ -239,13 +255,14 @@ class MercadoLivreClient:
             results = body.get("results") if isinstance(body, dict) else None
             page = [r for r in results or [] if isinstance(r, dict)]
             offers.extend(page)
-            total = (
+            total = int(
                 ((body or {}).get("paging") or {}).get("total", 0) if isinstance(body, dict) else 0
             )
             offset += PRODUCT_ITEMS_PAGE
-            if not page or offset >= int(total or 0):
+            if not page or offset >= total:
                 break
-        return offers
+        partial = len(offers) < min(total, PRODUCT_ITEMS_MAX)
+        return offers, partial
 
     async def users_bulk(self, user_ids: list[int]) -> list[dict[str, Any]]:
         """Perfil público (com `seller_reputation`) de vários vendedores, 20 por chamada.

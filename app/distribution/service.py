@@ -360,16 +360,22 @@ async def fetch_recheck(
     404 é o produto sem nenhuma oferta, ou o ML instável respondendo 404 falso (14/10/2026): volta
     `not_found`, e o envio confirma antes de tirar o post da fila. Tratar como "ML fora" deixava o
     post em 1º na fila para sempre e travava o grupo (13/10/2026).
+
+    Resposta parcial (206, uma oferta a menos) sem a nossa oferta também volta `not_found`: pode
+    ser justo ela a que faltou. Espera e confere de novo; faltando outra vez, sai da fila.
     """
     try:
-        offers = await client.product_items(external_id)
+        offers, partial = await client.product_offers(external_id)
     except NotFoundError:
         return Recheck("not_found", None)
     except MercadoLivreError as exc:
         raise DistributionError(
             f"o ML não respondeu ({exc.status or 'rede'}); tente de novo"
         ) from exc
-    return recheck_offer(offers, item_id, approved_cents)
+    result = recheck_offer(offers, item_id, approved_cents)
+    if partial and result.status == "gone":
+        return Recheck("not_found", None)
+    return result
 
 
 def apply_recheck(pub: Publication, recheck: Recheck, now: datetime) -> None:

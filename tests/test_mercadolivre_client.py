@@ -103,6 +103,25 @@ async def test_partial_content_206_is_retried_then_succeeds(settings: Settings) 
     assert fake.calls.count("/products/MLB9/items") == 2
 
 
+async def test_permanent_206_returns_the_partial_page_flagged(settings: Settings) -> None:
+    # 06/11/2026: alguns produtos respondem 206 sempre, 25 de 26 ofertas.
+    def partial(request: httpx.Request) -> httpx.Response | None:
+        if request.url.path.endswith("/items"):
+            offers = [{"item_id": f"MLB{i}", "price": 10.0} for i in range(25)]
+            return httpx.Response(206, json={"results": offers, "paging": {"total": 26}})
+        return None
+
+    fake = FakeML(override=partial)
+    client = MercadoLivreClient(settings, transport=fake.transport())
+    try:
+        offers, missing = await client.product_offers("MLB9")
+        assert len(offers) == 25 and missing
+        assert len(await client.product_items("MLB9")) == 25  # a atualização de preço usa a parte
+    finally:
+        await client.aclose()
+    assert fake.calls.count("/products/MLB9/items") == 4  # duas chamadas, uma nova tentativa cada
+
+
 async def test_product_items_paginates_with_cap(settings: Settings) -> None:
     offers = [{"item_id": f"MLB{i}", "price": 10.0 + i} for i in range(250)]
     fake = FakeML(offers={"MLB9": offers})
